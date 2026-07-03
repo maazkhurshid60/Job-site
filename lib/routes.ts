@@ -1,0 +1,14 @@
+/* Admin lives at an unguessable base path (a light layer on top of the real
+   protection: Firebase Auth + Firestore rules).
+
+   To change it: edit ADMIN_BASE below AND rename the matching folder
+   `app/<slug>` so the two stay in sync. */
+export const ADMIN_BASE = "/console-4h9k2xqf";
+
+export const adminRoutes = {
+  base: ADMIN_BASE,
+  login: `${ADMIN_BASE}/login`,
+  newJob: `${ADMIN_BASE}/jobs/new`,
+  editJob: (id: string) => `${ADMIN_BASE}/jobs/${id}/edit`,
+  submissions: `${ADMIN_BASE}/submissions`,
+};

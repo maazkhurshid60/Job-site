@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// Metro Associates — Firebase Storage rules.
+// Paste into Firebase console → Storage → Rules, then Publish.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Candidate CVs. Anyone may upload a reasonably sized PDF/Word file
+    // (applicants are not logged in). Download URLs are tokenised.
+    match /cvs/{jobId}/{fileName} {
+      allow read: if true;
+      allow write: if request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches(
+          'application/pdf|application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        );
+    }
+
+    // Everything else is closed by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// Metro Associates — Firestore security rules.
+// Paste these into Firebase console → Firestore Database → Rules, then Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // An admin is anyone with a document at admins/{their-uid}.
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Jobs: posted by admins only. The public may read `open` roles; admins
+    // see and manage everything.
+    match /jobs/{jobId} {
+      allow read: if resource.data.status == 'open' || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Submissions: a signed-in user creates & reads their own; admins screen
+    // and manage everything.
+    match /submissions/{subId} {
+      allow create: if request.auth != null
+        && request.resource.data.recruiterId == request.auth.uid;
+      allow read: if isAdmin()
+        || (request.auth != null
+            && resource.data.recruiterId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // User profiles. A user owns only their own doc.
+    match /users/{uid} {
+      allow read, create, update: if request.auth != null
+        && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // Contact enquiries: anyone may send one; only admins can read them.
+    match /messages/{msgId} {
+      allow create: if request.resource.data.email is string
+        && request.resource.data.message is string;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Admin allow-list. Manage these docs from the console only.
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}
