@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getJob, type Job } from "@/lib/jobs";
 import { adminRoutes } from "@/lib/routes";
 import { JobForm } from "@/components/admin/JobForm";
+import { Loader } from "@/components/Loader";
 
 export default function EditJobPage() {
   const params = useParams<{ id: string }>();
@@ -30,7 +31,7 @@ export default function EditJobPage() {
   if (state === "loading") {
     return (
       <div className="grid h-64 place-items-center">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-line border-t-primary" />
+        <Loader />
       </div>
     );
   }

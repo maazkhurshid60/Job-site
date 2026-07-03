@@ -6,6 +6,7 @@ import Link from "next/link";
 import { adminRoutes } from "@/lib/routes";
 import {
   EMPLOYMENT_TYPES,
+  JOB_CATEGORIES,
   createJob,
   updateJob,
   type Job,
@@ -19,6 +20,7 @@ function emptyDraft(): JobInput {
   return {
     title: "",
     company: "",
+    category: "Civil Engineering",
     location: "",
     remote: false,
     employmentType: "Full-time",
@@ -38,6 +40,7 @@ export function JobForm({ job }: { job?: Job }) {
       ? {
           title: job.title,
           company: job.company,
+          category: job.category,
           location: job.location,
           remote: job.remote,
           employmentType: job.employmentType,
@@ -101,6 +104,19 @@ export function JobForm({ job }: { job?: Job }) {
               onChange={(e) => set("company", e.target.value)}
               placeholder="Acme Inc."
             />
+          </Field>
+          <Field label="Category / vertical">
+            <select
+              className="input"
+              value={form.category}
+              onChange={(e) => set("category", e.target.value)}
+            >
+              {JOB_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Location">
             <input

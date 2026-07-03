@@ -8,6 +8,12 @@ import {
   type Submission,
 } from "@/lib/submissions";
 import { StatCard, SubmissionBadge, money } from "@/components/dashboard/parts";
+import {
+  SubmissionsOverTime,
+  PipelineByStage,
+  OutcomesDonut,
+} from "@/components/dashboard/Charts";
+import { Loader } from "@/components/Loader";
 
 export default function DashboardOverview() {
   const { user, profile } = useAuth();
@@ -47,7 +53,7 @@ export default function DashboardOverview() {
 
       {loading ? (
         <div className="grid h-40 place-items-center rounded-2xl border border-line bg-white">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-line border-t-primary" />
+          <Loader />
         </div>
       ) : (
         <>
@@ -62,7 +68,16 @@ export default function DashboardOverview() {
             />
           </div>
 
-          <div className="mt-8 rounded-2xl border border-line bg-white p-6">
+          {/* charts */}
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <SubmissionsOverTime subs={subs} />
+            <OutcomesDonut subs={subs} />
+          </div>
+          <div className="mt-4">
+            <PipelineByStage subs={subs} />
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-line bg-white p-6">
             <h2 className="mb-4 font-bold text-ink">Recent submissions</h2>
             {subs.length === 0 ? (
               <div>

@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { isAdminUser } from "@/lib/users";
 import { adminRoutes } from "@/lib/routes";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { PageLoader } from "@/components/Loader";
 
 function Gate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -41,11 +42,7 @@ function Gate({ children }: { children: React.ReactNode }) {
   if (isLogin) return <>{children}</>;
 
   if (loading || !user || admin !== "yes") {
-    return (
-      <div className="grid min-h-screen place-items-center bg-cream">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return <AdminShell>{children}</AdminShell>;

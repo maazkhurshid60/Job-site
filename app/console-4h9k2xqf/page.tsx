@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { listJobs, deleteJob, type Job, type JobStatus } from "@/lib/jobs";
 import { adminRoutes } from "@/lib/routes";
+import { Loader } from "@/components/Loader";
 
 const statusStyle: Record<JobStatus, string> = {
   open: "bg-primary-soft text-primary",
@@ -77,7 +78,7 @@ export default function AdminJobsPage() {
 
       {loading ? (
         <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-line border-t-primary" />
+          <Loader />
         </div>
       ) : jobs.length === 0 && !error ? (
         <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">

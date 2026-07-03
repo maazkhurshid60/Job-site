@@ -81,6 +81,7 @@ function toJob(id: string, data: Record<string, unknown>): Job {
     id,
     title: (data.title as string) ?? "",
     company: (data.company as string) ?? "",
+    category: (data.category as string) ?? "Other",
     location: (data.location as string) ?? "",
     remote: Boolean(data.remote),
     employmentType: (data.employmentType as EmploymentType) ?? "Full-time",

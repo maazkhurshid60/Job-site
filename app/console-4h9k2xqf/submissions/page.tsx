@@ -10,6 +10,7 @@ import {
   type SubmissionStatus,
 } from "@/lib/submissions";
 import { money } from "@/components/dashboard/parts";
+import { Loader } from "@/components/Loader";
 
 const tone: Record<SubmissionStatus, string> = {
   submitted: "bg-line text-muted",
@@ -100,7 +101,7 @@ export default function AdminSubmissionsPage() {
 
       {loading ? (
         <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-line border-t-primary" />
+          <Loader />
         </div>
       ) : shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">

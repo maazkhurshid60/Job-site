@@ -5,14 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
-
-function Spinner() {
-  return (
-    <div className="grid min-h-screen place-items-center bg-cream">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-primary" />
-    </div>
-  );
-}
+import { PageLoader } from "@/components/Loader";
 
 export default function DashboardLayout({
   children,
@@ -26,12 +19,12 @@ export default function DashboardLayout({
     if (!loading && !user) router.replace("/login");
   }, [loading, user, router]);
 
-  if (loading || !user || profileLoading) return <Spinner />;
+  if (loading || !user || profileLoading) return <PageLoader />;
 
   // Signed in but no self-serve profile (e.g. an admin-only account).
   if (!profile) {
     return (
-      <div className="grid min-h-screen place-items-center bg-cream px-6">
+      <div className="grid min-h-screen place-items-center bg-white px-6">
         <div className="max-w-sm rounded-2xl border border-line bg-white p-8 text-center">
           <h1 className="font-bold text-ink">No account profile found</h1>
           <p className="mt-1 text-sm text-muted">

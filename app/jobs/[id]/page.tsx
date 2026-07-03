@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { SubmitCandidateForm } from "@/components/dashboard/SubmitCandidateForm";
 import { formatPay } from "@/components/jobFormat";
 import { getJob, type Job } from "@/lib/jobs";
+import { Loader } from "@/components/Loader";
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +40,7 @@ export default function JobDetailPage() {
   return (
     <>
       <Navbar />
-      <main className="flex-1 bg-cream">
+      <main className="flex-1 bg-white">
         <Container className="py-12 lg:py-16">
           <Link
             href="/jobs"
@@ -50,7 +51,7 @@ export default function JobDetailPage() {
 
           {state === "loading" ? (
             <div className="mt-8 grid h-64 place-items-center rounded-2xl border border-line bg-white">
-              <div className="h-7 w-7 animate-spin rounded-full border-2 border-line border-t-primary" />
+              <Loader />
             </div>
           ) : state === "missing" || !job ? (
             <div className="mt-8 rounded-2xl border border-line bg-white p-12 text-center">
@@ -71,6 +72,9 @@ export default function JobDetailPage() {
               {/* details */}
               <div className="rounded-2xl border border-line bg-white p-8">
                 <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex rounded-pill bg-lime/30 px-2.5 py-0.5 text-xs font-semibold text-ink">
+                    {job.category}
+                  </span>
                   <span className="inline-flex rounded-pill bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary">
                     {job.employmentType}
                   </span>
@@ -132,7 +136,7 @@ function ApplyPanel({ job }: { job: Job }) {
   if (loading) {
     return (
       <div className="grid h-40 place-items-center rounded-2xl border border-line bg-white">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-primary" />
+        <Loader />
       </div>
     );
   }

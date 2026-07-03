@@ -7,19 +7,34 @@ import { Testimonial } from "@/components/Testimonial";
 import { Recruiters } from "@/components/Recruiters";
 import { CTA } from "@/components/CTA";
 import { Footer } from "@/components/Footer";
+import { Reveal } from "@/components/motion/Reveal";
 
 export default function Home() {
   return (
     <>
       <Navbar />
       <main className="flex-1">
-        <Hero />
-        <SocialProof />
-        <HowItWorks />
-        <Reasons />
-        <Testimonial />
-        <Recruiters />
-        <CTA />
+        <Reveal y={16}>
+          <Hero />
+        </Reveal>
+        <Reveal>
+          <SocialProof />
+        </Reveal>
+        <Reveal>
+          <HowItWorks />
+        </Reveal>
+        <Reveal>
+          <Reasons />
+        </Reveal>
+        <Reveal>
+          <Testimonial />
+        </Reveal>
+        <Reveal>
+          <Recruiters />
+        </Reveal>
+        <Reveal>
+          <CTA />
+        </Reveal>
       </main>
       <Footer />
     </>
