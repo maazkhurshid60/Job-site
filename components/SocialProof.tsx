@@ -1,9 +1,10 @@
 import { Container } from "./ui";
+import { CountUp } from "./motion/CountUp";
 
 const stats = [
-  { value: "20K", label: "Hires made" },
-  { value: "1.3M", label: "Candidates sourced" },
-  { value: "8.5B", label: "In salaries placed" },
+  { to: 20, decimals: 0, suffix: "K", label: "Hires made" },
+  { to: 1.3, decimals: 1, suffix: "M", label: "Candidates sourced" },
+  { to: 8.5, decimals: 1, prefix: "$", suffix: "B", label: "In salaries placed" },
 ];
 
 const companies = ["airbnb", "ShipBob", "DISCOVER", "Walmart", "Ramp"];
@@ -28,7 +29,14 @@ export function SocialProof() {
           <div className="flex gap-10">
             {stats.map((s) => (
               <div key={s.label}>
-                <p className="text-3xl font-extrabold text-primary">{s.value}</p>
+                <p className="text-3xl font-extrabold text-primary">
+                  <CountUp
+                    to={s.to}
+                    decimals={s.decimals}
+                    prefix={s.prefix}
+                    suffix={s.suffix}
+                  />
+                </p>
                 <p className="mt-1 text-sm text-muted">{s.label}</p>
               </div>
             ))}

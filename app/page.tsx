@@ -14,9 +14,7 @@ export default function Home() {
     <>
       <Navbar />
       <main className="flex-1">
-        <Reveal y={16}>
-          <Hero />
-        </Reveal>
+        <Hero />
         <Reveal>
           <SocialProof />
         </Reveal>

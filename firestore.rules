@@ -43,10 +43,16 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Admin allow-list. Manage these docs from the console only.
+    // Admin allow-list.
     match /admins/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if false;
+
+      // TEMP BOOTSTRAP — lets the /setup page create your first admin.
+      // After your admin exists, change this line back to `if false;`
+      // and re-publish, then delete the setup page.
+      allow create: if request.auth != null && request.auth.uid == uid;
+
+      allow update, delete: if false;
     }
   }
 }

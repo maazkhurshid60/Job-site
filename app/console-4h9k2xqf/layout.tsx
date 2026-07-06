@@ -12,7 +12,9 @@ function Gate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
-  const isLogin = pathname === adminRoutes.login;
+  // Login + the temporary setup page render on their own (no admin gate).
+  const isPublic =
+    pathname === adminRoutes.login || pathname === adminRoutes.setup;
 
   const [admin, setAdmin] = useState<"unknown" | "yes" | "no">("unknown");
 
@@ -33,13 +35,13 @@ function Gate({ children }: { children: React.ReactNode }) {
 
   // Route people who shouldn't be here away.
   useEffect(() => {
-    if (loading || isLogin) return;
+    if (loading || isPublic) return;
     if (!user) router.replace(adminRoutes.login);
     else if (admin === "no") router.replace("/");
-  }, [loading, user, admin, isLogin, router]);
+  }, [loading, user, admin, isPublic, router]);
 
-  // Login page renders on its own, without the admin chrome.
-  if (isLogin) return <>{children}</>;
+  // Login + setup pages render on their own, without the admin chrome.
+  if (isPublic) return <>{children}</>;
 
   if (loading || !user || admin !== "yes") {
     return <PageLoader />;

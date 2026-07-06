@@ -31,7 +31,7 @@ export function Button({
   className = "",
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-pill px-6 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+    "inline-flex items-center justify-center gap-2 rounded-pill px-6 py-3 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
   const styles = {
     primary: "bg-primary text-white hover:bg-primary-dark shadow-sm",
     outline: "border border-line text-ink hover:border-ink/30 hover:bg-black/[0.02]",
