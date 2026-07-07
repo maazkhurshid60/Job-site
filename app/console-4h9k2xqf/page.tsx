@@ -1,70 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listJobs, deleteJob, type Job, type JobStatus } from "@/lib/jobs";
+import { listJobs, type Job } from "@/lib/jobs";
+import { listAllSubmissions, type Submission } from "@/lib/submissions";
 import { adminRoutes } from "@/lib/routes";
+import { StatCard, SubmissionBadge } from "@/components/dashboard/parts";
 import { Loader } from "@/components/Loader";
 
-const statusStyle: Record<JobStatus, string> = {
-  open: "bg-primary-soft text-primary",
-  draft: "bg-line text-muted",
-  closed: "bg-coral-soft text-coral",
-};
-
-export default function AdminJobsPage() {
+export default function AdminDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [subs, setSubs] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setJobs(await listJobs());
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Could not load jobs. Check your Firestore rules.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    Promise.all([listJobs(), listAllSubmissions()])
+      .then(([j, s]) => {
+        setJobs(j);
+        setSubs(s);
+      })
+      .catch(() => setError("Could not load data. Check your Firestore rules."))
+      .finally(() => setLoading(false));
+  }, []);
 
-  async function onDelete(job: Job) {
-    if (!confirm(`Delete “${job.title}”? This cannot be undone.`)) return;
-    setDeleting(job.id);
-    try {
-      await deleteJob(job.id);
-      setJobs((list) => list.filter((j) => j.id !== job.id));
-    } catch {
-      alert("Could not delete the job.");
-    } finally {
-      setDeleting(null);
-    }
-  }
+  const open = jobs.filter((j) => j.status === "open").length;
+  const draft = jobs.filter((j) => j.status === "draft").length;
+  const inScreening = subs.filter(
+    (s) => s.status === "submitted" || s.status === "screening",
+  ).length;
+  const hired = subs.filter((s) => s.status === "hired").length;
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between gap-4">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink">
-            Jobs
+          <p className="eyebrow uppercase">Overview</p>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">
+            Dashboard
           </h1>
-          <p className="mt-1 text-sm text-muted">
-            {loading ? "Loading…" : `${jobs.length} role${jobs.length === 1 ? "" : "s"}`}
-          </p>
         </div>
         <Link
           href={adminRoutes.newJob}
-          className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+          className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
         >
           Post a job
         </Link>
@@ -77,82 +55,82 @@ export default function AdminJobsPage() {
       )}
 
       {loading ? (
-        <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">
+        <div className="grid h-40 place-items-center rounded-2xl border border-line bg-white">
           <Loader />
         </div>
-      ) : jobs.length === 0 && !error ? (
-        <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">
-          <h2 className="font-bold text-ink">No jobs yet</h2>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-            Post your first role and it will appear here for the recruiter
-            network to source against.
-          </p>
-          <Link
-            href={adminRoutes.newJob}
-            className="mt-5 inline-block rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
-          >
-            Post a job
-          </Link>
-        </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
-              <tr>
-                <th className="px-5 py-3 font-semibold">Role</th>
-                <th className="hidden px-5 py-3 font-semibold sm:table-cell">Location</th>
-                <th className="hidden px-5 py-3 font-semibold md:table-cell">Bounty</th>
-                <th className="px-5 py-3 font-semibold">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {jobs.map((job) => (
-                <tr key={job.id} className="hover:bg-cream/40">
-                  <td className="px-5 py-4">
-                    <p className="font-semibold text-ink">{job.title}</p>
-                    <p className="text-xs text-muted">
-                      {job.company}
-                      {job.remote ? " · Remote" : ""} · {job.employmentType}
-                    </p>
-                  </td>
-                  <td className="hidden px-5 py-4 text-muted sm:table-cell">
-                    {job.location || "—"}
-                  </td>
-                  <td className="hidden px-5 py-4 text-muted md:table-cell">
-                    {job.bounty != null ? `$${job.bounty.toLocaleString()}` : "—"}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex rounded-pill px-2.5 py-0.5 text-xs font-semibold capitalize ${statusStyle[job.status]}`}
-                    >
-                      {job.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-3">
-                      <Link
-                        href={adminRoutes.editJob(job.id)}
-                        className="text-sm font-semibold text-primary hover:text-primary-dark"
-                      >
-                        Edit
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Total jobs" value={jobs.length} hint={`${open} open · ${draft} draft`} />
+            <StatCard label="Open roles" value={open} />
+            <StatCard label="Submissions" value={subs.length} />
+            <StatCard label="Needs screening" value={inScreening} hint={`${hired} hired`} />
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            {/* recent jobs */}
+            <Panel title="Recent jobs" href={adminRoutes.jobs} linkLabel="All jobs">
+              {jobs.length === 0 ? (
+                <Empty text="No jobs yet." cta={{ href: adminRoutes.newJob, label: "Post your first job" }} />
+              ) : (
+                <ul className="divide-y divide-line">
+                  {jobs.slice(0, 5).map((j) => (
+                    <li key={j.id} className="flex items-center justify-between py-3">
+                      <Link href={adminRoutes.editJob(j.id)} className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-ink hover:text-primary">{j.title}</p>
+                        <p className="truncate text-xs text-muted">{j.company} · {j.category}</p>
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => onDelete(job)}
-                        disabled={deleting === job.id}
-                        className="text-sm font-semibold text-coral hover:opacity-80 disabled:opacity-50"
-                      >
-                        {deleting === job.id ? "…" : "Delete"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <span className={`shrink-0 rounded-pill px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                        j.status === "open" ? "bg-primary-soft text-primary" : j.status === "draft" ? "bg-line text-muted" : "bg-coral-soft text-coral"
+                      }`}>{j.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+
+            {/* recent submissions */}
+            <Panel title="Recent submissions" href={adminRoutes.submissions} linkLabel="All submissions">
+              {subs.length === 0 ? (
+                <Empty text="No candidate submissions yet." />
+              ) : (
+                <ul className="divide-y divide-line">
+                  {subs.slice(0, 5).map((s) => (
+                    <li key={s.id} className="flex items-center justify-between py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-ink">{s.candidateName}</p>
+                        <p className="truncate text-xs text-muted">{s.jobTitle}</p>
+                      </div>
+                      <SubmissionBadge status={s.status} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          </div>
+        </>
       )}
+    </div>
+  );
+}
+
+function Panel({ title, href, linkLabel, children }: { title: string; href: string; linkLabel: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-line bg-white p-6">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="font-bold text-ink">{title}</h2>
+        <Link href={href} className="text-sm font-semibold text-primary hover:text-primary-dark">{linkLabel} →</Link>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Empty({ text, cta }: { text: string; cta?: { href: string; label: string } }) {
+  return (
+    <div className="py-4">
+      <p className="text-sm text-muted">{text}</p>
+      {cta && <Link href={cta.href} className="mt-2 inline-block text-sm font-semibold text-primary">{cta.label} →</Link>}
     </div>
   );
 }

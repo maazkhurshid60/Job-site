@@ -6,9 +6,10 @@
 export const ADMIN_BASE = "/console-4h9k2xqf";
 
 export const adminRoutes = {
-  base: ADMIN_BASE,
+  base: ADMIN_BASE, // dashboard overview
   login: `${ADMIN_BASE}/login`,
   setup: `${ADMIN_BASE}/setup`,
+  jobs: `${ADMIN_BASE}/jobs`,
   newJob: `${ADMIN_BASE}/jobs/new`,
   editJob: (id: string) => `${ADMIN_BASE}/jobs/${id}/edit`,
   submissions: `${ADMIN_BASE}/submissions`,

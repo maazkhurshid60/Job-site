@@ -52,6 +52,15 @@ export const JOB_CATEGORIES = [
 
 export type JobCategory = (typeof JOB_CATEGORIES)[number];
 
+export type FAQ = { question: string; answer: string };
+
+export const DEFAULT_HIRING_STAGES = [
+  "Application review",
+  "Screening call",
+  "Client interview",
+  "Offer",
+];
+
 /* A role Metro Opportunities is sourcing for. `company` is the client;
    `bounty` is what a recruiter earns on a confirmed hire. */
 export type Job = {
@@ -65,7 +74,12 @@ export type Job = {
   salaryMin: number | null;
   salaryMax: number | null;
   bounty: number | null;
-  description: string;
+  description: string; // the "Job Brief"
+  responsibilities: string;
+  requirements: string;
+  faqs: FAQ[];
+  screeningQuestions: string[];
+  hiringStages: string[];
   status: JobStatus;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
@@ -89,6 +103,11 @@ function toJob(id: string, data: Record<string, unknown>): Job {
     salaryMax: (data.salaryMax as number | null) ?? null,
     bounty: (data.bounty as number | null) ?? null,
     description: (data.description as string) ?? "",
+    responsibilities: (data.responsibilities as string) ?? "",
+    requirements: (data.requirements as string) ?? "",
+    faqs: (data.faqs as FAQ[]) ?? [],
+    screeningQuestions: (data.screeningQuestions as string[]) ?? [],
+    hiringStages: (data.hiringStages as string[]) ?? [],
     status: (data.status as JobStatus) ?? "draft",
     createdAt: (data.createdAt as Timestamp) ?? null,
     updatedAt: (data.updatedAt as Timestamp) ?? null,

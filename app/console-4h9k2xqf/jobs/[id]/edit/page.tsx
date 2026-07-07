@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getJob, type Job } from "@/lib/jobs";
 import { adminRoutes } from "@/lib/routes";
-import { JobForm } from "@/components/admin/JobForm";
+import { JobWizard } from "@/components/admin/JobWizard";
 import { Loader } from "@/components/Loader";
 
 export default function EditJobPage() {
@@ -58,7 +58,7 @@ export default function EditJobPage() {
         </h1>
         <p className="mt-1 text-sm text-muted">{job.title}</p>
       </div>
-      <JobForm job={job} />
+      <JobWizard job={job} />
     </div>
   );
 }

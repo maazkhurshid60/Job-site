@@ -108,11 +108,42 @@ export default function JobDetailPage() {
                   </div>
                 </dl>
 
-                <div className="mt-6">
-                  <h2 className="text-sm font-bold text-ink">About the role</h2>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-7 text-muted">
-                    {job.description || "No description provided."}
-                  </p>
+                <div className="mt-6 space-y-6">
+                  <Prose title="About the role" text={job.description || "No description provided."} />
+                  {job.responsibilities && (
+                    <Prose title="Responsibilities" text={job.responsibilities} />
+                  )}
+                  {job.requirements && (
+                    <Prose title="Requirements and skills" text={job.requirements} />
+                  )}
+
+                  {job.hiringStages.filter(Boolean).length > 0 && (
+                    <div>
+                      <h2 className="text-sm font-bold text-ink">Hiring process</h2>
+                      <ol className="mt-3 flex flex-wrap gap-2">
+                        {job.hiringStages.filter(Boolean).map((s, i) => (
+                          <li key={s + i} className="inline-flex items-center gap-1.5 rounded-pill bg-cream px-3 py-1 text-xs font-medium text-ink">
+                            <span className="grid h-4 w-4 place-items-center rounded-full bg-primary text-[10px] font-bold text-white">{i + 1}</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {job.faqs.length > 0 && (
+                    <div>
+                      <h2 className="text-sm font-bold text-ink">FAQs</h2>
+                      <div className="mt-3 space-y-3">
+                        {job.faqs.map((f, i) => (
+                          <div key={i} className="rounded-xl border border-line p-4">
+                            <p className="text-sm font-semibold text-ink">{f.question}</p>
+                            <p className="mt-1 whitespace-pre-line text-sm leading-6 text-muted">{f.answer}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -126,6 +157,15 @@ export default function JobDetailPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+function Prose({ title, text }: { title: string; text: string }) {
+  return (
+    <div>
+      <h2 className="text-sm font-bold text-ink">{title}</h2>
+      <p className="mt-2 whitespace-pre-line text-sm leading-7 text-muted">{text}</p>
+    </div>
   );
 }
 
