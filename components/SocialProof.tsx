@@ -1,3 +1,5 @@
+"use client";
+
 import { Container } from "./ui";
 import { CountUp } from "./motion/CountUp";
 
@@ -11,25 +13,27 @@ const companies = ["airbnb", "ShipBob", "DISCOVER", "Walmart", "Ramp"];
 
 export function SocialProof() {
   return (
-    <section className="bg-white">
-      <Container className="py-16 lg:py-20">
-        <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto]">
+    <section className="bg-white py-16">
+      <Container>
+        <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
           <div>
-            <p className="eyebrow uppercase">About us</p>
-            <h2 className="mt-3 max-w-md text-3xl font-extrabold tracking-tight text-ink">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
+              About us
+            </span>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
               Where great companies hire great people
             </h2>
-            <p className="mt-4 max-w-lg text-muted">
+            <p className="mt-4 text-base text-muted leading-relaxed">
               Since 2012, the world&apos;s best companies have leaned on Metro
-              Opportunities to find their next hire — without the noise of an open
+              Associates to find their next hire — without the noise of an open
               marketplace.
             </p>
           </div>
 
-          <div className="flex gap-10">
+          <div className="grid grid-cols-3 gap-6 sm:gap-8 bg-gray-50/50 rounded-3xl border border-gray-100 p-8">
             {stats.map((s) => (
-              <div key={s.label}>
-                <p className="text-3xl font-extrabold text-primary">
+              <div key={s.label} className="text-center">
+                <p className="text-3xl sm:text-4xl font-extrabold text-blue-brand">
                   <CountUp
                     to={s.to}
                     decimals={s.decimals}
@@ -37,21 +41,27 @@ export function SocialProof() {
                     suffix={s.suffix}
                   />
                 </p>
-                <p className="mt-1 text-sm text-muted">{s.label}</p>
+                <p className="mt-2 text-xs sm:text-sm font-semibold text-muted">{s.label}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="mt-12 flex flex-wrap items-center justify-between gap-x-10 gap-y-6 rounded-2xl border border-line bg-cream/50 px-8 py-6">
-          {companies.map((c) => (
-            <span
-              key={c}
-              className="text-lg font-bold tracking-tight text-ink/40"
-            >
-              {c}
-            </span>
-          ))}
+        {/* Gray logo ribbon matching the Allianz, Konbini design */}
+        <div className="mt-16 border-t border-gray-100 pt-10">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-muted/60 mb-6">
+            Trusted by industry leading teams
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 md:gap-x-20">
+            {companies.map((c) => (
+              <span
+                key={c}
+                className="text-lg md:text-xl font-bold tracking-tight text-gray-400 hover:text-blue-brand transition-colors duration-200"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
         </div>
       </Container>
     </section>

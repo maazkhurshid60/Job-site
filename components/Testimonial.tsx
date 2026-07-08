@@ -35,7 +35,7 @@ export function Testimonial() {
           <div>
             <p className="eyebrow uppercase">Client stories</p>
             <blockquote className="mt-4 text-2xl font-bold leading-snug tracking-tight text-ink sm:text-3xl">
-              &ldquo;With the reach of a recruiting network, Metro Opportunities cut
+              &ldquo;With the reach of a recruiting network, Metro Associates cut
               our dependence on in-house sourcing — we filled two specialist
               roles in under a month, and never once sifted a bad CV.&rdquo;
             </blockquote>

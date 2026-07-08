@@ -1,211 +1,170 @@
 "use client";
 
 import Image from "next/image";
-import { motion, type Variants } from "framer-motion";
-import { Container, Button, Eyebrow } from "./ui";
+import { motion } from "framer-motion";
+import { Container } from "./ui";
 import { img } from "./images";
 import { CountUp } from "./motion/CountUp";
 
-const container: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.12, delayChildren: 0.05 } },
-};
-const item: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-  },
-};
-
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-cream">
-      {/* floating decorative shapes */}
-      <FloatShape className="left-[52%] -top-6 h-16 w-16 rounded-[30%] bg-coral" delay={0} />
-      <FloatShape className="bottom-24 left-[46%] h-12 w-12 rounded-[30%] bg-lime" delay={0.6} />
-      <FloatShape className="bottom-16 right-16 h-6 w-6 rounded-full bg-primary" delay={1.1} />
+    <section className="relative overflow-hidden bg-white pb-16 pt-6">
+      {/* Royal Blue Curved Banner Container */}
+      <div className="relative mx-auto max-w-[1400px] overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-3xl md:rounded-[40px] px-6 pb-32 pt-20 md:pb-48 md:pt-28 shadow-2xl">
+        
+        {/* Floating Shapes Background */}
+        <div className="absolute inset-0 opacity-15 pointer-events-none">
+          <div className="absolute -top-12 -left-12 h-64 w-64 rounded-full bg-blue-400 blur-3xl" />
+          <div className="absolute top-1/2 right-12 h-80 w-80 rounded-full bg-indigo-300 blur-3xl" />
+          <div className="absolute bottom-4 left-1/3 h-52 w-52 rounded-full bg-white blur-3xl" />
+        </div>
 
-      <Container className="grid items-center gap-12 py-16 lg:grid-cols-2 lg:py-24">
-        {/* Copy */}
-        <motion.div variants={container} initial="hidden" animate="show">
-          <motion.div variants={item}>
-            <Eyebrow>Why Metro Opportunities</Eyebrow>
-          </motion.div>
-          <motion.h1
-            variants={item}
-            className="mt-4 text-4xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-5xl"
-          >
-            Hiring that brings the&nbsp;right people and companies together.
-          </motion.h1>
-          <motion.p
-            variants={item}
-            className="mt-5 max-w-md text-base leading-7 text-muted"
-          >
-            We put a network of specialist recruiters behind every role, screen
-            every candidate ourselves, and stay your single point of contact —
-            so you only ever meet talent worth hiring.
-          </motion.p>
-
-          <motion.div
-            variants={item}
-            className="mt-8 flex flex-wrap items-center gap-4"
-          >
-            <Button href="/signup">Get started</Button>
-            <a
-              href="#how"
-              className="group inline-flex items-center gap-3 text-sm font-semibold text-ink"
-            >
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-coral text-white transition-transform group-hover:scale-110">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-                  <path d="M3 2l6 4-6 4V2z" fill="currentColor" />
-                </svg>
-              </span>
-              See how it works
-            </a>
-          </motion.div>
-
-          <motion.div variants={item} className="mt-10 flex items-center gap-3">
-            <div className="flex -space-x-2">
-              {img.avatars.map((src, i) => (
-                <span
-                  key={src}
-                  className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-cream bg-cream-deep"
-                >
-                  <Image
-                    src={src}
-                    alt={`Placed candidate ${i + 1}`}
-                    fill
-                    sizes="32px"
-                    className="object-cover"
-                  />
-                </span>
-              ))}
-            </div>
-            <p className="text-sm text-muted">
-              <span className="font-bold text-ink">
-                <CountUp to={27500} suffix="+" />
-              </span>{" "}
-              candidates placed through Metro Opportunities
-            </p>
-          </motion.div>
-        </motion.div>
-
-        {/* Product mockup */}
+        {/* Floating Badges */}
+        {/* Badge 1: Cloud */}
         <motion.div
-          initial={{ opacity: 0, x: 32 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.25 }}
-          className="relative"
+          animate={{ y: [0, -12, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0 }}
+          className="absolute left-[8%] top-[12%] hidden md:flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-xs font-bold text-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-white/20"
         >
-          <PipelineMockup />
+          <span className="text-blue-500">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17.5 19A6 6 0 0 0 22 13a6 6 0 0 0-6-6h-.5A8 8 0 0 0 4.5 9a6 6 0 0 0 1 11.5H17.5z" />
+            </svg>
+          </span>
+          Cloud
         </motion.div>
-      </Container>
-    </section>
-  );
-}
 
-/* A softly floating brand shape (respects the hero's absolute positioning). */
-function FloatShape({
-  className,
-  delay,
-}: {
-  className: string;
-  delay: number;
-}) {
-  return (
-    <motion.span
-      aria-hidden
-      className={`pointer-events-none absolute hidden lg:block ${className}`}
-      animate={{ y: [0, -14, 0], rotate: [0, 8, 0] }}
-      transition={{
-        duration: 5,
-        repeat: Infinity,
-        ease: "easeInOut",
-        delay,
-      }}
-    />
-  );
-}
+        {/* Badge 2: Microsoft */}
+        <motion.div
+          animate={{ y: [0, -12, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+          className="absolute left-[6%] top-[45%] hidden md:flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-2.5 text-sm font-semibold text-gray-800 shadow-[0_10px_35px_rgb(0,0,0,0.08)] border border-white/20"
+        >
+          <div className="grid grid-cols-2 gap-0.5 w-4 h-4">
+            <span className="bg-[#f25022] w-1.5 h-1.5" />
+            <span className="bg-[#7fba00] w-1.5 h-1.5" />
+            <span className="bg-[#00a4ef] w-1.5 h-1.5" />
+            <span className="bg-[#ffb900] w-1.5 h-1.5" />
+          </div>
+          Microsoft
+        </motion.div>
 
-/* A stylised in-app view: the screening pipeline that sits between
-   recruiters and the client — our core differentiator. */
-function PipelineMockup() {
-  const stages = [
-    { label: "Submitted", count: 24, tone: "bg-line text-muted" },
-    { label: "Screening", count: 11, tone: "bg-coral-soft text-coral" },
-    { label: "Client review", count: 5, tone: "bg-primary-soft text-primary" },
-  ];
-  const candidates = [
-    { name: "Senior Backend Engineer", meta: "Approved · 3 in review", ok: true },
-    { name: "Product Designer", meta: "Screening · 2 candidates", ok: false },
-    { name: "Growth Marketer", meta: "Approved · shortlist sent", ok: true },
-  ];
+        {/* Badge 3: AWS */}
+        <motion.div
+          animate={{ y: [0, -12, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
+          className="absolute left-[10%] bottom-[18%] hidden md:flex items-center gap-2 rounded-full bg-blue-brand/30 text-cyan-300 font-bold px-5 py-3 text-sm shadow-[0_12px_40px_rgb(27,92,255,0.25)] border border-cyan-400/20 backdrop-blur-sm"
+        >
+          <span className="tracking-tight text-white">aws</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </motion.div>
 
-  return (
-    <div className="rounded-2xl border border-line bg-white shadow-[0_24px_60px_-24px_rgba(23,19,15,0.25)]">
-      {/* window chrome */}
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="h-2.5 w-2.5 rounded-full bg-coral" />
-        <span className="h-2.5 w-2.5 rounded-full bg-lime" />
-        <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-        <span className="ml-3 text-xs font-medium text-muted">
-          Metro Opportunities · Hiring dashboard
-        </span>
-      </div>
+        {/* Badge 4: Airbnb */}
+        <motion.div
+          animate={{ y: [0, -12, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.2 }}
+          className="absolute right-[8%] bottom-[25%] hidden md:flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-3 text-sm font-semibold text-gray-800 shadow-[0_10px_35px_rgb(0,0,0,0.08)] border border-white/20"
+        >
+          <span className="text-[#ff5a5f]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </span>
+          airbnb
+        </motion.div>
 
-      <div className="space-y-5 p-5">
-        {/* stage counters */}
-        <div className="grid grid-cols-3 gap-3">
-          {stages.map((s) => (
-            <div key={s.label} className="rounded-xl border border-line p-3">
-              <span
-                className={`inline-flex rounded-pill px-2 py-0.5 text-[11px] font-semibold ${s.tone}`}
+        {/* Badge 5: Uber */}
+        <motion.div
+          animate={{ y: [0, -12, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1.1 }}
+          className="absolute right-[6%] top-[35%] hidden md:flex items-center gap-2 rounded-full bg-gray-900 text-white px-5 py-2.5 text-sm font-bold shadow-[0_10px_35px_rgb(0,0,0,0.15)] border border-gray-800"
+        >
+          UBER
+        </motion.div>
+
+        {/* Hero Content */}
+        <Container className="relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="mx-auto max-w-3xl"
+          >
+            <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-200 mb-6">
+              Why Metro Associates
+            </span>
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl leading-tight">
+              Hiring that brings the right people and companies together.
+            </h1>
+            <p className="mt-6 text-lg md:text-xl text-blue-100 leading-relaxed max-w-2xl mx-auto font-medium">
+              We put a network of specialist recruiters behind every role, screen every candidate ourselves, and stay your single point of contact — so you only ever meet talent worth hiring.
+            </p>
+
+            {/* CTAs */}
+            <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
+              <a
+                href="/signup"
+                className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-8 py-4 text-base font-bold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg bg-white text-blue-brand hover:bg-blue-50"
               >
-                {s.label}
-              </span>
-              <p className="mt-2 text-2xl font-extrabold text-ink">
-                <CountUp to={s.count} />
+                Get started
+              </a>
+              <a
+                href="#how"
+                className="group inline-flex w-full sm:w-auto items-center justify-center gap-3 text-base font-bold text-white transition-all duration-300"
+              >
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white transition-transform group-hover:scale-110">
+                  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden>
+                    <path d="M3 2l6 4-6 4V2z" fill="currentColor" />
+                  </svg>
+                </span>
+                See how it works
+              </a>
+            </div>
+
+            {/* Placed Candidates Counter */}
+            <div className="mt-14 flex flex-col sm:flex-row items-center justify-center gap-4 border-t border-white/15 pt-8">
+              <div className="flex -space-x-2">
+                {img.avatars.map((src, i) => (
+                  <span
+                    key={src}
+                    className="relative h-9 w-9 overflow-hidden rounded-full border-2 border-indigo-600 bg-indigo-500 shrink-0"
+                  >
+                    <Image
+                      src={src}
+                      alt={`Placed candidate ${i + 1}`}
+                      fill
+                      sizes="36px"
+                      className="object-cover"
+                    />
+                  </span>
+                ))}
+              </div>
+              <p className="text-sm text-blue-100 font-medium">
+                <span className="font-extrabold text-white">
+                  <CountUp to={27500} suffix="+" />
+                </span>{" "}
+                candidates placed through Metro Associates
               </p>
             </div>
-          ))}
-        </div>
+          </motion.div>
+        </Container>
 
-        {/* role rows */}
-        <div className="space-y-2.5">
-          {candidates.map((c, i) => (
-            <motion.div
-              key={c.name}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 + i * 0.15, duration: 0.4 }}
-              className="flex items-center justify-between rounded-xl border border-line px-4 py-3"
-            >
-              <div>
-                <p className="text-sm font-semibold text-ink">{c.name}</p>
-                <p className="text-xs text-muted">{c.meta}</p>
-              </div>
-              <span
-                className={`grid h-7 w-7 place-items-center rounded-full ${
-                  c.ok ? "bg-primary-soft text-primary" : "bg-coral-soft text-coral"
-                }`}
-              >
-                {c.ok ? (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-                    <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-                    <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.6" />
-                    <path d="M6 4v2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                  </svg>
-                )}
-              </span>
-            </motion.div>
-          ))}
+        {/* Custom SVG Asymmetric Wave Divider at the Bottom */}
+        <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none z-10">
+          <svg
+            viewBox="0 0 1200 120"
+            preserveAspectRatio="none"
+            className="relative block w-full h-[60px] md:h-[100px] text-white fill-current"
+          >
+            <path
+              d="M0,0 C150,90 350,120 600,100 C850,80 1050,40 1200,0 L1200,120 L0,120 Z"
+            />
+          </svg>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

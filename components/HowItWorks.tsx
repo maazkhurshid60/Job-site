@@ -1,118 +1,98 @@
-import { Container, Eyebrow } from "./ui";
-import type { ReactNode } from "react";
+"use client";
+
+import { Container } from "./ui";
 
 const steps = [
   {
-    title: "Tell us the role, once",
-    body: "Brief us on the hire and the bounty. We translate it into a clear spec and put our specialist recruiter network to work — no job-board spam, no chasing.",
-    art: <SourceArt />,
+    title: "Browse Open Placements",
+    body: "Review our list of vetted civil, structural, manufacturing, and technical roles. Each job shows the precise requirements and the referral commission you can earn.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-brand">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+    ),
+    href: "#jobs",
   },
   {
-    title: "We screen every submission",
-    body: "Recruiters submit candidates to us, not to you. Our team vets each one against your brief, so nothing reaches your desk until it has cleared our bar.",
-    art: <ScreenArt />,
-    href: "#companies",
+    title: "Apply or Refer Candidates",
+    body: "Apply directly if you match the brief, or refer qualified professionals from your network by entering their details and uploading their CV.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-brand">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="m19 8 2 2 4-4" />
+      </svg>
+    ),
+    href: "#jobs",
   },
   {
-    title: "You meet a curated shortlist",
-    body: "You review a short, pre-qualified list and stay with one point of contact from first intro to signed offer. Pay only when the hire is confirmed.",
-    art: <HireArt />,
+    title: "Earn Referral Commission",
+    body: "Our principal recruiter screens candidates and handles coordinates with the client. When your referred candidate is selected and placed, you receive the success commission.",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-brand">
+        <line x1="12" x2="12" y1="2" y2="22" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    ),
+    href: "#jobs",
   },
 ];
 
 export function HowItWorks() {
   return (
-    <section id="how" className="bg-white">
-      <Container className="py-16 lg:py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <Eyebrow>How it works</Eyebrow>
-          <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+    <section id="how" className="bg-gray-50/30 py-20 border-b border-gray-100">
+      <Container>
+        <div className="mx-auto max-w-2xl text-center mb-16">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
+            How it works
+          </span>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
             The reach of a marketplace, the judgement of an agency
           </h2>
         </div>
 
-        <div className="mt-14 grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3">
           {steps.map((s, i) => (
-            <div key={s.title}>
-              <div className="rounded-2xl border border-line bg-white p-3 shadow-[0_16px_40px_-28px_rgba(23,19,15,0.35)]">
-                {/* window chrome */}
-                <div className="mb-3 flex items-center gap-1.5 px-2 pt-1">
-                  <span className="h-2 w-2 rounded-full bg-coral" />
-                  <span className="h-2 w-2 rounded-full bg-lime" />
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                </div>
-                <div className="grid h-40 place-items-center rounded-xl bg-cream/60">
-                  {s.art}
+            <div
+              key={s.title}
+              className="group relative rounded-3xl border border-gray-100 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-blue-brand/20"
+            >
+              {/* Icon Container */}
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-brand-soft mb-6 transition-colors duration-300 group-hover:bg-blue-brand group-hover:text-white text-blue-brand">
+                <div className="group-hover:scale-110 transition-transform duration-300">
+                  {s.icon}
                 </div>
               </div>
 
-              <div className="mt-6 flex items-start gap-3">
-                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary">
-                  {i + 1}
-                </span>
-                <div>
-                  <h3 className="text-lg font-bold text-ink">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted">{s.body}</p>
-                  {s.href && (
-                    <a
-                      href={s.href}
-                      className="mt-3 inline-block text-sm font-semibold text-primary hover:text-primary-dark"
-                    >
-                      Learn more →
-                    </a>
-                  )}
-                </div>
+              {/* Step number badge */}
+              <span className="absolute top-8 right-8 text-4xl font-black text-gray-100 select-none group-hover:text-blue-brand/10 transition-colors duration-300">
+                0{i + 1}
+              </span>
+
+              <h3 className="text-xl font-bold text-ink group-hover:text-blue-brand transition-colors duration-200">
+                {s.title}
+              </h3>
+              
+              <p className="mt-4 text-sm leading-relaxed text-muted">
+                {s.body}
+              </p>
+
+              <div className="mt-6 pt-2">
+                <a
+                  href={s.href || "#"}
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-brand hover:text-blue-brand-dark transition-colors"
+                >
+                  Learn more
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transform group-hover:translate-x-1 transition-transform">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </a>
               </div>
             </div>
           ))}
         </div>
       </Container>
     </section>
-  );
-}
-
-/* Lightweight inline illustrations in the brand palette */
-function Frame({ children }: { children: ReactNode }) {
-  return <svg width="180" height="120" viewBox="0 0 180 120" fill="none">{children}</svg>;
-}
-
-function SourceArt() {
-  return (
-    <Frame>
-      {[0, 1, 2].map((i) => (
-        <g key={i} transform={`translate(${18 + i * 52} 34)`}>
-          <rect width="44" height="52" rx="8" fill="#fff" stroke="#ece5db" />
-          <circle cx="22" cy="18" r="9" fill={["#ee5b3f", "#1e9e63", "#c0d64e"][i]} />
-          <rect x="10" y="34" width="24" height="4" rx="2" fill="#ece5db" />
-          <rect x="14" y="42" width="16" height="4" rx="2" fill="#ece5db" />
-        </g>
-      ))}
-    </Frame>
-  );
-}
-
-function ScreenArt() {
-  return (
-    <Frame>
-      <rect x="24" y="20" width="132" height="24" rx="6" fill="#fff" stroke="#ece5db" />
-      <rect x="24" y="52" width="132" height="24" rx="6" fill="#fff" stroke="#ece5db" />
-      <rect x="24" y="84" width="132" height="24" rx="6" fill="#fff" stroke="#ece5db" />
-      <circle cx="40" cy="32" r="6" fill="#1e9e63" />
-      <circle cx="40" cy="64" r="6" fill="#ee5b3f" />
-      <circle cx="40" cy="96" r="6" fill="#1e9e63" />
-      <path d="M37 32l2 2 4-4" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M37 96l2 2 4-4" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </Frame>
-  );
-}
-
-function HireArt() {
-  return (
-    <Frame>
-      <rect x="46" y="24" width="88" height="72" rx="10" fill="#fff" stroke="#ece5db" />
-      <circle cx="90" cy="52" r="16" fill="#e5f3ea" />
-      <path d="M83 52l5 5 9-10" stroke="#1e9e63" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="66" y="76" width="48" height="6" rx="3" fill="#ece5db" />
-    </Frame>
   );
 }

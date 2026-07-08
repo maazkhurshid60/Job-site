@@ -19,7 +19,7 @@ export function Recruiters() {
               Bring the candidates. We&apos;ll bring the roles.
             </h2>
             <p className="mt-4 text-white/70">
-              Join the Metro Opportunities network and get matched to funded,
+              Join the Metro Associates network and get matched to funded,
               well-defined roles. Submit your best people, and get paid when they
               land the job.
             </p>

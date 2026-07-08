@@ -26,7 +26,7 @@ export const EMPLOYMENT_TYPES = [
 
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
 
-/* Verticals Metro Opportunities / Patrick recruit across (engineering,
+/* Verticals Metro Associates / Patrick recruit across (engineering,
    technical, cleared & government). Used for the job-board category filter. */
 export const JOB_CATEGORIES = [
   "Civil Engineering",
@@ -61,7 +61,7 @@ export const DEFAULT_HIRING_STAGES = [
   "Offer",
 ];
 
-/* A role Metro Opportunities is sourcing for. `company` is the client;
+/* A role Metro Associates is sourcing for. `company` is the client;
    `bounty` is what a recruiter earns on a confirmed hire. */
 export type Job = {
   id: string;

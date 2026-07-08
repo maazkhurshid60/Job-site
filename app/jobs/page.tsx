@@ -222,7 +222,7 @@ export default function JobsPage() {
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
                   <path d="M10 2l2.4 5 5.6.5-4.2 3.7 1.3 5.6L10 14l-5.1 2.8L6.2 11 2 7.3l5.6-.5L10 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
                 </svg>
-                <span><strong>{jobs.length}</strong> open role{jobs.length === 1 ? "" : "s"} from Metro Opportunities</span>
+                <span><strong>{jobs.length}</strong> open role{jobs.length === 1 ? "" : "s"} from Metro Associates</span>
               </div>
 
               <SidebarCard title="Browse by category">

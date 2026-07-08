@@ -55,7 +55,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input"
-                placeholder="you@metroopportunities.com"
+                placeholder="you@metroassociates.com"
               />
             </Field>
             <Field label="Password">

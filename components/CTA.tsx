@@ -15,7 +15,7 @@ export function CTA() {
             Let&apos;s grow together
           </h2>
           <p className="mx-auto mt-5 max-w-lg text-muted">
-            No retainers and no upfront fees. Metro Opportunities helps companies of
+            No retainers and no upfront fees. Metro Associates helps companies of
             all sizes hire — you only pay a success fee once the right person
             signs. Tell us your role and we&apos;ll take it from there.
           </p>

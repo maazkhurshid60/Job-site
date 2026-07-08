@@ -46,13 +46,13 @@ export default function ContactPage() {
             </h1>
             <p className="mt-4 max-w-md text-muted">
               Tell us the roles you&apos;re hiring for and we&apos;ll get back to
-              you with how Metro Opportunities can help — usually within one
+              you with how Metro Associates can help — usually within one
               business day.
             </p>
             <dl className="mt-8 space-y-4 text-sm">
               <div>
                 <dt className="font-semibold text-ink">Email</dt>
-                <dd className="text-muted">hello@metroopportunities.com</dd>
+                <dd className="text-muted">hello@metroassociates.com</dd>
               </div>
               <div>
                 <dt className="font-semibold text-ink">Hours</dt>

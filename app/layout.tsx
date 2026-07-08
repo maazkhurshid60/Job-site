@@ -10,7 +10,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Metro Opportunities — Hiring, handled end to end",
+  title: "Metro Associates — Hiring, handled end to end",
   description:
     "A crowdsourced recruiting agency. We put a network of specialist recruiters behind every role, screen every candidate ourselves, and stay your single point of contact until the hire is made.",
 };
