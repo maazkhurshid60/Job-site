@@ -87,12 +87,7 @@ export function Hero() {
 
         {/* Hero Content */}
         <Container className="relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="mx-auto max-w-3xl"
-          >
+          <div className="hero-rise mx-auto max-w-3xl">
             <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-200 mb-6">
               Why Metro Associates
             </span>
@@ -149,7 +144,7 @@ export function Hero() {
                 candidates placed through Metro Associates
               </p>
             </div>
-          </motion.div>
+          </div>
         </Container>
 
         {/* Custom SVG Asymmetric Wave Divider at the Bottom */}

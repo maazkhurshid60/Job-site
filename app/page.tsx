@@ -1,6 +1,5 @@
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
-import { FeaturedJobs } from "@/components/FeaturedJobs";
 import { SocialProof } from "@/components/SocialProof";
 import { HowItWorks } from "@/components/HowItWorks";
 import { Reasons } from "@/components/Reasons";
@@ -15,11 +14,7 @@ export default function Home() {
       <Navbar />
       <main className="flex-1 bg-white">
         <Hero />
-        
-        <Reveal>
-          <FeaturedJobs />
-        </Reveal>
-        
+
         <Reveal>
           <SocialProof />
         </Reveal>

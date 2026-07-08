@@ -1,29 +1,59 @@
 "use client";
 
-import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
-/* Fade + rise on scroll into view. Wrap a landing section to animate it in. */
+/* Fade + rise on scroll into view. Wrap a landing section to animate it in.
+ *
+ * Resilient by design: the content renders fully visible. Only after this
+ * component mounts (JS running) does it "arm" the hidden start state via a
+ * CSS class, then reveal on scroll. If JS never runs, is paused, or the
+ * visitor prefers reduced motion, the content is simply shown — never blank.
+ * Animation styles live in app/globals.css (.reveal / .reveal-armed). */
 export function Reveal({
   children,
   delay = 0,
-  y = 24,
   className = "",
 }: {
   children: ReactNode;
   delay?: number;
-  y?: number;
   className?: string;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [armed, setArmed] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    // JS is running — safe to hide first, then animate in.
+    setArmed(true);
+
+    const el = ref.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const classes = [
+    "reveal",
+    armed && "reveal-armed",
+    visible && "is-visible",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay }}
-    >
+    <div ref={ref} className={classes} style={{ transitionDelay: `${delay}s` }}>
       {children}
-    </motion.div>
+    </div>
   );
 }

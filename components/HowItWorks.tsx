@@ -12,7 +12,7 @@ const steps = [
         <path d="m21 21-4.3-4.3" />
       </svg>
     ),
-    href: "#jobs",
+    href: "/jobs",
   },
   {
     title: "Apply or Refer Candidates",
@@ -24,7 +24,7 @@ const steps = [
         <path d="m19 8 2 2 4-4" />
       </svg>
     ),
-    href: "#jobs",
+    href: "/jobs",
   },
   {
     title: "Earn Referral Commission",
@@ -35,7 +35,7 @@ const steps = [
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
       </svg>
     ),
-    href: "#jobs",
+    href: "/jobs",
   },
 ];
 
