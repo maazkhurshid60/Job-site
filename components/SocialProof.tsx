@@ -9,7 +9,7 @@ const stats = [
   { to: 8.5, decimals: 1, prefix: "$", suffix: "B", label: "In salaries placed" },
 ];
 
-const companies = ["airbnb", "ShipBob", "DISCOVER", "Walmart", "Ramp"];
+const companies = ["State DOTs", "Municipalities", "AEC Firms", "Design-Builders", "Public Agencies"];
 
 export function SocialProof() {
   return (
@@ -24,9 +24,9 @@ export function SocialProof() {
               Where great companies hire great people
             </h2>
             <p className="mt-4 text-base text-muted leading-relaxed">
-              Since 2012, the world&apos;s best companies have leaned on Metro
-              Associates to find their next hire — without the noise of an open
-              marketplace.
+              For decades, DOT agencies, municipalities, and AEC firms have leaned
+              on Metro Associates to fill their toughest engineering roles — without
+              the noise of an open marketplace.
             </p>
           </div>
 
@@ -47,10 +47,10 @@ export function SocialProof() {
           </div>
         </div>
 
-        {/* Gray logo ribbon matching the Allianz, Konbini design */}
+        {/* Sector ribbon — the kinds of teams Metro Associates recruits for */}
         <div className="mt-16 border-t border-gray-100 pt-10">
           <p className="text-center text-xs font-bold uppercase tracking-widest text-muted/60 mb-6">
-            Trusted by industry leading teams
+            Trusted across DOT &amp; infrastructure teams
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 md:gap-x-20">
             {companies.map((c) => (

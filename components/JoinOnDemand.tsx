@@ -11,7 +11,7 @@ export function JoinOnDemand() {
     { src: img.avatars[1], top: "25%", right: "12%", size: "h-16 w-16", delay: 0.5 },
     { src: img.avatars[2], bottom: "20%", left: "15%", size: "h-16 w-16", delay: 1.2 },
     { src: img.avatars[3], bottom: "15%", right: "18%", size: "h-12 w-12", delay: 0.8 },
-    { src: img.wadeWarren, top: "50%", right: "8%", size: "h-14 w-14", delay: 2.0 },
+    { src: img.clientPortraitB, top: "50%", right: "8%", size: "h-14 w-14", delay: 2.0 },
     { src: img.clientPortraitA, top: "45%", left: "8%", size: "h-14 w-14", delay: 1.7 },
   ];
 

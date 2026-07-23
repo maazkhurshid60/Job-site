@@ -19,70 +19,53 @@ export function Hero() {
           <div className="absolute bottom-4 left-1/3 h-52 w-52 rounded-full bg-white blur-3xl" />
         </div>
 
-        {/* Floating Badges */}
-        {/* Badge 1: Cloud */}
+        {/* Floating discipline badges — the engineering fields Metro recruits for */}
+        {/* Badge 1: Transportation */}
         <motion.div
           animate={{ y: [0, -12, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0 }}
           className="absolute left-[8%] top-[12%] hidden md:flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-xs font-bold text-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-white/20"
         >
-          <span className="text-blue-500">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17.5 19A6 6 0 0 0 22 13a6 6 0 0 0-6-6h-.5A8 8 0 0 0 4.5 9a6 6 0 0 0 1 11.5H17.5z" />
-            </svg>
-          </span>
-          Cloud
+          <span className="h-2 w-2 rounded-full bg-blue-500" />
+          Transportation
         </motion.div>
 
-        {/* Badge 2: Microsoft */}
+        {/* Badge 2: Structural & Bridge */}
         <motion.div
           animate={{ y: [0, -12, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
           className="absolute left-[6%] top-[45%] hidden md:flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-2.5 text-sm font-semibold text-gray-800 shadow-[0_10px_35px_rgb(0,0,0,0.08)] border border-white/20"
         >
-          <div className="grid grid-cols-2 gap-0.5 w-4 h-4">
-            <span className="bg-[#f25022] w-1.5 h-1.5" />
-            <span className="bg-[#7fba00] w-1.5 h-1.5" />
-            <span className="bg-[#00a4ef] w-1.5 h-1.5" />
-            <span className="bg-[#ffb900] w-1.5 h-1.5" />
-          </div>
-          Microsoft
+          <span className="h-2.5 w-2.5 rounded-sm bg-amber-500" />
+          Structural &amp; Bridge
         </motion.div>
 
-        {/* Badge 3: AWS */}
+        {/* Badge 3: DOT & Highway */}
         <motion.div
           animate={{ y: [0, -12, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
-          className="absolute left-[10%] bottom-[18%] hidden md:flex items-center gap-2 rounded-full bg-blue-brand/30 text-cyan-300 font-bold px-5 py-3 text-sm shadow-[0_12px_40px_rgb(27,92,255,0.25)] border border-cyan-400/20 backdrop-blur-sm"
+          className="absolute left-[10%] bottom-[18%] hidden md:flex items-center gap-2 rounded-full bg-blue-brand/30 text-white font-bold px-5 py-3 text-sm shadow-[0_12px_40px_rgb(27,92,255,0.25)] border border-cyan-400/20 backdrop-blur-sm"
         >
-          <span className="tracking-tight text-white">aws</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
+          <span className="tracking-tight">DOT &amp; Highway</span>
         </motion.div>
 
-        {/* Badge 4: Airbnb */}
+        {/* Badge 4: Water & Environmental */}
         <motion.div
           animate={{ y: [0, -12, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.2 }}
           className="absolute right-[8%] bottom-[25%] hidden md:flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-3 text-sm font-semibold text-gray-800 shadow-[0_10px_35px_rgb(0,0,0,0.08)] border border-white/20"
         >
-          <span className="text-[#ff5a5f]">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </span>
-          airbnb
+          <span className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
+          Water &amp; Environmental
         </motion.div>
 
-        {/* Badge 5: Uber */}
+        {/* Badge 5: Inspection / CEI */}
         <motion.div
           animate={{ y: [0, -12, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1.1 }}
           className="absolute right-[6%] top-[35%] hidden md:flex items-center gap-2 rounded-full bg-gray-900 text-white px-5 py-2.5 text-sm font-bold shadow-[0_10px_35px_rgb(0,0,0,0.15)] border border-gray-800"
         >
-          UBER
+          Inspection / CEI
         </motion.div>
 
         {/* Hero Content */}

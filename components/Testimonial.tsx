@@ -36,22 +36,16 @@ export function Testimonial() {
             <p className="eyebrow uppercase">Client stories</p>
             <blockquote className="mt-4 text-2xl font-bold leading-snug tracking-tight text-ink sm:text-3xl">
               &ldquo;With the reach of a recruiting network, Metro Associates cut
-              our dependence on in-house sourcing — we filled two specialist
-              roles in under a month, and never once sifted a bad CV.&rdquo;
+              our dependence on in-house sourcing — we filled two hard-to-fill PE
+              roles in under a month, and never once sifted a bad résumé.&rdquo;
             </blockquote>
             <div className="mt-6 flex items-center gap-3">
-              <span className="relative h-11 w-11 overflow-hidden rounded-full bg-primary/20">
-                <Image
-                  src={img.wadeWarren}
-                  alt="Wade Warren"
-                  fill
-                  sizes="44px"
-                  className="object-cover"
-                />
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-blue-brand/10 text-blue-brand font-extrabold text-sm">
+                MA
               </span>
               <div>
-                <p className="font-semibold text-ink">Wade Warren</p>
-                <p className="text-sm text-muted">Head of Talent, Elevate</p>
+                <p className="font-semibold text-ink">Engineering Hiring Manager</p>
+                <p className="text-sm text-muted">Transportation Design Firm</p>
               </div>
             </div>
           </div>

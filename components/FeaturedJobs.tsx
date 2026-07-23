@@ -239,38 +239,38 @@ const INITIAL_JOBS: JobListing[] = [
   },
   {
     id: "13",
-    title: "Lead DevOps Engineer (AWS)",
-    location: "Toronto, Ontario",
-    type: "Full-time",
-    remoteType: "Remote",
-    country: "Canada",
+    title: "Highway Design Engineer (PE)",
+    location: "Providence, Rhode Island",
+    type: "Direct Hire",
+    remoteType: "Hybrid",
+    country: "United States",
     datePosted: "1 week ago",
     daysAgo: 8,
     featured: false,
     commission: 6500,
-    description: "Build robust infrastructure-as-code deployment pipelines using AWS CDK, Terraform, and Kubernetes for high-load SaaS platforms.",
+    description: "Lead roadway and interchange design for state DOT programs — geometric design, drainage, and maintenance-of-traffic plans from preliminary engineering through PS&E.",
     requirements: [
-      "AWS Certified Solutions Architect or DevOps Professional",
-      "5+ years scaling containerized microservices in cloud environments",
-      "Deep scripting experience in Bash, Python, or Go"
+      "Active PE License (or EIT on track for PE)",
+      "5+ years in highway/roadway design (MicroStation / OpenRoads)",
+      "Familiarity with AASHTO and state DOT design standards"
     ]
   },
   {
     id: "14",
-    title: "Healthcare Facility Engineer",
+    title: "Bridge Design Engineer (PE)",
     location: "New Haven, Connecticut",
-    type: "Full-time",
+    type: "Direct Hire",
     remoteType: "Onsite",
     country: "United States",
     datePosted: "1 week ago",
     daysAgo: 9,
     featured: false,
     commission: 3500,
-    description: "Oversee building automation, custom HVAC layouts, and back-up generator sets within a tertiary care medical complex.",
+    description: "Design and load-rate highway bridges and culverts for CTDOT and municipal programs, from preliminary studies through final structural plans.",
     requirements: [
-      "Degree in Mechanical/Electrical Engineering or equivalent trade certifications",
-      "4+ years working in operational healthcare environments (ASHE CHFM preferred)",
-      "Knowledge of Joint Commission facility engineering compliance guidelines"
+      "Active PE License (CT) or EIT progressing to PE",
+      "4+ years in bridge / structural design",
+      "Experience with AASHTO LRFD and bridge load rating"
     ]
   },
   {
@@ -347,7 +347,7 @@ const INITIAL_JOBS: JobListing[] = [
   },
   {
     id: "19",
-    title: "Manufacturing Operations Manager",
+    title: "Construction Project Manager (Heavy Civil)",
     location: "Waterbury, Connecticut",
     type: "Direct Hire",
     remoteType: "Onsite",
@@ -356,16 +356,16 @@ const INITIAL_JOBS: JobListing[] = [
     daysAgo: 17,
     featured: false,
     commission: 5500,
-    description: "Oversee machining, assembly, and fabrication shifts in a metal components manufacturing plant. Champion Lean Six Sigma transformations.",
+    description: "Manage heavy-civil and transportation construction projects — schedule, budget, subcontractors, and DOT coordination from mobilization through closeout.",
     requirements: [
-      "BS in Industrial or Manufacturing Engineering",
-      "6+ years directing shopfloor operations and safety compliance",
-      "Six Sigma Green or Black Belt certification"
+      "10+ years managing heavy-civil / transportation construction",
+      "PMP and/or PE preferred",
+      "Experience with DOT specifications and prevailing-wage projects"
     ]
   },
   {
     id: "20",
-    title: "Clinical Systems Engineer",
+    title: "Water / Wastewater Treatment Engineer",
     location: "Hartford, Connecticut",
     type: "Full-time",
     remoteType: "Hybrid",
@@ -374,11 +374,11 @@ const INITIAL_JOBS: JobListing[] = [
     daysAgo: 21,
     featured: false,
     commission: 4000,
-    description: "Configure medical device networking protocols, validate EHR hardware integrations, and ensure cyber-security standards.",
+    description: "Design water and wastewater treatment upgrades and pump stations for municipal and state clients, from process design through permitting.",
     requirements: [
-      "Degree in Biomedical or Computer Engineering",
-      "Experience supporting clinical networking nodes (DICOM, HL7)",
-      "Familiarity with hospital security compliance models"
+      "PE License in Civil / Environmental (or EIT)",
+      "4+ years in water / wastewater process design",
+      "Familiarity with state DEEP / EPA permitting"
     ]
   },
   {
@@ -1034,7 +1034,7 @@ export function FeaturedJobs() {
                       <input
                         type="text"
                         required
-                        placeholder="Wade Warren"
+                        placeholder="Jane Doe"
                         value={applyName}
                         onChange={(e) => setApplyName(e.target.value)}
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-ink outline-none focus:border-blue-brand"

@@ -72,21 +72,21 @@ export function Reasons() {
               transition={{ repeat: Infinity, duration: 24, ease: "linear" }}
               className="absolute z-10 h-[180px] w-[180px] rounded-full border border-dashed border-gray-200"
             >
-              {/* AWS logo */}
+              {/* Discipline: DOT */}
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ repeat: Infinity, duration: 24, ease: "linear" }}
                 className="absolute top-0 left-1/2 -ml-5 -mt-5 flex h-10 w-10 items-center justify-center rounded-full bg-[#1b5cff]/10 text-blue-brand font-bold text-[10px] shadow-sm border border-blue-100"
               >
-                aws
+                DOT
               </motion.div>
-              {/* Allianz logo */}
+              {/* Discipline: AEC */}
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ repeat: Infinity, duration: 24, ease: "linear" }}
                 className="absolute bottom-0 left-1/2 -ml-5 -mb-5 flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white font-bold text-[10px] shadow-sm border border-blue-500"
               >
-                AZ
+                AEC
               </motion.div>
             </motion.div>
 
@@ -96,26 +96,21 @@ export function Reasons() {
               transition={{ repeat: Infinity, duration: 32, ease: "linear" }}
               className="absolute z-10 h-[280px] w-[280px] rounded-full border border-dashed border-gray-200/80"
             >
-              {/* Microsoft Logo */}
+              {/* Discipline: PE */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 32, ease: "linear" }}
                 className="absolute top-1/2 left-0 -ml-6 -mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-md border border-gray-100"
               >
-                <div className="grid grid-cols-2 gap-0.5 w-4 h-4">
-                  <span className="bg-[#f25022] w-1.5 h-1.5" />
-                  <span className="bg-[#7fba00] w-1.5 h-1.5" />
-                  <span className="bg-[#00a4ef] w-1.5 h-1.5" />
-                  <span className="bg-[#ffb900] w-1.5 h-1.5" />
-                </div>
+                <span className="font-extrabold text-[11px] text-blue-brand">PE</span>
               </motion.div>
-              {/* Konbini logo */}
+              {/* Discipline: CEI */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 32, ease: "linear" }}
-                className="absolute top-1/2 right-0 -mr-6 -mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500 text-white font-black text-xs shadow-md border border-cyan-400"
+                className="absolute top-1/2 right-0 -mr-6 -mt-6 flex h-12 w-12 items-center justify-center rounded-full bg-cyan-500 text-white font-black text-[11px] shadow-md border border-cyan-400"
               >
-                K
+                CEI
               </motion.div>
             </motion.div>
 
@@ -125,29 +120,29 @@ export function Reasons() {
               transition={{ repeat: Infinity, duration: 48, ease: "linear" }}
               className="absolute z-10 h-[380px] w-[380px] rounded-full border border-dashed border-gray-200/60"
             >
-              {/* Forbes Logo */}
+              {/* Discipline: MEP */}
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ repeat: Infinity, duration: 48, ease: "linear" }}
-                className="absolute top-0 left-1/2 -ml-7 -mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-500 font-extrabold text-[10px] shadow-sm border border-gray-200"
+                className="absolute top-0 left-1/2 -ml-7 -mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-500 font-extrabold text-[11px] shadow-sm border border-gray-200"
               >
-                Forbes
+                MEP
               </motion.div>
-              {/* Google Cloud Logo */}
+              {/* Discipline: Water */}
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ repeat: Infinity, duration: 48, ease: "linear" }}
-                className="absolute bottom-1/4 left-0 -ml-7 flex h-14 w-14 items-center justify-center rounded-full bg-teal-50 text-teal-600 font-bold text-xs shadow-sm border border-teal-100"
+                className="absolute bottom-1/4 left-0 -ml-7 flex h-14 w-14 items-center justify-center rounded-full bg-teal-50 text-teal-600 font-bold text-[11px] shadow-sm border border-teal-100"
               >
-                GCP
+                Water
               </motion.div>
-              {/* Viessmann logo */}
+              {/* Discipline: Geotech */}
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ repeat: Infinity, duration: 48, ease: "linear" }}
-                className="absolute bottom-1/4 right-0 -mr-7 flex h-14 w-14 items-center justify-center rounded-full bg-white text-gray-800 font-bold text-[9px] shadow-sm border border-gray-100"
+                className="absolute bottom-1/4 right-0 -mr-7 flex h-14 w-14 items-center justify-center rounded-full bg-white text-gray-800 font-bold text-[11px] shadow-sm border border-gray-100"
               >
-                VIESMANN
+                GEO
               </motion.div>
             </motion.div>
 
