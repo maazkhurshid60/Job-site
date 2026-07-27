@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Metro Associates — Firebase Storage rules.
+// JobFolder — Firebase Storage rules.
 // Paste into Firebase console → Storage → Rules, then Publish.
 service firebase.storage {
   match /b/{bucket}/o {

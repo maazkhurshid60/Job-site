@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Metro Associates — Firestore security rules.
+// JobFolder — Firestore security rules.
 // Paste these into Firebase console → Firestore Database → Rules, then Publish.
 service cloud.firestore {
   match /databases/{database}/documents {

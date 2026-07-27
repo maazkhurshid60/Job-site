@@ -36,7 +36,7 @@ export default function RecruiterApplyPage() {
           <div className="max-w-2xl">
             <Eyebrow>For recruiters</Eyebrow>
             <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
-              Join the Metro Associates network
+              Join the JobFolder network
             </h1>
             <p className="mt-4 text-muted">
               Bring the candidates, we&apos;ll bring the roles. Get matched to

@@ -84,7 +84,7 @@ export function Footer() {
 
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-8 sm:flex-row">
           <p className="text-sm text-muted font-medium">
-            © {new Date().getFullYear()} Metro Associates. All rights reserved.
+            © {new Date().getFullYear()} JobFolder. All rights reserved.
           </p>
           <div className="flex gap-3">
             {["in", "X", "f"].map((s) => (

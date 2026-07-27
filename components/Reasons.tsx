@@ -14,7 +14,7 @@ const reasons = [
   },
   {
     title: "One point of contact",
-    body: "You deal with Metro Associates, start to finish. We coordinate every recruiter behind the scenes so you never have to.",
+    body: "You deal with JobFolder, start to finish. We coordinate every recruiter behind the scenes so you never have to.",
   },
   {
     title: "Pay on the hire",
@@ -41,7 +41,7 @@ export function Reasons() {
               For companies
             </span>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-              More reasons companies come to Metro Associates
+              More reasons companies come to JobFolder
             </h2>
             <p className="mt-4 text-base text-muted leading-relaxed max-w-md">
               Whether you&apos;re hiring your fifth employee or your five
@@ -63,7 +63,7 @@ export function Reasons() {
             
             {/* Center Node */}
             <div className="absolute z-20 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)] border border-gray-100">
-              <span className="text-xs font-extrabold tracking-widest text-gray-400">METRO</span>
+              <span className="text-xs font-extrabold tracking-widest text-gray-400">JOBFOLDER</span>
             </div>
 
             {/* Inner Circle (Orbit 1) */}

@@ -34,7 +34,7 @@ export default function LoginPage() {
   return (
     <AuthCard
       title="Welcome back"
-      subtitle="Sign in to your Metro Associates account."
+      subtitle="Sign in to your JobFolder account."
       footer={
         <>
           New here?{" "}

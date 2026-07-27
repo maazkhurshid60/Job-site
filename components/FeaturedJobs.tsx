@@ -604,10 +604,10 @@ export function FeaturedJobs() {
         {/* Header section with Steel-Navy accent */}
         <div className="max-w-3xl mb-12">
           <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-            Metro Associates
+            JobFolder
           </h2>
           <p className="mt-4 text-base text-muted leading-relaxed">
-            Metro Associates is a specialized staffing and executive search firm
+            JobFolder is a specialized staffing and executive search firm
             serving engineering, infrastructure, manufacturing, healthcare,
             technology, and other technical markets nationwide and
             internationally.

@@ -19,7 +19,7 @@ export function Hero() {
           <div className="absolute bottom-4 left-1/3 h-52 w-52 rounded-full bg-white blur-3xl" />
         </div>
 
-        {/* Floating discipline badges — the engineering fields Metro recruits for */}
+        {/* Floating discipline badges — the engineering fields JobFolder recruits for */}
         {/* Badge 1: Transportation */}
         <motion.div
           animate={{ y: [0, -12, 0] }}
@@ -72,7 +72,7 @@ export function Hero() {
         <Container className="relative z-10 text-center">
           <div className="hero-rise mx-auto max-w-3xl">
             <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-200 mb-6">
-              Why Metro Associates
+              Why JobFolder
             </span>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl leading-tight">
               Hiring that brings the right people and companies together.
@@ -124,7 +124,7 @@ export function Hero() {
                 <span className="font-extrabold text-white">
                   <CountUp to={27500} suffix="+" />
                 </span>{" "}
-                candidates placed through Metro Associates
+                candidates placed through JobFolder
               </p>
             </div>
           </div>

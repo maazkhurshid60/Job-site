@@ -25,7 +25,7 @@ export function SocialProof() {
             </h2>
             <p className="mt-4 text-base text-muted leading-relaxed">
               For decades, DOT agencies, municipalities, and AEC firms have leaned
-              on Metro Associates to fill their toughest engineering roles — without
+              on JobFolder to fill their toughest engineering roles — without
               the noise of an open marketplace.
             </p>
           </div>
@@ -47,7 +47,7 @@ export function SocialProof() {
           </div>
         </div>
 
-        {/* Sector ribbon — the kinds of teams Metro Associates recruits for */}
+        {/* Sector ribbon — the kinds of teams JobFolder recruits for */}
         <div className="mt-16 border-t border-gray-100 pt-10">
           <p className="text-center text-xs font-bold uppercase tracking-widest text-muted/60 mb-6">
             Trusted across DOT &amp; infrastructure teams

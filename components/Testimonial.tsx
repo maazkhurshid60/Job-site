@@ -17,7 +17,7 @@ export function Testimonial() {
             </span>
 
             <blockquote className="relative text-2xl font-bold leading-snug tracking-tight text-ink sm:text-3xl">
-              With the reach of a recruiting network, Metro Associates cut our
+              With the reach of a recruiting network, JobFolder cut our
               dependence on in-house sourcing — we filled two hard-to-fill PE
               roles in under a month, and never once sifted a bad résumé.
             </blockquote>

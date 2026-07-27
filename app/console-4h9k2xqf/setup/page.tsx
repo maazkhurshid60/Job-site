@@ -78,7 +78,7 @@ export default function AdminSetupPage() {
             Create admin
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Sets up your first Metro Associates admin account.
+            Sets up your first JobFolder admin account.
           </p>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -92,7 +92,7 @@ export default function AdminSetupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input"
-                placeholder="admin@metroassociates.com"
+                placeholder="admin@jobfolder.com"
               />
             </label>
             <label className="block">

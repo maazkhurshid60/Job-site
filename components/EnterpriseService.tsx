@@ -21,7 +21,7 @@ export function EnterpriseService() {
                 Let&apos;s grow your team together
               </h2>
               <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed">
-                No retainers and no upfront fees. Metro Associates helps companies of
+                No retainers and no upfront fees. JobFolder helps companies of
                 all sizes hire — you only pay a success fee once the right candidate
                 signs. Tell us your role and we&apos;ll handle candidate screening from there.
               </p>

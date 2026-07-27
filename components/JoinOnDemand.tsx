@@ -56,7 +56,7 @@ export function JoinOnDemand() {
             Join professionals on demand
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-muted">
-            Bring the candidates, we&apos;ll bring the roles. Metro Associates network matches you to vetted, well-defined positions. Submit your best profiles, and get rewarded.
+            Bring the candidates, we&apos;ll bring the roles. JobFolder network matches you to vetted, well-defined positions. Submit your best profiles, and get rewarded.
           </p>
           <div className="mt-8 flex justify-center">
             <a
