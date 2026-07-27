@@ -4,12 +4,13 @@
  * JobFolder — design tokens (extracted from the Career.co ref) *
  * ------------------------------------------------------------------ */
 @theme {
-  /* Brand */
-  --color-primary: #1e9e63;
-  --color-primary-dark: #16814f;
-  --color-primary-soft: #e5f3ea;
+  /* Brand — primary now points to the blue redesign so every `primary`
+     utility renders on-brand. (Old green kept below for reference only.) */
+  --color-primary: #224fa8;
+  --color-primary-dark: #123173;
+  --color-primary-soft: #e2e9f5;
 
-  /* Redesign Brand (Blue Theme - Toned Down Corporate Blue) */
+  /* Redesign Brand (Toned Down Corporate Blue) */
   --color-blue-brand: #224fa8;
   --color-blue-brand-dark: #123173;
   --color-blue-brand-soft: #f1f5fa;

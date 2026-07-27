@@ -2,7 +2,7 @@
 
 const DOTS = [
   { color: "#ee5b3f", delay: "-0.22s" }, // coral
-  { color: "#1e9e63", delay: "-0.11s" }, // green
+  { color: "#224fa8", delay: "-0.11s" }, // blue brand
   { color: "#c0d64e", delay: "0s" }, // lime
 ];
 

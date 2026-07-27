@@ -132,7 +132,7 @@ export function Reasons() {
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ repeat: Infinity, duration: 48, ease: "linear" }}
-                className="absolute bottom-1/4 left-0 -ml-7 flex h-14 w-14 items-center justify-center rounded-full bg-teal-50 text-teal-600 font-bold text-[11px] shadow-sm border border-teal-100"
+                className="absolute bottom-1/4 left-0 -ml-7 flex h-14 w-14 items-center justify-center rounded-full bg-sky-50 text-sky-600 font-bold text-[11px] shadow-sm border border-sky-100"
               >
                 Water
               </motion.div>

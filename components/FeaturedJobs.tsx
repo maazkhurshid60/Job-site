@@ -979,7 +979,7 @@ export function FeaturedJobs() {
               <button
                 onClick={() => setDetailsTab("refer")}
                 className={`flex-1 py-3 text-center transition-all cursor-pointer border-b-2 ${
-                  detailsTab === "refer" ? "border-blue-brand text-blue-brand bg-blue-50/10" : "border-transparent text-emerald-600 hover:text-emerald-700"
+                  detailsTab === "refer" ? "border-blue-brand text-blue-brand bg-blue-50/10" : "border-transparent text-muted hover:text-blue-brand"
                 }`}
               >
                 Refer &amp; Earn
@@ -1115,8 +1115,8 @@ export function FeaturedJobs() {
                   </div>
 
                   {/* Candidate Details */}
-                  <div className="p-4 rounded-2xl bg-emerald-50/20 border border-emerald-100/50">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-3">Referred Candidate Details</h5>
+                  <div className="p-4 rounded-2xl bg-blue-brand-soft border border-blue-brand-light/50">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-blue-brand-dark mb-3">Referred Candidate Details</h5>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[11px] font-semibold text-ink mb-1">Candidate Name</label>
@@ -1166,7 +1166,7 @@ export function FeaturedJobs() {
 
                   <button
                     type="submit"
-                    className="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-700 transition-all cursor-pointer flex justify-center items-center gap-1.5"
+                    className="w-full rounded-xl bg-blue-brand py-3 text-sm font-semibold text-white hover:bg-blue-brand-dark transition-all cursor-pointer flex justify-center items-center gap-1.5"
                   >
                     <svg className="fill-current" width="16" height="16" viewBox="0 0 24 24">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
