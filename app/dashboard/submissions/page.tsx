@@ -36,7 +36,7 @@ export default function MySubmissionsPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/roles"
+          href="/jobs"
           className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
         >
           Browse roles
@@ -60,7 +60,7 @@ export default function MySubmissionsPage() {
             Browse open roles and submit your first candidate to get started.
           </p>
           <Link
-            href="/dashboard/roles"
+            href="/jobs"
             className="mt-5 inline-block rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
           >
             Browse roles

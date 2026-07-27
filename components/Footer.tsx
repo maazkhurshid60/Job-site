@@ -18,26 +18,26 @@ const columns = [
     heading: "Company",
     links: [
       { label: "About us", href: "/#companies" },
-      { label: "Careers", href: "#" },
+      { label: "Careers", href: "/careers" },
       { label: "Contact", href: "/contact" },
-      { label: "Press", href: "#" },
+      { label: "Press", href: "/press" },
     ],
   },
   {
     heading: "Resources",
     links: [
-      { label: "Hiring guides", href: "#" },
-      { label: "Recruiter FAQ", href: "#" },
-      { label: "Case studies", href: "#" },
-      { label: "Blog", href: "#" },
+      { label: "Hiring guides", href: "/hiring-guides" },
+      { label: "Recruiter FAQ", href: "/recruiter-faq" },
+      { label: "Case studies", href: "/case-studies" },
+      { label: "Blog", href: "/blog" },
     ],
   },
   {
     heading: "Legal",
     links: [
-      { label: "Privacy", href: "#" },
-      { label: "Terms", href: "#" },
-      { label: "Cookie policy", href: "#" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+      { label: "Cookie policy", href: "/cookie-policy" },
     ],
   },
 ];
