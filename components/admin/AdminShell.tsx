@@ -18,6 +18,7 @@ const groups = [
       { label: "Jobs", href: adminRoutes.jobs, icon: "M3 6h14v11H3zM7 6V4h6v2" },
       { label: "Add new job", href: adminRoutes.newJob, icon: "M10 4v12M4 10h12" },
       { label: "Submissions", href: adminRoutes.submissions, icon: "M4 4h12v12H4zM7 8h6M7 11h6" },
+      { label: "Recruiters", href: adminRoutes.recruiters, icon: "M13 13a3 3 0 10-6 0M10 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5M15 13a2.5 2.5 0 00-3-2.4M5 13a2.5 2.5 0 013-2.4" },
     ],
   },
 ];

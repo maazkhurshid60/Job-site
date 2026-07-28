@@ -13,6 +13,11 @@ const nav = [
     href: "/dashboard/submissions",
     icon: "M6 3h6l4 4v10H6zM12 3v4h4",
   },
+  {
+    label: "My profile",
+    href: "/dashboard/profile",
+    icon: "M10 10a3 3 0 100-6 3 3 0 000 6zM4 17a6 6 0 0112 0z",
+  },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {

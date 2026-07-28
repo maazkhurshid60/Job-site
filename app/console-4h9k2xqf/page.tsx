@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { listJobs, type Job } from "@/lib/jobs";
 import { listAllSubmissions, type Submission } from "@/lib/submissions";
+import { listAllUsers, type UserProfile } from "@/lib/users";
 import { adminRoutes } from "@/lib/routes";
 import { StatCard, SubmissionBadge } from "@/components/dashboard/parts";
 import { Loader } from "@/components/Loader";
@@ -11,14 +12,16 @@ import { Loader } from "@/components/Loader";
 export default function AdminDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [subs, setSubs] = useState<Submission[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([listJobs(), listAllSubmissions()])
-      .then(([j, s]) => {
+    Promise.all([listJobs(), listAllSubmissions(), listAllUsers()])
+      .then(([j, s, u]) => {
         setJobs(j);
         setSubs(s);
+        setUsers(u);
       })
       .catch(() => setError("Could not load data. Check your Firestore rules."))
       .finally(() => setLoading(false));
@@ -62,9 +65,9 @@ export default function AdminDashboard() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Total jobs" value={jobs.length} hint={`${open} open · ${draft} draft`} />
-            <StatCard label="Open roles" value={open} />
-            <StatCard label="Submissions" value={subs.length} />
-            <StatCard label="Needs screening" value={inScreening} hint={`${hired} hired`} />
+            <StatCard label="Recruiters" value={users.length} />
+            <StatCard label="Submissions" value={subs.length} hint={`${inScreening} need screening`} />
+            <StatCard label="Hired" value={hired} />
           </div>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -102,6 +105,34 @@ export default function AdminDashboard() {
                         <p className="truncate text-xs text-muted">{s.jobTitle}</p>
                       </div>
                       <SubmissionBadge status={s.status} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          </div>
+
+          {/* recent recruiters */}
+          <div className="mt-4">
+            <Panel title="Recent recruiters" href={adminRoutes.recruiters} linkLabel="All recruiters">
+              {users.length === 0 ? (
+                <Empty text="No recruiters have signed up yet." />
+              ) : (
+                <ul className="divide-y divide-line">
+                  {users.slice(0, 5).map((u) => (
+                    <li key={u.uid} className="flex items-center gap-3 py-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft text-sm font-bold text-primary">
+                        {u.photoURL ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={u.photoURL} alt={u.name} className="h-full w-full object-cover" />
+                        ) : (
+                          (u.name || u.email || "R").charAt(0).toUpperCase()
+                        )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-ink">{u.name || "Unnamed"}</p>
+                        <p className="truncate text-xs text-muted">{u.company || u.email}</p>
+                      </div>
                     </li>
                   ))}
                 </ul>
