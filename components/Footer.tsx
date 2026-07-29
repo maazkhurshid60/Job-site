@@ -29,7 +29,6 @@ const columns = [
       { label: "Hiring guides", href: "/hiring-guides" },
       { label: "Recruiter FAQ", href: "/recruiter-faq" },
       { label: "Case studies", href: "/case-studies" },
-      { label: "Blog", href: "/blog" },
     ],
   },
   {
