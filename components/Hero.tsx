@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { Container } from "./ui";
 import { img } from "./images";
 import { CountUp } from "./motion/CountUp";
@@ -18,55 +17,6 @@ export function Hero() {
           <div className="absolute top-1/2 right-12 h-80 w-80 rounded-full bg-indigo-300 blur-3xl" />
           <div className="absolute bottom-4 left-1/3 h-52 w-52 rounded-full bg-white blur-3xl" />
         </div>
-
-        {/* Floating discipline badges — the engineering fields JobFolder recruits for */}
-        {/* Badge 1: Transportation */}
-        <motion.div
-          animate={{ y: [0, -12, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0 }}
-          className="absolute left-[8%] top-[12%] hidden md:flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-xs font-bold text-gray-800 shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-white/20"
-        >
-          <span className="h-2 w-2 rounded-full bg-blue-500" />
-          Transportation
-        </motion.div>
-
-        {/* Badge 2: Structural & Bridge */}
-        <motion.div
-          animate={{ y: [0, -12, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-          className="absolute left-[6%] top-[45%] hidden md:flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-2.5 text-sm font-semibold text-gray-800 shadow-[0_10px_35px_rgb(0,0,0,0.08)] border border-white/20"
-        >
-          <span className="h-2.5 w-2.5 rounded-sm bg-amber-500" />
-          Structural &amp; Bridge
-        </motion.div>
-
-        {/* Badge 3: DOT & Highway */}
-        <motion.div
-          animate={{ y: [0, -12, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
-          className="absolute left-[10%] bottom-[18%] hidden md:flex items-center gap-2 rounded-full bg-blue-brand/30 text-white font-bold px-5 py-3 text-sm shadow-[0_12px_40px_rgb(27,92,255,0.25)] border border-cyan-400/20 backdrop-blur-sm"
-        >
-          <span className="tracking-tight">DOT &amp; Highway</span>
-        </motion.div>
-
-        {/* Badge 4: Water & Environmental */}
-        <motion.div
-          animate={{ y: [0, -12, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.2 }}
-          className="absolute right-[8%] bottom-[25%] hidden md:flex items-center gap-2.5 rounded-full bg-white/95 px-5 py-3 text-sm font-semibold text-gray-800 shadow-[0_10px_35px_rgb(0,0,0,0.08)] border border-white/20"
-        >
-          <span className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
-          Water &amp; Environmental
-        </motion.div>
-
-        {/* Badge 5: Inspection / CEI */}
-        <motion.div
-          animate={{ y: [0, -12, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1.1 }}
-          className="absolute right-[6%] top-[35%] hidden md:flex items-center gap-2 rounded-full bg-gray-900 text-white px-5 py-2.5 text-sm font-bold shadow-[0_10px_35px_rgb(0,0,0,0.15)] border border-gray-800"
-        >
-          Inspection / CEI
-        </motion.div>
 
         {/* Hero Content */}
         <Container className="relative z-10 text-center">
