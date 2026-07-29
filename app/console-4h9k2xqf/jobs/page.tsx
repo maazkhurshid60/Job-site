@@ -7,10 +7,10 @@ import {
   listJobs,
   deleteJob,
   EMPLOYMENT_TYPES,
-  JOB_CATEGORIES,
   type Job,
   type JobStatus,
 } from "@/lib/jobs";
+import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { adminRoutes } from "@/lib/routes";
 import { Loader } from "@/components/Loader";
 
@@ -42,6 +42,8 @@ function JobsList() {
   const [status, setStatus] = useState<JobStatus | "all">("all");
   const [category, setCategory] = useState("all");
   const [type, setType] = useState("all");
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  useEffect(() => { getCategories().then(setCategories); }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -163,7 +165,7 @@ function JobsList() {
             </label>
             <select className="input h-10 w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="all">All categories</option>
-              {JOB_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <select className="input h-10 w-auto" value={type} onChange={(e) => setType(e.target.value)}>
               <option value="all">All types</option>

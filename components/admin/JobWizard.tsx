@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminRoutes } from "@/lib/routes";
+import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import {
   EMPLOYMENT_TYPES,
-  JOB_CATEGORIES,
   DEFAULT_HIRING_STAGES,
   createJob,
   updateJob,
@@ -193,6 +193,8 @@ type StepProps = {
 };
 
 function BasicInfo({ form, set, num }: StepProps & { num: (v: string) => number | null }) {
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  useEffect(() => { getCategories().then(setCategories); }, []);
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Job title" full>
@@ -203,7 +205,7 @@ function BasicInfo({ form, set, num }: StepProps & { num: (v: string) => number 
       </Field>
       <Field label="Category / vertical">
         <select className="input" value={form.category} onChange={(e) => set("category", e.target.value)}>
-          {JOB_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </Field>
       <Field label="Location">

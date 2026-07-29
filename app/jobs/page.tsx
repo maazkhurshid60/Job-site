@@ -10,9 +10,9 @@ import { useAuth } from "@/lib/auth";
 import {
   listOpenJobs,
   EMPLOYMENT_TYPES,
-  JOB_CATEGORIES,
   type Job,
 } from "@/lib/jobs";
+import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { formatPay } from "@/components/jobFormat";
 import type { Timestamp } from "firebase/firestore";
 
@@ -36,6 +36,7 @@ export default function JobsPage() {
 
   const [q, setQ] = useState("");
   const [cats, setCats] = useState<Set<string>>(new Set());
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [types, setTypes] = useState<Set<string>>(new Set());
   const [stateFilter, setStateFilter] = useState("All");
   const [remote, setRemote] = useState(false);
@@ -51,6 +52,8 @@ export default function JobsPage() {
       .catch(() => setError("Could not load roles right now."))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { getCategories().then(setCategories); }, []);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -119,7 +122,7 @@ export default function JobsPage() {
           <div className="mt-6 flex flex-wrap items-center gap-2">
             <Dropdown label="Category" count={cats.size}>
               <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
-                {JOB_CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <Check key={c} label={c} checked={cats.has(c)} onChange={() => toggleIn(cats, c, setCats)} />
                 ))}
               </div>

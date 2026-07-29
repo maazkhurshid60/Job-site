@@ -46,6 +46,13 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // Site settings (e.g. the editable job-category list). Public read so the
+    // job board + posting form can load it; only admins can change it.
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Admin allow-list.
     match /admins/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
