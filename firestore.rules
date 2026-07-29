@@ -18,11 +18,19 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Submissions: a signed-in user creates & reads their own; admins screen
+    // Submissions: open applications — anyone may submit a candidate (no login
+    // required). We require the core contact fields so every candidate is
+    // reachable. Signed-in recruiters may still read their own; admins screen
     // and manage everything.
     match /submissions/{subId} {
-      allow create: if request.auth != null
-        && request.resource.data.recruiterId == request.auth.uid;
+      allow create: if request.resource.data.candidateName is string
+        && request.resource.data.candidateName.size() > 0
+        && request.resource.data.candidateEmail is string
+        && request.resource.data.candidateEmail.size() > 0
+        && request.resource.data.candidatePhone is string
+        && request.resource.data.candidatePhone.size() > 0
+        && request.resource.data.cvUrl is string
+        && request.resource.data.status == 'submitted';
       allow read: if isAdmin()
         || (request.auth != null
             && resource.data.recruiterId == request.auth.uid);

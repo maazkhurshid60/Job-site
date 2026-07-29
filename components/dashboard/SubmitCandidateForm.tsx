@@ -18,6 +18,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     notes: "",
   });
   const [cv, setCv] = useState<File | null>(null);
+  const [hp, setHp] = useState(""); // honeypot — real users leave this empty
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -30,7 +31,11 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     e.preventDefault();
     setError(null);
 
-    if (!user) return;
+    // Bot filled the hidden field — pretend success, write nothing.
+    if (hp) {
+      setDone(true);
+      return;
+    }
     if (!cv) {
       setError("Please attach the candidate's CV.");
       return;
@@ -48,7 +53,9 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     try {
       await createSubmission(
         job,
-        { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" },
+        user
+          ? { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" }
+          : null,
         form,
         cv,
       );
@@ -77,10 +84,10 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         </p>
         <button
           type="button"
-          onClick={() => router.push("/dashboard/submissions")}
+          onClick={() => router.push(user ? "/dashboard/submissions" : "/jobs")}
           className="mt-5 rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
         >
-          View my submissions
+          {user ? "View my submissions" : "Browse more jobs"}
         </button>
       </div>
     );
@@ -88,6 +95,17 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
 
   return (
     <form onSubmit={onSubmit} className="rounded-2xl border border-line bg-white p-6">
+      {/* honeypot — hidden from real users; bots that fill it are dropped */}
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        value={hp}
+        onChange={(e) => setHp(e.target.value)}
+        className="absolute left-[-9999px] h-0 w-0 opacity-0"
+      />
       <h3 className="text-lg font-bold text-ink">Submit a candidate</h3>
       <p className="mt-1 text-sm text-muted">
         Your candidate goes to our screening team, not the client directly.
@@ -113,9 +131,11 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
             placeholder="jordan@email.com"
           />
         </Field>
-        <Field label="Candidate phone (optional)" className="sm:col-span-2">
+        <Field label="Candidate phone" className="sm:col-span-2">
           <input
             className="input"
+            type="tel"
+            required
             value={form.candidatePhone}
             onChange={(e) => set("candidatePhone", e.target.value)}
             placeholder="+44 7700 900000"

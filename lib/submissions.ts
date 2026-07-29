@@ -90,10 +90,11 @@ function toSubmission(id: string, d: Record<string, unknown>): Submission {
   };
 }
 
-/* Recruiter action: upload the candidate's CV, then create the submission. */
+/* Upload the candidate's CV, then create the submission. Open applications:
+   `recruiter` is null for a public applicant, or the signed-in recruiter. */
 export async function createSubmission(
   job: Job,
-  recruiter: { uid: string; name: string },
+  recruiter: { uid: string; name: string } | null,
   input: SubmissionInput,
   cv: File,
 ): Promise<void> {
@@ -112,8 +113,8 @@ export async function createSubmission(
     jobId: job.id,
     jobTitle: job.title,
     company: job.company,
-    recruiterId: recruiter.uid,
-    recruiterName: recruiter.name,
+    recruiterId: recruiter?.uid ?? "",
+    recruiterName: recruiter?.name ?? "Public applicant",
     candidateName: input.candidateName,
     candidateEmail: input.candidateEmail,
     candidatePhone: input.candidatePhone,

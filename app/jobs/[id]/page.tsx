@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Container } from "@/components/ui";
-import { useAuth } from "@/lib/auth";
 import { SubmitCandidateForm } from "@/components/dashboard/SubmitCandidateForm";
 import { formatPay } from "@/components/jobFormat";
 import { getJob, type Job } from "@/lib/jobs";
@@ -147,9 +146,9 @@ export default function JobDetailPage() {
                 </div>
               </div>
 
-              {/* apply — login required */}
+              {/* apply — open to everyone, no login required */}
               <div className="lg:sticky lg:top-24">
-                <ApplyPanel job={job} />
+                <SubmitCandidateForm job={job} />
               </div>
             </div>
           )}
@@ -169,40 +168,3 @@ function Prose({ title, text }: { title: string; text: string }) {
   );
 }
 
-/* Logged-in users submit a candidate; guests get a login prompt. */
-function ApplyPanel({ job }: { job: Job }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="grid h-40 place-items-center rounded-2xl border border-line bg-white">
-        <Loader />
-      </div>
-    );
-  }
-
-  if (user) return <SubmitCandidateForm job={job} />;
-
-  return (
-    <div className="rounded-2xl border border-line bg-white p-6 text-center">
-      <h3 className="text-lg font-bold text-ink">Apply for this role</h3>
-      <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
-        Log in or create an account to submit a candidate for this role.
-      </p>
-      <div className="mt-5 flex flex-col gap-3">
-        <Link
-          href="/login"
-          className="rounded-pill bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
-        >
-          Log in to apply
-        </Link>
-        <Link
-          href="/signup"
-          className="rounded-pill border border-line px-6 py-3 text-sm font-semibold text-ink hover:bg-black/[0.02]"
-        >
-          Create an account
-        </Link>
-      </div>
-    </div>
-  );
-}
