@@ -33,6 +33,8 @@ export const JOB_CATEGORIES = [
   "Transportation / DOT",
   "Structural Engineering",
   "MEP Engineering",
+  "Electrical Engineering",
+  "Mechanical Engineering",
   "Water / Hydrology",
   "CEI / Inspection",
   "Project Management",

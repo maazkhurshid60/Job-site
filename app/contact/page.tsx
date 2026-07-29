@@ -55,6 +55,10 @@ export default function ContactPage() {
                 <dd className="text-muted">hello@jobfolder.com</dd>
               </div>
               <div>
+                <dt className="font-semibold text-ink">Phone</dt>
+                <dd className="text-muted">TBD</dd>
+              </div>
+              <div>
                 <dt className="font-semibold text-ink">Hours</dt>
                 <dd className="text-muted">Mon–Fri, 9am–6pm</dd>
               </div>
