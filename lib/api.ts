@@ -57,3 +57,42 @@ export async function apiFetch<T>(
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
+
+/* Upload a file to POST /api/files, which stores the bytes in MySQL.
+
+   Sent as multipart/form-data with no Content-Type header of our own — the
+   browser must set it, because only it knows the multipart boundary.
+
+   Signing in is optional: a candidate applying to a role directly is not
+   logged in, and a signed-in recruiter gets recorded as the uploader. */
+export async function uploadFile(
+  file: File,
+  kind: "cv" | "avatar",
+): Promise<{ id: string; filename: string; size: number; url?: string }> {
+  const form = new FormData();
+  form.append("kind", kind);
+  form.append("file", file);
+
+  const res = await fetch("/api/files", {
+    method: "POST",
+    headers: await authHeader(kind === "avatar"),
+    body: form,
+  });
+
+  if (!res.ok) {
+    let message = `Upload failed (${res.status}).`;
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (data?.error) message = data.error;
+    } catch {
+      /* Vercel rejects bodies over ~4.5 MB before the route runs, and answers
+         with a non-JSON 413. Say something useful rather than "Upload failed". */
+      if (res.status === 413) {
+        message = "That file is too large to upload. Please use a smaller file.";
+      }
+    }
+    throw new Error(message);
+  }
+
+  return res.json();
+}

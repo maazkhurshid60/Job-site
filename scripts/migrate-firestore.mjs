@@ -21,6 +21,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import mysql from "mysql2/promise";
+import { randomUUID } from "node:crypto";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -76,6 +77,21 @@ const ts = (v) => {
 };
 const s = (v, fallback = "") => (typeof v === "string" ? v : fallback);
 const n = (v) => (typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : null);
+
+/* Salary and commission columns are INT UNSIGNED, and the API caps them at
+   100M. Firestore had no such constraint — one job carried a salaryMax of
+   11225879852654. Under strict mode that now fails the whole INSERT, so clamp
+   it here instead: keeping the job with a flagged salary beats dropping the
+   job. Every clamp is reported so the bad values can be corrected by hand. */
+const MAX_MONEY = 100_000_000;
+const clamped = [];
+const money = (v, field, id) => {
+  const raw = n(v);
+  if (raw === null) return null;
+  const fixed = Math.min(Math.max(raw, 0), MAX_MONEY);
+  if (fixed !== raw) clamped.push(`${id}.${field}: ${raw} -> ${fixed}`);
+  return fixed;
+};
 const j = (v) => JSON.stringify(Array.isArray(v) ? v : []);
 
 /** Read a collection, tolerating a permission-denied when signed out. */
@@ -141,7 +157,8 @@ try {
     (r) => [
       r.id, s(r.title, "(untitled)"), s(r.company), s(r.category, "Other"),
       s(r.location), r.remote ? 1 : 0, s(r.employmentType, "Full-time"),
-      n(r.salaryMin), n(r.salaryMax), n(r.bounty), s(r.description),
+      money(r.salaryMin,"salaryMin",r.id), money(r.salaryMax,"salaryMax",r.id),
+      money(r.bounty,"bounty",r.id), s(r.description),
       s(r.responsibilities), s(r.requirements), j(r.faqs),
       j(r.screeningQuestions), j(r.hiringStages), s(r.status, "draft"),
       ts(r.createdAt), ts(r.updatedAt),
@@ -181,21 +198,53 @@ try {
     (await conn.query("SELECT uid FROM users"))[0].map((u) => u.uid),
   );
 
+  /* Pull each CV down from its old Firebase Storage URL and store the bytes in
+     the files table, so nothing is left behind in cloud storage. A CV that
+     cannot be fetched leaves cv_file_id NULL rather than dropping the whole
+     submission — the candidate's contact details still matter. */
+  const submissionDocs = await read("submissions");
+  if (submissionDocs && !dryRun) {
+    for (const r of submissionDocs) {
+      if (!r.cvUrl) continue;
+      try {
+        const res = await fetch(r.cvUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const buf = Buffer.from(await res.arrayBuffer());
+        const id = randomUUID();
+        await conn.execute(
+          `INSERT INTO files (id,kind,filename,content_type,byte_size,data,owner_uid)
+           VALUES (?,'cv',?,?,?,?,?)`,
+          [
+            id,
+            s(r.cvName, "cv.pdf"),
+            res.headers.get("content-type") || "application/octet-stream",
+            buf.length,
+            buf,
+            knownUids.has(r.recruiterId) ? r.recruiterId : null,
+          ],
+        );
+        r.__cvFileId = id;
+      } catch (err) {
+        console.log(`  WARN    cv for submission ${r.id}: ${err.message}`);
+      }
+    }
+  }
+
   await copy(
     "submissions",
-    await read("submissions"),
+    submissionDocs,
     `INSERT INTO submissions
        (id,job_id,job_title,company,recruiter_id,recruiter_name,candidate_name,
-        candidate_email,candidate_phone,notes,cv_url,cv_name,bounty,status,created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,COALESCE(?,CURRENT_TIMESTAMP(3)))
+        candidate_email,candidate_phone,notes,cv_file_id,bounty,status,created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,COALESCE(?,CURRENT_TIMESTAMP(3)))
      ON DUPLICATE KEY UPDATE
        status=VALUES(status), notes=VALUES(notes)`,
     (r) => [
       r.id, s(r.jobId), s(r.jobTitle), s(r.company),
       knownUids.has(r.recruiterId) ? r.recruiterId : null,
       s(r.recruiterName, "Public applicant"), s(r.candidateName),
-      s(r.candidateEmail), s(r.candidatePhone), s(r.notes), s(r.cvUrl),
-      s(r.cvName), n(r.bounty), s(r.status, "submitted"), ts(r.createdAt),
+      s(r.candidateEmail), s(r.candidatePhone), s(r.notes),
+      r.__cvFileId ?? null, money(r.bounty,"bounty",r.id), s(r.status, "submitted"), ts(r.createdAt),
     ],
   );
 
@@ -221,6 +270,12 @@ try {
     } else if (cats?.list?.length) {
       console.log(`  ${"settings".padEnd(12)} jobCategories (${cats.list.length}) (dry run)`);
     }
+  }
+
+  if (clamped.length) {
+    console.log(`
+  CLAMPED ${clamped.length} out-of-range value(s) — review these:`);
+    for (const c of clamped) console.log(`          ${c}`);
   }
 
   console.log(

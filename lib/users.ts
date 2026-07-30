@@ -1,10 +1,8 @@
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { storage } from "./firebase";
-import { apiFetch } from "./api";
+import { apiFetch, uploadFile } from "./api";
 
-/* Recruiter profiles. Rows live in MySQL; avatar images still live in Firebase
-   Storage, so uploadAvatar is unchanged and returns a Storage download URL that
-   the profile row then stores. */
+/* Recruiter profiles. Rows and avatar images both live in MySQL — the image
+   bytes go into the `files` table and photoURL holds the /api/files/{id} path
+   that serves them. */
 
 /* A single kind of self-serve user: a recruiter. They browse our jobs and
    submit / refer their candidates. (Admins are separate — the `admins` table.)
@@ -65,23 +63,22 @@ export async function updateUserProfile(
   await apiFetch("/api/me", { method: "PUT", body: data, auth: true });
 }
 
-/* Recruiter action: upload a profile photo and return its download URL.
-   Stored under `avatars/{uid}/…` so a user only ever writes to their space. */
+/* Recruiter action: upload a profile photo and return the URL that serves it.
+   The server records the uploader from the token, so a user can only ever
+   attach an avatar to their own account. */
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-export async function uploadAvatar(uid: string, file: File): Promise<string> {
+export async function uploadAvatar(_uid: string, file: File): Promise<string> {
+  // Checked again server-side; this is just a fast, friendly failure.
   if (file.size > MAX_AVATAR_BYTES)
     throw new Error("Image is larger than 5 MB.");
   if (!ACCEPTED_AVATAR_TYPES.includes(file.type))
     throw new Error("Image must be a JPG, PNG, or WebP.");
 
-  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
-  const path = `avatars/${uid}/${Date.now()}-${safeName}`;
-  const snap = await uploadBytes(ref(storage, path), file, {
-    contentType: file.type,
-  });
-  return getDownloadURL(snap.ref);
+  const { url } = await uploadFile(file, "avatar");
+  if (!url) throw new Error("Upload succeeded but returned no URL.");
+  return url;
 }
 
 /* True when the signed-in user is on the admin allow-list. Always asks about

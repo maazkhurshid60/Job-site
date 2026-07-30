@@ -3,6 +3,7 @@ import {
 } from "@/lib/server/respond";
 import {
   createSubmission, getOpenJob, listSubmissionsByRecruiter, getUserProfile,
+  cvFileIsAvailable,
 } from "@/lib/server/repo";
 import { getUid, requireUid } from "@/lib/server/auth";
 
@@ -36,11 +37,13 @@ export function POST(req: Request) {
     const job = await getOpenJob(jobId);
     if (!job) throw new NotFound("Role not available.");
 
-    const cvUrl = str(body.cvUrl, "cvUrl", { max: 1024, required: true });
-    // The CV is uploaded to Firebase Storage by the browser before this call;
-    // reject anything that isn't one of those URLs.
-    if (!/^https:\/\//i.test(cvUrl)) {
-      throw new BadRequest("cvUrl must be an https URL.");
+    /* The CV was uploaded to POST /api/files first and its bytes are already
+       in the database. Verify the id names a real, unattached CV rather than
+       trusting it: otherwise a caller could point a new submission at someone
+       else's CV row, or at an avatar. */
+    const cvFileId = str(body.cvFileId, "cvFileId", { max: 36, required: true });
+    if (!(await cvFileIsAvailable(cvFileId))) {
+      throw new BadRequest("That CV upload is missing or already used.");
     }
 
     let recruiterName = "Public applicant";
@@ -59,8 +62,7 @@ export function POST(req: Request) {
       candidateEmail: str(body.candidateEmail, "candidateEmail", { max: 320, required: true }),
       candidatePhone: str(body.candidatePhone, "candidatePhone", { max: 64, required: true }),
       notes: str(body.notes, "notes"),
-      cvUrl,
-      cvName: str(body.cvName, "cvName", { max: 255 }),
+      cvFileId,
       bounty: job.bounty,
     }).catch((err: unknown) => {
       // uq_subs_job_candidate — this candidate is already referred for this role.

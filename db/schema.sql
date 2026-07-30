@@ -8,11 +8,11 @@
 --
 -- Verify afterwards with:  npm run db:check
 --
--- Scope of the migration this supports: Firestore moves to SQL. Firebase Auth
--- and Firebase Storage STAY. That means:
+-- Scope: Firestore AND Firebase Storage both move to SQL. Only Firebase Auth
+-- stays. That means:
 --   * `users.uid` and `admins.uid` are Firebase Auth UIDs, not local accounts.
 --     There is no password column here and there must never be one.
---   * `cv_url` / `photo_url` remain Firebase Storage download URLs.
+--   * CV and avatar bytes live in the `files` table, not in cloud storage.
 --
 -- IMPORTANT — primary keys are the existing Firestore document IDs, kept as
 -- VARCHAR rather than switched to AUTO_INCREMENT. Job detail pages live at
@@ -55,6 +55,35 @@ CREATE TABLE admins (
   note       VARCHAR(255) NOT NULL DEFAULT '',
   created_at DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ---------------------------------------------------------------- files
+
+-- Uploaded bytes: candidate CVs and recruiter avatars.
+--
+-- MEDIUMBLOB holds 16 MB, comfortably above the 10 MB CV cap. The server's
+-- max_allowed_packet is 1000 MB, so the wire protocol is not a constraint
+-- either. LONGBLOB would allow 4 GB rows and only invites trouble on a shared
+-- host with a 4 GB account-wide quota.
+--
+-- IDs are UUIDs rather than sequential: a file's URL should not be guessable
+-- by counting. CV downloads additionally require a signed URL (see
+-- lib/server/files.ts) — the UUID alone is not treated as the secret.
+CREATE TABLE files (
+  id           CHAR(36)     NOT NULL,
+  kind         ENUM('cv','avatar') NOT NULL,
+  filename     VARCHAR(255) NOT NULL DEFAULT '',
+  content_type VARCHAR(128) NOT NULL DEFAULT 'application/octet-stream',
+  byte_size    INT UNSIGNED NOT NULL DEFAULT 0,
+  data         MEDIUMBLOB   NOT NULL,
+  -- Uploader, when known. NULL for a public applicant's CV.
+  owner_uid    VARCHAR(128) NULL,
+  created_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_files_owner (owner_uid),
+  KEY idx_files_kind_created (kind, created_at),
+  CONSTRAINT fk_files_owner FOREIGN KEY (owner_uid)
+    REFERENCES users (uid) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ---------------------------------------------------------------- jobs
@@ -113,8 +142,10 @@ CREATE TABLE submissions (
   candidate_email VARCHAR(320) NOT NULL DEFAULT '',
   candidate_phone VARCHAR(64)  NOT NULL DEFAULT '',
   notes           MEDIUMTEXT,
-  cv_url          VARCHAR(1024) NOT NULL DEFAULT '',
-  cv_name         VARCHAR(255)  NOT NULL DEFAULT '',
+  -- The CV itself lives in `files`. RESTRICT, not CASCADE: deleting a CV row
+  -- out from under a live submission would silently destroy the only copy of
+  -- the candidate's document.
+  cv_file_id      CHAR(36)     NULL,
   bounty          INT UNSIGNED NULL,
   status          ENUM('submitted','screening','approved','client_review','hired','rejected')
                                NOT NULL DEFAULT 'submitted',
@@ -137,7 +168,9 @@ CREATE TABLE submissions (
   -- SET NULL, not RESTRICT: deleting a recruiter must not be blocked by, or
   -- destroy, the submission history the commission is settled against.
   CONSTRAINT fk_subs_recruiter FOREIGN KEY (recruiter_id)
-    REFERENCES users (uid) ON DELETE SET NULL
+    REFERENCES users (uid) ON DELETE SET NULL,
+  CONSTRAINT fk_subs_cv FOREIGN KEY (cv_file_id)
+    REFERENCES files (id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ------------------------------------------------------------- messages

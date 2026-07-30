@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { query, queryOne, execute } from "@/lib/db";
+import { signedFileUrl } from "./files";
 import type { Job, JobStatus, EmploymentType, FAQ } from "@/lib/jobs";
 import type { Submission, SubmissionStatus } from "@/lib/submissions";
 import type { UserProfile } from "@/lib/users";
@@ -189,13 +190,17 @@ type SubmissionRow = {
   candidate_email: string;
   candidate_phone: string;
   notes: string | null;
-  cv_url: string;
-  cv_name: string;
+  cv_file_id: string | null;
+  cv_name: string | null;
   bounty: number | null;
   status: SubmissionStatus;
   created_at: string | null;
 };
 
+/* cvUrl is generated, not stored: a fresh signed link is minted each time a
+   submission is read. Because this only runs for a caller who was already
+   allowed to read the row, download rights follow read rights — and the link
+   expires on its own an hour later. */
 function toSubmission(r: SubmissionRow): Submission {
   return {
     id: r.id,
@@ -209,25 +214,30 @@ function toSubmission(r: SubmissionRow): Submission {
     candidateEmail: r.candidate_email,
     candidatePhone: r.candidate_phone,
     notes: r.notes ?? "",
-    cvUrl: r.cv_url,
-    cvName: r.cv_name,
+    cvUrl: r.cv_file_id ? signedFileUrl(r.cv_file_id) : "",
+    cvName: r.cv_name ?? "",
     bounty: r.bounty,
     status: r.status,
     createdAt: r.created_at,
   };
 }
 
+/* LEFT JOIN, not INNER: a submission whose CV row is somehow missing should
+   still be readable — losing the candidate's contact details because the file
+   vanished would be worse than showing the row without a download link. */
 const SUB_COLUMNS = `
-  id, job_id, job_title, company, recruiter_id, recruiter_name,
-  candidate_name, candidate_email, candidate_phone, notes, cv_url, cv_name,
-  bounty, status, created_at`;
+  s.id, s.job_id, s.job_title, s.company, s.recruiter_id, s.recruiter_name,
+  s.candidate_name, s.candidate_email, s.candidate_phone, s.notes,
+  s.cv_file_id, f.filename AS cv_name, s.bounty, s.status, s.created_at`;
+
+const SUB_FROM = `FROM submissions s LEFT JOIN files f ON f.id = s.cv_file_id`;
 
 export async function listSubmissionsByRecruiter(
   recruiterId: string,
 ): Promise<Submission[]> {
   const rows = await query<SubmissionRow>(
-    `SELECT ${SUB_COLUMNS} FROM submissions
-      WHERE recruiter_id = ? ORDER BY created_at DESC`,
+    `SELECT ${SUB_COLUMNS} ${SUB_FROM}
+      WHERE s.recruiter_id = ? ORDER BY s.created_at DESC`,
     [recruiterId],
   );
   return rows.map(toSubmission);
@@ -235,7 +245,7 @@ export async function listSubmissionsByRecruiter(
 
 export async function listAllSubmissions(): Promise<Submission[]> {
   const rows = await query<SubmissionRow>(
-    `SELECT ${SUB_COLUMNS} FROM submissions ORDER BY created_at DESC`,
+    `SELECT ${SUB_COLUMNS} ${SUB_FROM} ORDER BY s.created_at DESC`,
   );
   return rows.map(toSubmission);
 }
@@ -250,8 +260,7 @@ export type SubmissionWrite = {
   candidateEmail: string;
   candidatePhone: string;
   notes: string;
-  cvUrl: string;
-  cvName: string;
+  cvFileId: string;
   bounty: number | null;
 };
 
@@ -263,16 +272,26 @@ export async function createSubmission(
     `INSERT INTO submissions
        (id, job_id, job_title, company, recruiter_id, recruiter_name,
         candidate_name, candidate_email, candidate_phone, notes,
-        cv_url, cv_name, bounty, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'submitted')`,
+        cv_file_id, bounty, status)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'submitted')`,
     [
       id, input.jobId, input.jobTitle, input.company, input.recruiterId,
       input.recruiterName, input.candidateName, input.candidateEmail,
-      input.candidatePhone, input.notes, input.cvUrl, input.cvName,
-      input.bounty,
+      input.candidatePhone, input.notes, input.cvFileId, input.bounty,
     ],
   );
   return id;
+}
+
+/** True when the file exists, is a CV, and isn't already attached elsewhere. */
+export async function cvFileIsAvailable(fileId: string): Promise<boolean> {
+  const row = await queryOne<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM files f
+      WHERE f.id = ? AND f.kind = 'cv'
+        AND NOT EXISTS (SELECT 1 FROM submissions s WHERE s.cv_file_id = f.id)`,
+    [fileId],
+  );
+  return (row?.n ?? 0) > 0;
 }
 
 export async function setSubmissionStatus(

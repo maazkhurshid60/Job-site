@@ -1,12 +1,10 @@
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { storage } from "./firebase";
-import { apiFetch } from "./api";
+import { apiFetch, uploadFile } from "./api";
 import type { Job } from "./jobs";
 import { ACCEPTED_CV_TYPES, MAX_CV_BYTES } from "./cv";
 
-/* Candidate submissions. Rows live in MySQL; the CV file itself still lives in
-   Firebase Storage, so this flow is a browser-side upload followed by an API
-   call carrying the resulting download URL. */
+/* Candidate submissions. Both the row and the CV bytes live in MySQL — the CV
+   goes into the `files` table via POST /api/files, and the submission stores
+   its id. Nothing touches cloud storage. */
 
 /* Lifecycle of a recruiter's candidate submission. `approved`/`client_review`
    are the point at which the client (company) may see it. */
@@ -48,6 +46,8 @@ export type Submission = {
   candidateEmail: string;
   candidatePhone: string;
   notes: string;
+  /* A signed, one-hour download link minted by the server each time this
+     submission is read. Not stored, and not shareable for long. */
   cvUrl: string;
   cvName: string;
   bounty: number | null;
@@ -76,16 +76,13 @@ export async function createSubmission(
   input: SubmissionInput,
   cv: File,
 ): Promise<void> {
+  // Checked again server-side; this is just a fast, friendly failure.
   if (cv.size > MAX_CV_BYTES) throw new Error("CV is larger than 10 MB.");
   if (!ACCEPTED_CV_TYPES.includes(cv.type))
     throw new Error("CV must be a PDF or Word document.");
 
-  const safeName = cv.name.replace(/[^\w.\-]+/g, "_");
-  const path = `cvs/${job.id}/${Date.now()}-${safeName}`;
-  const snap = await uploadBytes(ref(storage, path), cv, {
-    contentType: cv.type,
-  });
-  const cvUrl = await getDownloadURL(snap.ref);
+  // Store the bytes first, then reference them from the submission.
+  const { id: cvFileId } = await uploadFile(cv, "cv");
 
   await apiFetch("/api/submissions", {
     method: "POST",
@@ -97,8 +94,7 @@ export async function createSubmission(
       candidateEmail: input.candidateEmail,
       candidatePhone: input.candidatePhone,
       notes: input.notes,
-      cvUrl,
-      cvName: cv.name,
+      cvFileId,
     },
   });
 }
