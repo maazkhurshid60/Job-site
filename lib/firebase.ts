@@ -1,7 +1,11 @@
 import { getApps, getApp, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
+
+/* Firebase is now used for two things only: Auth (identity) and Storage (CV
+   and avatar files). All application data moved to MySQL — see lib/db.ts and
+   the /api routes. Firestore is deliberately not initialised here, so the
+   Firestore SDK stays out of the browser bundle. */
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -17,7 +21,6 @@ const firebaseConfig = {
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
 
 /* Analytics is browser-only and unsupported in some environments,

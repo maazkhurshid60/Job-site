@@ -22,13 +22,16 @@ export function Hero() {
         <Container className="relative z-10 text-center">
           <div className="hero-rise mx-auto max-w-3xl">
             <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-200 mb-6">
-              Why JobFolder
+              Engineering &amp; DOT Recruiting
             </span>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl leading-tight">
-              Hiring that brings the right people and companies together.
+              The engineering recruiting agency built for hard-to-fill roles.
             </h1>
             <p className="mt-6 text-lg md:text-xl text-blue-100 leading-relaxed max-w-2xl mx-auto font-medium">
-              We put a network of specialist recruiters behind every role, screen every candidate ourselves, and stay your single point of contact — so you only ever meet talent worth hiring.
+              Civil, transportation and DOT hiring, handled end to end. We put a
+              network of specialist recruiters behind every role, screen every
+              candidate ourselves, and stay your single point of contact — so you
+              only ever meet talent worth hiring.
             </p>
 
             {/* CTAs */}

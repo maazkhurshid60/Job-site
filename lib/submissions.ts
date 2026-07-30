@@ -1,19 +1,12 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  Timestamp,
-} from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "./firebase";
+import { storage } from "./firebase";
+import { apiFetch } from "./api";
 import type { Job } from "./jobs";
 import { ACCEPTED_CV_TYPES, MAX_CV_BYTES } from "./cv";
+
+/* Candidate submissions. Rows live in MySQL; the CV file itself still lives in
+   Firebase Storage, so this flow is a browser-side upload followed by an API
+   call carrying the resulting download URL. */
 
 /* Lifecycle of a recruiter's candidate submission. `approved`/`client_review`
    are the point at which the client (company) may see it. */
@@ -48,6 +41,7 @@ export type Submission = {
   jobId: string;
   jobTitle: string;
   company: string;
+  /** "" for an open/public application with no signed-in referrer. */
   recruiterId: string;
   recruiterName: string;
   candidateName: string;
@@ -58,7 +52,8 @@ export type Submission = {
   cvName: string;
   bounty: number | null;
   status: SubmissionStatus;
-  createdAt: Timestamp | null;
+  /** ISO-8601 string from MySQL, or null. */
+  createdAt: string | null;
 };
 
 export type SubmissionInput = {
@@ -68,33 +63,16 @@ export type SubmissionInput = {
   notes: string;
 };
 
-const subsCol = collection(db, "submissions");
+/* Upload the candidate's CV, then create the submission.
 
-function toSubmission(id: string, d: Record<string, unknown>): Submission {
-  return {
-    id,
-    jobId: (d.jobId as string) ?? "",
-    jobTitle: (d.jobTitle as string) ?? "",
-    company: (d.company as string) ?? "",
-    recruiterId: (d.recruiterId as string) ?? "",
-    recruiterName: (d.recruiterName as string) ?? "",
-    candidateName: (d.candidateName as string) ?? "",
-    candidateEmail: (d.candidateEmail as string) ?? "",
-    candidatePhone: (d.candidatePhone as string) ?? "",
-    notes: (d.notes as string) ?? "",
-    cvUrl: (d.cvUrl as string) ?? "",
-    cvName: (d.cvName as string) ?? "CV",
-    bounty: (d.bounty as number | null) ?? null,
-    status: (d.status as SubmissionStatus) ?? "submitted",
-    createdAt: (d.createdAt as Timestamp) ?? null,
-  };
-}
-
-/* Upload the candidate's CV, then create the submission. Open applications:
-   `recruiter` is null for a public applicant, or the signed-in recruiter. */
+   `recruiter` is kept in the signature for call-site compatibility but is no
+   longer trusted for identity: the server reads the referrer from the verified
+   ID token. Passing a different uid here would have no effect. Job title,
+   company and bounty are likewise read server-side from the jobs table, so a
+   client cannot claim a commission the role doesn't carry. */
 export async function createSubmission(
   job: Job,
-  recruiter: { uid: string; name: string } | null,
+  _recruiter: { uid: string; name: string } | null,
   input: SubmissionInput,
   cv: File,
 ): Promise<void> {
@@ -109,47 +87,40 @@ export async function createSubmission(
   });
   const cvUrl = await getDownloadURL(snap.ref);
 
-  await addDoc(subsCol, {
-    jobId: job.id,
-    jobTitle: job.title,
-    company: job.company,
-    recruiterId: recruiter?.uid ?? "",
-    recruiterName: recruiter?.name ?? "Public applicant",
-    candidateName: input.candidateName,
-    candidateEmail: input.candidateEmail,
-    candidatePhone: input.candidatePhone,
-    notes: input.notes,
-    cvUrl,
-    cvName: cv.name,
-    bounty: job.bounty,
-    status: "submitted" satisfies SubmissionStatus,
-    createdAt: serverTimestamp(),
+  await apiFetch("/api/submissions", {
+    method: "POST",
+    // Open applications: signing in is optional, but credits you if present.
+    auth: "optional",
+    body: {
+      jobId: job.id,
+      candidateName: input.candidateName,
+      candidateEmail: input.candidateEmail,
+      candidatePhone: input.candidatePhone,
+      notes: input.notes,
+      cvUrl,
+      cvName: cv.name,
+    },
   });
 }
 
-export async function listSubmissionsByRecruiter(
-  recruiterId: string,
-): Promise<Submission[]> {
-  const snap = await getDocs(
-    query(subsCol, where("recruiterId", "==", recruiterId)),
-  );
-  return sortByNewest(snap.docs.map((d) => toSubmission(d.id, d.data())));
+/* The signed-in recruiter's own submissions. Takes no uid: the server derives
+   the recruiter from the verified token, so there is no way to ask for someone
+   else's — which is the point. */
+export function listSubmissionsByRecruiter(): Promise<Submission[]> {
+  return apiFetch<Submission[]>("/api/submissions", { auth: true });
 }
 
-export async function listAllSubmissions(): Promise<Submission[]> {
-  const snap = await getDocs(query(subsCol, orderBy("createdAt", "desc")));
-  return snap.docs.map((d) => toSubmission(d.id, d.data()));
+export function listAllSubmissions(): Promise<Submission[]> {
+  return apiFetch<Submission[]>("/api/admin/submissions", { auth: true });
 }
 
 export async function setSubmissionStatus(
   id: string,
   status: SubmissionStatus,
 ): Promise<void> {
-  await updateDoc(doc(db, "submissions", id), { status });
-}
-
-function sortByNewest(list: Submission[]): Submission[] {
-  return list.sort(
-    (a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0),
-  );
+  await apiFetch(`/api/admin/submissions/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: { status },
+    auth: true,
+  });
 }

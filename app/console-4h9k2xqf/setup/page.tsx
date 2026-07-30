@@ -7,8 +7,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
+import { bootstrapAdmin } from "@/lib/users";
 import { adminRoutes } from "@/lib/routes";
 import { Logo } from "@/components/Logo";
 
@@ -29,30 +29,25 @@ export default function AdminSetupPage() {
     setBusy(true);
     try {
       // Create the auth user, or sign in if it already exists.
-      let uid: string;
       try {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        uid = cred.user.uid;
+        await createUserWithEmailAndPassword(auth, email, password);
         setNote("Account created.");
       } catch (err) {
         if (
           err instanceof FirebaseError &&
           err.code === "auth/email-already-in-use"
         ) {
-          const cred = await signInWithEmailAndPassword(auth, email, password);
-          uid = cred.user.uid;
+          await signInWithEmailAndPassword(auth, email, password);
           setNote("Existing account — signed in.");
         } else {
           throw err;
         }
       }
 
-      // Grant admin by writing the allow-list doc.
-      await setDoc(
-        doc(db, "admins", uid),
-        { email, createdAt: serverTimestamp() },
-        { merge: true },
-      );
+      /* Grant admin. The server takes the uid from the verified token and
+         refuses once any admin exists, so this closes itself — unlike the old
+         Firestore rule, which stayed open until someone remembered to edit it. */
+      await bootstrapAdmin();
 
       router.replace(adminRoutes.base);
     } catch (err) {
@@ -146,11 +141,11 @@ function explain(err: unknown): string {
       case "auth/wrong-password":
       case "auth/invalid-credential":
         return "That email exists but the password doesn't match.";
-      case "permission-denied":
-        return "Firestore blocked the admin write — publish the temporary bootstrap rule (see instructions).";
       default:
         return err.message;
     }
   }
+  // Bootstrap refusals ("An admin already exists") arrive as plain Errors.
+  if (err instanceof Error && err.message) return err.message;
   return "Something went wrong. Please try again.";
 }

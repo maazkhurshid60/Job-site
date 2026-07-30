@@ -18,7 +18,7 @@ export default function MySubmissionsPage() {
 
   useEffect(() => {
     if (!user) return;
-    listSubmissionsByRecruiter(user.uid)
+    listSubmissionsByRecruiter()
       .then(setSubs)
       .catch(() => setError("Could not load your submissions."))
       .finally(() => setLoading(false));

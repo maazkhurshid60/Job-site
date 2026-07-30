@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Container } from "@/components/ui";
+import { JsonLd } from "@/components/JsonLd";
 import { howSteps, getStep } from "@/lib/howItWorks";
+import { absoluteUrl } from "@/lib/seo";
 
 export function generateStaticParams() {
   return howSteps.map((s) => ({ slug: s.slug }));
@@ -17,10 +19,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const step = getStep(slug);
-  if (!step) return { title: "How it works — JobFolder" };
+  if (!step) return { title: "How it works" };
+
+  const url = `/how-it-works/${step.slug}`;
   return {
-    title: `${step.title} — JobFolder`,
+    title: step.title,
     description: step.intro,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title: step.title,
+      description: step.intro,
+      url,
+    },
   };
 }
 
@@ -35,15 +46,36 @@ export default async function HowItWorksStepPage({
 
   const others = howSteps.filter((s) => s.slug !== step.slug);
 
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "How it works",
+        item: absoluteUrl("/how-it-works"),
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: step.title,
+        item: absoluteUrl(`/how-it-works/${step.slug}`),
+      },
+    ],
+  };
+
   return (
     <>
+      <JsonLd schema={breadcrumbSchema} />
       <Navbar />
       <main className="flex-1">
         {/* Hero */}
         <section className="border-b border-gray-100 bg-gray-50/40 py-16 sm:py-20">
           <Container>
             <Link
-              href="/#how"
+              href="/how-it-works"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-blue-brand"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

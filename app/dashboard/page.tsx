@@ -22,7 +22,7 @@ export default function DashboardOverview() {
 
   useEffect(() => {
     if (!user) return;
-    listSubmissionsByRecruiter(user.uid)
+    listSubmissionsByRecruiter()
       .then(setSubs)
       .finally(() => setLoading(false));
   }, [user]);

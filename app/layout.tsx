@@ -2,6 +2,15 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
+import { JsonLd } from "@/components/JsonLd";
+import {
+  SITE_URL,
+  SITE_NAME,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  organizationSchema,
+  websiteSchema,
+} from "@/lib/seo";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -10,9 +19,35 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "JobFolder — Hiring, handled end to end",
-  description:
-    "A crowdsourced recruiting agency. We put a network of specialist recruiters behind every role, screen every candidate ourselves, and stay your single point of contact until the hire is made.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default:
+      "JobFolder — Engineering, Civil & DOT Recruiting Agency",
+    // Child pages set only their own title; this appends the brand.
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  applicationName: SITE_NAME,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    url: SITE_URL,
+    title: "JobFolder — Engineering, Civil & DOT Recruiting Agency",
+    description: SITE_DESCRIPTION,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "JobFolder — Engineering, Civil & DOT Recruiting Agency",
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
 };
 
 export default function RootLayout({
@@ -22,6 +57,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${jakarta.variable} h-full antialiased`}>
+      <head>
+        <JsonLd schema={[organizationSchema, websiteSchema]} />
+      </head>
       <body className="min-h-full flex flex-col bg-white text-ink">
         <AuthProvider>{children}</AuthProvider>
       </body>

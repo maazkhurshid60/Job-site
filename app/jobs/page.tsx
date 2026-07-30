@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Container } from "@/components/ui";
@@ -14,7 +15,7 @@ import {
 } from "@/lib/jobs";
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { formatPay } from "@/components/jobFormat";
-import type { Timestamp } from "firebase/firestore";
+import { timeAgo } from "@/lib/dates";
 
 const US_STATES = [
   "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
@@ -34,7 +35,12 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [q, setQ] = useState("");
+  /* Seed the search box from ?q= so links into a pre-filtered board work — this
+     is the URL the sitelinks SearchAction in lib/seo.ts points at. Read during
+     the initial render rather than in an effect, which would cause a second
+     render pass. The Suspense boundary this needs lives in ./layout.tsx. */
+  const searchParams = useSearchParams();
+  const [q, setQ] = useState(() => searchParams.get("q") ?? "");
   const [cats, setCats] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [types, setTypes] = useState<Set<string>>(new Set());
@@ -102,7 +108,9 @@ export default function JobsPage() {
         <Container className="py-8 lg:py-10">
           {/* title + search */}
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <h1 className="text-3xl font-extrabold tracking-tight text-ink">Explore jobs</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-ink">
+              Engineering &amp; DOT jobs
+            </h1>
             <label className="relative w-full max-w-xs">
               <span className="sr-only">Search</span>
               <input
@@ -411,15 +419,3 @@ function countTop(values: string[], n: number): [string, number][] {
   return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
 }
 
-function timeAgo(ts: Timestamp | null): string {
-  const d = ts?.toDate?.();
-  if (!d) return "recently";
-  const m = Math.floor((Date.now() - d.getTime()) / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m} min ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} hour${h > 1 ? "s" : ""} ago`;
-  const days = Math.floor(h / 24);
-  if (days < 30) return `${days} day${days > 1 ? "s" : ""} ago`;
-  return `${Math.floor(days / 30)} month${days >= 60 ? "s" : ""} ago`;
-}

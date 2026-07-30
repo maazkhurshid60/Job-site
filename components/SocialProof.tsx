@@ -21,12 +21,13 @@ export function SocialProof() {
               About us
             </span>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-              Where great companies hire great people
+              Civil engineering recruiters for DOT and infrastructure teams
             </h2>
             <p className="mt-4 text-base text-muted leading-relaxed">
-              For decades, DOT agencies, municipalities, and AEC firms have leaned
-              on JobFolder to fill their toughest engineering roles — without
-              the noise of an open marketplace.
+              State DOTs, municipalities and AEC firms lean on JobFolder to fill
+              the engineering roles that stall elsewhere — PE-licensed designers,
+              state-certified CEI inspectors, structural and water resources
+              specialists — without the noise of an open marketplace.
             </p>
           </div>
 

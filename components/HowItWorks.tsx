@@ -20,8 +20,12 @@ export function HowItWorks() {
             How it works
           </span>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-            The reach of a marketplace, the judgement of an agency
+            Crowdsourced recruiting, with an agency doing the quality control
           </h2>
+          <p className="mt-4 text-base leading-relaxed text-muted">
+            A network of specialist recruiters works every engineering brief in
+            parallel. We screen everything it produces before it reaches you.
+          </p>
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">

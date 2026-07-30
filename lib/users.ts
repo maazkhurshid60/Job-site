@@ -1,21 +1,15 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  Timestamp,
-} from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "./firebase";
+import { storage } from "./firebase";
+import { apiFetch } from "./api";
+
+/* Recruiter profiles. Rows live in MySQL; avatar images still live in Firebase
+   Storage, so uploadAvatar is unchanged and returns a Storage download URL that
+   the profile row then stores. */
 
 /* A single kind of self-serve user: a recruiter. They browse our jobs and
-   submit / refer their candidates. (Admins are separate — the `admins/{uid}`
-   list.) A recruiter fills out a richer profile — including a photo — which
-   admins can review from the console. */
+   submit / refer their candidates. (Admins are separate — the `admins` table.)
+   A recruiter fills out a richer profile — including a photo — which admins can
+   review from the console. */
 export type UserProfile = {
   uid: string;
   name: string;
@@ -27,11 +21,12 @@ export type UserProfile = {
   linkedin: string;
   bio: string;
   photoURL: string;
-  createdAt: Timestamp | null;
+  /** ISO-8601 string from MySQL, or null. */
+  createdAt: string | null;
 };
 
 /* The fields a recruiter can edit on their profile (everything except the
-   identity/audit fields). */
+   identity/audit fields, which the server refuses to update). */
 export type UserProfileInput = {
   name: string;
   phone: string;
@@ -43,49 +38,31 @@ export type UserProfileInput = {
   photoURL: string;
 };
 
-const usersCol = collection(db, "users");
+/** What GET /api/me returns: the profile plus the caller's admin status. */
+export type Me = { profile: UserProfile | null; isAdmin: boolean };
 
-function toUserProfile(uid: string, d: Record<string, unknown>): UserProfile {
-  return {
-    uid,
-    name: (d.name as string) ?? "",
-    email: (d.email as string) ?? "",
-    phone: (d.phone as string) ?? "",
-    company: (d.company as string) ?? "",
-    headline: (d.headline as string) ?? "",
-    location: (d.location as string) ?? "",
-    linkedin: (d.linkedin as string) ?? "",
-    bio: (d.bio as string) ?? "",
-    photoURL: (d.photoURL as string) ?? "",
-    createdAt: (d.createdAt as Timestamp) ?? null,
-  };
+/** One round trip for both — the dashboard and console both need each. */
+export function getMe(): Promise<Me> {
+  return apiFetch<Me>("/api/me", { auth: true });
 }
 
+/* Called right after Firebase Auth creates the account. The server takes the
+   uid from the verified token, so the `uid` argument is accepted only to keep
+   existing call sites compiling. */
 export async function createUserProfile(
-  uid: string,
+  _uid: string,
   data: { name: string; email: string },
 ): Promise<void> {
-  await setDoc(doc(db, "users", uid), {
-    name: data.name,
-    email: data.email,
-    phone: "",
-    company: "",
-    headline: "",
-    location: "",
-    linkedin: "",
-    bio: "",
-    photoURL: "",
-    createdAt: serverTimestamp(),
-  });
+  await apiFetch("/api/me", { method: "POST", body: data, auth: true });
 }
 
-/* Recruiter action: update the editable parts of their own profile.
-   Merges so identity/audit fields (email, createdAt) are preserved. */
+/* Recruiter action: update the editable parts of their own profile. A user can
+   only ever update their own — the server ignores any uid in the body. */
 export async function updateUserProfile(
-  uid: string,
+  _uid: string,
   data: Partial<UserProfileInput>,
 ): Promise<void> {
-  await setDoc(doc(db, "users", uid), data, { merge: true });
+  await apiFetch("/api/me", { method: "PUT", body: data, auth: true });
 }
 
 /* Recruiter action: upload a profile photo and return its download URL.
@@ -107,22 +84,36 @@ export async function uploadAvatar(uid: string, file: File): Promise<string> {
   return getDownloadURL(snap.ref);
 }
 
-/* True when the signed-in user is on the admin allow-list (`admins/{uid}`).
-   Rules let a user read their own admin doc, so this works client-side. */
-export async function isAdminUser(uid: string): Promise<boolean> {
-  const snap = await getDoc(doc(db, "admins", uid));
-  return snap.exists();
+/* True when the signed-in user is on the admin allow-list. Always asks about
+   the caller — an arbitrary uid is not answerable client-side, and shouldn't
+   be. Prefer `useAuth().isAdmin`, which reuses the profile fetch. */
+export async function isAdminUser(): Promise<boolean> {
+  try {
+    return (await getMe()).isAdmin;
+  } catch {
+    return false;
+  }
 }
 
-export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  const snap = await getDoc(doc(db, "users", uid));
-  if (!snap.exists()) return null;
-  return toUserProfile(uid, snap.data());
+/** The caller's own profile. */
+export async function getUserProfile(): Promise<UserProfile | null> {
+  return (await getMe()).profile;
 }
 
-/* Admin action: list every recruiter, newest first. Requires admin read
-   access to the `users` collection (see firestore.rules). */
-export async function listAllUsers(): Promise<UserProfile[]> {
-  const snap = await getDocs(query(usersCol, orderBy("createdAt", "desc")));
-  return snap.docs.map((d) => toUserProfile(d.id, d.data()));
+/** Admin action: list every recruiter, newest first. */
+export function listAllUsers(): Promise<UserProfile[]> {
+  return apiFetch<UserProfile[]>("/api/admin/recruiters", { auth: true });
+}
+
+/** Bootstrap the first admin (used by the /setup page). */
+export async function bootstrapAdmin(): Promise<void> {
+  await apiFetch("/api/admin/bootstrap", { method: "POST", auth: true });
+}
+
+/** Whether first-admin bootstrap is still available. */
+export async function bootstrapAvailable(): Promise<boolean> {
+  const { available } = await apiFetch<{ available: boolean }>(
+    "/api/admin/bootstrap",
+  );
+  return available;
 }

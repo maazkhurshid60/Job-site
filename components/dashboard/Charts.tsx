@@ -6,6 +6,7 @@ import {
   type Submission,
   type SubmissionStatus,
 } from "@/lib/submissions";
+import { toDate } from "@/lib/dates";
 
 /* Brand chart palette (validated via the dataviz skill's validator, light mode).
    Status/outcome colors are reserved for state and paired with labels. */
@@ -285,7 +286,7 @@ function monthlyCounts(subs: Submission[], months: number) {
   }
   const index = new Map(buckets.map((b, i) => [b.key, i]));
   for (const s of subs) {
-    const t = s.createdAt?.toDate?.();
+    const t = toDate(s.createdAt);
     if (!t) continue;
     const key = `${t.getFullYear()}-${t.getMonth()}`;
     const i = index.get(key);

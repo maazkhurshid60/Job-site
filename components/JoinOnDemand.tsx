@@ -50,13 +50,15 @@ export function JoinOnDemand() {
       <Container className="relative z-10 text-center">
         <div className="mx-auto max-w-xl bg-white rounded-3xl border border-gray-100 p-8 sm:p-12 shadow-sm">
           <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
-            Join the team
+            For recruiters
           </span>
           <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-            Join professionals on demand
+            Refer a candidate, earn the commission
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-muted">
-            Bring the candidates, we&apos;ll bring the roles. JobFolder network matches you to vetted, well-defined positions. Submit your best profiles, and get rewarded.
+            Bring the candidates, we&apos;ll bring the roles. Every listing in
+            our split fee network publishes its referral commission before you
+            submit anyone — free to join, no retainers, and you keep your desk.
           </p>
           <div className="mt-8 flex justify-center">
             <a

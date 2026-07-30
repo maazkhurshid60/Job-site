@@ -1,5 +1,4 @@
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "./firebase";
+import { apiFetch } from "./api";
 
 export type ContactInput = {
   name: string;
@@ -8,10 +7,19 @@ export type ContactInput = {
   message: string;
 };
 
+export type ContactMessage = ContactInput & {
+  id: number;
+  handled: boolean;
+  /** ISO-8601 string from MySQL, or null. */
+  createdAt: string | null;
+};
+
 /* Public: anyone can send an enquiry. Admins read these in the console. */
 export async function sendMessage(input: ContactInput): Promise<void> {
-  await addDoc(collection(db, "messages"), {
-    ...input,
-    createdAt: serverTimestamp(),
-  });
+  await apiFetch("/api/messages", { method: "POST", body: input });
+}
+
+/** Admin: read contact enquiries. */
+export function listMessages(): Promise<ContactMessage[]> {
+  return apiFetch<ContactMessage[]>("/api/messages", { auth: true });
 }

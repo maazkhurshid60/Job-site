@@ -6,11 +6,11 @@ import { Container } from "./ui";
 const reasons = [
   {
     title: "A whole network, not one desk",
-    body: "Every role is worked by dozens of specialist recruiters at once — the reach of a marketplace without you managing any of them.",
+    body: "Every role is worked by dozens of specialist recruiters at once — civil, transportation, structural, MEP — the reach of a marketplace without you managing any of them.",
   },
   {
     title: "We are the filter",
-    body: "Candidates are vetted by our team before they reach you. No spray-and-pray submissions, no wading through unqualified profiles.",
+    body: "Candidates are vetted by our team against your spec before they reach you. No spray-and-pray submissions, no wading through unqualified profiles.",
   },
   {
     title: "One point of contact",
@@ -25,8 +25,8 @@ const reasons = [
     body: "A curated shortlist in days, not months — because the sourcing runs in parallel while we do the quality control.",
   },
   {
-    title: "Expert brief, every time",
-    body: "We turn your requirement into a sharp spec the network can act on, drawing on a decade of placements across roles.",
+    title: "We know the licensure",
+    body: "PE, EIT, state comity, NICET and the state-specific inspector programmes. We check the requirement against the actual scope before the search starts — not after a candidate falls through.",
   },
 ];
 
@@ -41,12 +41,12 @@ export function Reasons() {
               For companies
             </span>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-              More reasons companies come to JobFolder
+              Why companies choose us over a single-desk agency
             </h2>
             <p className="mt-4 text-base text-muted leading-relaxed max-w-md">
-              Whether you&apos;re hiring your fifth employee or your five
-              hundredth, you get one accountable partner and a shortlist you can
-              trust.
+              Whether it&apos;s one roadway designer or a whole project team, you
+              get one accountable partner, a shortlist you can trust, and no fee
+              until the hire is confirmed.
             </p>
             <div className="mt-8">
               <a

@@ -1,59 +1,21 @@
-"use client";
+import type { Metadata } from "next";
+import ConsoleGate from "./ConsoleGate";
 
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/lib/auth";
-import { isAdminUser } from "@/lib/users";
-import { adminRoutes } from "@/lib/routes";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { PageLoader } from "@/components/Loader";
+/* Server layout exists purely to own the metadata — the admin gate below it is
+   a client component and cannot export any.
 
-function Gate({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, loading } = useAuth();
-  // Login + the temporary setup page render on their own (no admin gate).
-  const isPublic =
-    pathname === adminRoutes.login || pathname === adminRoutes.setup;
-
-  const [admin, setAdmin] = useState<"unknown" | "yes" | "no">("unknown");
-
-  // Check the admin allow-list once we know who is signed in.
-  useEffect(() => {
-    let active = true;
-    if (loading || !user) {
-      setAdmin("unknown");
-      return;
-    }
-    isAdminUser(user.uid)
-      .then((ok) => active && setAdmin(ok ? "yes" : "no"))
-      .catch(() => active && setAdmin("no"));
-    return () => {
-      active = false;
-    };
-  }, [loading, user]);
-
-  // Route people who shouldn't be here away.
-  useEffect(() => {
-    if (loading || isPublic) return;
-    if (!user) router.replace(adminRoutes.login);
-    else if (admin === "no") router.replace("/");
-  }, [loading, user, admin, isPublic, router]);
-
-  // Login + setup pages render on their own, without the admin chrome.
-  if (isPublic) return <>{children}</>;
-
-  if (loading || !user || admin !== "yes") {
-    return <PageLoader />;
-  }
-
-  return <AdminShell>{children}</AdminShell>;
-}
+   noindex is how the console stays out of search results. It is deliberately
+   NOT listed in robots.txt: that file is public, so naming the path there would
+   hand out the unguessable slug the console relies on (see lib/routes.ts). */
+export const metadata: Metadata = {
+  title: "Console",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <Gate>{children}</Gate>;
+  return <ConsoleGate>{children}</ConsoleGate>;
 }

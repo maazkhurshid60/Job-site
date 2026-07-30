@@ -10,6 +10,8 @@ import { SubmitCandidateForm } from "@/components/dashboard/SubmitCandidateForm"
 import { formatPay } from "@/components/jobFormat";
 import { getJob, type Job } from "@/lib/jobs";
 import { Loader } from "@/components/Loader";
+import { JsonLd } from "@/components/JsonLd";
+import { jobPostingSchema } from "@/lib/jobSchema";
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +40,9 @@ export default function JobDetailPage() {
 
   return (
     <>
+      {/* Google Jobs eligibility. Emitted only once the role has loaded, since
+          the data arrives client-side — see the caveat in lib/jobSchema.ts. */}
+      {job && <JsonLd schema={jobPostingSchema(job)} />}
       <Navbar />
       <main className="flex-1 bg-white">
         <Container className="py-12 lg:py-16">

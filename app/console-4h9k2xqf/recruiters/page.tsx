@@ -4,15 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { listAllUsers, type UserProfile } from "@/lib/users";
 import { listAllSubmissions, type Submission } from "@/lib/submissions";
 import { Loader } from "@/components/Loader";
+import { formatDate } from "@/lib/dates";
 
 function fmtDate(u: UserProfile): string {
-  const ms = u.createdAt?.toMillis();
-  if (!ms) return "—";
-  return new Date(ms).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDate(u.createdAt);
 }
 
 export default function AdminRecruitersPage() {

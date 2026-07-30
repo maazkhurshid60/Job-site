@@ -9,9 +9,9 @@ const columns = [
     heading: "Product",
     links: [
       { label: "Browse jobs", href: "/jobs" },
-      { label: "How it works", href: "/#how" },
+      { label: "How it works", href: "/how-it-works" },
       { label: "For companies", href: "/#companies" },
-      { label: "For recruiters", href: "/#recruiters" },
+      { label: "For recruiters", href: "/recruiters" },
     ],
   },
   {
@@ -28,7 +28,8 @@ const columns = [
     links: [
       { label: "Hiring guides", href: "/hiring-guides" },
       { label: "Recruiter FAQ", href: "/recruiter-faq" },
-      { label: "Case studies", href: "/case-studies" },
+      { label: "Search playbooks", href: "/case-studies" },
+      { label: "Join the network", href: "/recruiters/apply" },
     ],
   },
   {

@@ -17,11 +17,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "./firebase";
-import {
-  createUserProfile,
-  getUserProfile,
-  type UserProfile,
-} from "./users";
+import { createUserProfile, getMe, type UserProfile } from "./users";
 
 type SignupData = {
   name: string;
@@ -32,6 +28,9 @@ type AuthContextValue = {
   loading: boolean;
   profile: UserProfile | null;
   profileLoading: boolean;
+  /* Admin status is resolved server-side and arrives with the profile, so the
+     console gate doesn't need a second round trip to find out. */
+  isAdmin: boolean;
   refreshProfile: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, data: SignupData) => Promise<void>;
@@ -45,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
@@ -56,20 +56,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = useCallback(async (u: User | null) => {
     if (!u) {
       setProfile(null);
+      setIsAdmin(false);
       setProfileLoading(false);
       return;
     }
     setProfileLoading(true);
     try {
-      setProfile(await getUserProfile(u.uid));
+      const me = await getMe();
+      setProfile(me.profile);
+      setIsAdmin(me.isAdmin);
     } catch {
+      // Never leave a stale isAdmin=true behind on a failed refresh.
       setProfile(null);
+      setIsAdmin(false);
     } finally {
       setProfileLoading(false);
     }
   }, []);
 
-  // Load the Firestore profile whenever the signed-in user changes.
+  // Load the profile from /api/me whenever the signed-in user changes.
   useEffect(() => {
     if (loading) return;
     loadProfile(user);
@@ -80,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     profile,
     profileLoading,
+    isAdmin,
     refreshProfile: () => loadProfile(user),
     login: async (email, password) => {
       await signInWithEmailAndPassword(auth, email, password);
