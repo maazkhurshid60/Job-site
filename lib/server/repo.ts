@@ -192,9 +192,23 @@ type SubmissionRow = {
   notes: string | null;
   cv_file_id: string | null;
   cv_name: string | null;
+  cv_type: string | null;
+  cv_size: number | null;
   bounty: number | null;
   status: SubmissionStatus;
   created_at: string | null;
+  /* Present only on the admin query, which joins users. Prefixed to keep them
+     distinct from the submission's own denormalised recruiter_name. */
+  r_uid?: string | null;
+  r_name?: string | null;
+  r_email?: string | null;
+  r_phone?: string | null;
+  r_company?: string | null;
+  r_headline?: string | null;
+  r_location?: string | null;
+  r_linkedin?: string | null;
+  r_photo_url?: string | null;
+  r_created_at?: string | null;
 };
 
 /* cvUrl is generated, not stored: a fresh signed link is minted each time a
@@ -216,9 +230,32 @@ function toSubmission(r: SubmissionRow): Submission {
     notes: r.notes ?? "",
     cvUrl: r.cv_file_id ? signedFileUrl(r.cv_file_id) : "",
     cvName: r.cv_name ?? "",
+    cvType: r.cv_type ?? "",
+    cvSize: r.cv_size,
     bounty: r.bounty,
     status: r.status,
     createdAt: r.created_at,
+    /* Only the admin query selects these. `r_uid` is the tell: undefined means
+       the query didn't ask for them, null means the recruiter row is genuinely
+       gone (deleted account, or an open application with no referrer). */
+    ...(r.r_uid === undefined
+      ? {}
+      : {
+          recruiter: r.r_uid
+            ? {
+                uid: r.r_uid,
+                name: r.r_name ?? "",
+                email: r.r_email ?? "",
+                phone: r.r_phone ?? "",
+                company: r.r_company ?? "",
+                headline: r.r_headline ?? "",
+                location: r.r_location ?? "",
+                linkedin: r.r_linkedin ?? "",
+                photoURL: r.r_photo_url ?? "",
+                createdAt: r.r_created_at ?? null,
+              }
+            : null,
+        }),
   };
 }
 
@@ -228,9 +265,21 @@ function toSubmission(r: SubmissionRow): Submission {
 const SUB_COLUMNS = `
   s.id, s.job_id, s.job_title, s.company, s.recruiter_id, s.recruiter_name,
   s.candidate_name, s.candidate_email, s.candidate_phone, s.notes,
-  s.cv_file_id, f.filename AS cv_name, s.bounty, s.status, s.created_at`;
+  s.cv_file_id, f.filename AS cv_name, f.content_type AS cv_type,
+  f.byte_size AS cv_size, s.bounty, s.status, s.created_at`;
 
 const SUB_FROM = `FROM submissions s LEFT JOIN files f ON f.id = s.cv_file_id`;
+
+/* Admin-only additions: the referring recruiter's profile. LEFT JOIN again —
+   a deleted recruiter sets submissions.recruiter_id to NULL, and that must not
+   make the submission itself disappear from the screening queue. */
+const SUB_RECRUITER_COLUMNS = `,
+  u.uid AS r_uid, u.name AS r_name, u.email AS r_email, u.phone AS r_phone,
+  u.company AS r_company, u.headline AS r_headline, u.location AS r_location,
+  u.linkedin AS r_linkedin, u.photo_url AS r_photo_url,
+  u.created_at AS r_created_at`;
+
+const SUB_FROM_WITH_RECRUITER = `${SUB_FROM} LEFT JOIN users u ON u.uid = s.recruiter_id`;
 
 export async function listSubmissionsByRecruiter(
   recruiterId: string,
@@ -243,9 +292,11 @@ export async function listSubmissionsByRecruiter(
   return rows.map(toSubmission);
 }
 
+/** Admin screening queue — every submission, with the referrer's profile. */
 export async function listAllSubmissions(): Promise<Submission[]> {
   const rows = await query<SubmissionRow>(
-    `SELECT ${SUB_COLUMNS} ${SUB_FROM} ORDER BY s.created_at DESC`,
+    `SELECT ${SUB_COLUMNS}${SUB_RECRUITER_COLUMNS}
+     ${SUB_FROM_WITH_RECRUITER} ORDER BY s.created_at DESC`,
   );
   return rows.map(toSubmission);
 }

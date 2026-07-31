@@ -48,28 +48,47 @@ export function GET(
       }
     }
 
-    /* CVs download rather than render. A PDF opened inline runs in this
-       origin's context; forcing an attachment plus nosniff removes that as a
-       vector, and stops a mislabelled upload being served as something
-       executable. */
-    const disposition =
-      row.kind === "cv"
-        ? `attachment; filename="${safeFilename(row.filename)}"`
-        : "inline";
+    /* CVs download by default. `?inline=1` asks for in-browser preview, and is
+       granted only for a file we have positively identified as a PDF:
 
-    return new NextResponse(new Uint8Array(row.data), {
-      status: 200,
-      headers: {
-        "Content-Type": row.content_type || "application/octet-stream",
-        "Content-Length": String(row.byte_size),
-        "Content-Disposition": disposition,
-        "X-Content-Type-Options": "nosniff",
-        // Avatars are immutable once uploaded; CV links expire, so never cache.
-        "Cache-Control":
-          row.kind === "avatar"
-            ? "public, max-age=31536000, immutable"
-            : "private, no-store",
-      },
-    });
+         - the stored content_type must be exactly application/pdf, and
+         - the bytes must actually start with %PDF-.
+
+       The declared type alone is not enough — it comes from the uploader, so a
+       .html or .svg labelled application/pdf would otherwise be served inline
+       and execute. The magic-byte check is what makes this safe.
+
+       Even then the response carries `Content-Security-Policy: sandbox`, which
+       puts it in an opaque origin with scripts disabled. That answers the
+       original objection to inline rendering: a PDF served this way cannot
+       touch this origin's cookies or storage. */
+    const wantsInline = new URL(req.url).searchParams.get("inline") === "1";
+    const isRealPdf =
+      row.content_type === "application/pdf" &&
+      row.data.subarray(0, 5).toString("latin1") === "%PDF-";
+    const previewable = row.kind === "cv" && wantsInline && isRealPdf;
+
+    const disposition =
+      row.kind === "cv" && !previewable
+        ? `attachment; filename="${safeFilename(row.filename)}"`
+        : `inline; filename="${safeFilename(row.filename)}"`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": row.content_type || "application/octet-stream",
+      "Content-Length": String(row.byte_size),
+      "Content-Disposition": disposition,
+      "X-Content-Type-Options": "nosniff",
+      // Avatars are immutable once uploaded; CV links expire, so never cache.
+      "Cache-Control":
+        row.kind === "avatar"
+          ? "public, max-age=31536000, immutable"
+          : "private, no-store",
+    };
+    if (previewable) {
+      headers["Content-Security-Policy"] =
+        "sandbox; default-src 'none'; object-src 'none'; script-src 'none'";
+    }
+
+    return new NextResponse(new Uint8Array(row.data), { status: 200, headers });
   });
 }

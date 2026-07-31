@@ -12,6 +12,7 @@ import {
 import { money } from "@/components/dashboard/parts";
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
+import { SubmissionDetail } from "@/components/admin/SubmissionDetail";
 
 const tone: Record<SubmissionStatus, string> = {
   submitted: "bg-line text-muted",
@@ -27,6 +28,10 @@ export default function AdminSubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<SubmissionStatus | "all">("all");
+  /* Track the open row by id, not by object: the list is replaced on every
+     status change, and holding a stale copy would leave the panel showing the
+     old status while the table showed the new one. */
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,6 +68,7 @@ export default function AdminSubmissionsPage() {
 
   const shown =
     filter === "all" ? subs : subs.filter((s) => s.status === filter);
+  const open = subs.find((s) => s.id === openId) ?? null;
 
   return (
     <div>
@@ -135,7 +141,13 @@ export default function AdminSubmissionsPage() {
               {shown.map((s) => (
                 <tr key={s.id} className="align-top hover:bg-cream/40">
                   <td className="px-5 py-4">
-                    <p className="font-semibold text-ink">{s.candidateName}</p>
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(s.id)}
+                      className="text-left font-semibold text-ink hover:text-primary"
+                    >
+                      {s.candidateName}
+                    </button>
                     <p className="text-xs text-muted">{s.candidateEmail}</p>
                     {s.notes && (
                       <p className="mt-1 max-w-xs text-xs text-muted">
@@ -147,17 +159,29 @@ export default function AdminSubmissionsPage() {
                     <p className="font-medium text-ink">{s.jobTitle}</p>
                     <p className="text-xs text-muted">{s.company}</p>
                   </td>
-                  <td className="px-5 py-4 text-muted">{s.recruiterName}</td>
+                  <td className="px-5 py-4">
+                    {/* The row already knows the recruiter's company — showing
+                        it saves opening the panel just to place the name. */}
+                    <p className="text-muted">
+                      {s.recruiter?.name || s.recruiterName || "—"}
+                    </p>
+                    {s.recruiter?.company && (
+                      <p className="text-xs text-muted/80">{s.recruiter.company}</p>
+                    )}
+                  </td>
                   <td className="px-5 py-4 text-muted">{money(s.bounty)}</td>
                   <td className="px-5 py-4">
-                    <a
-                      href={s.cvUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-semibold text-primary hover:text-primary-dark"
-                    >
-                      Open CV
-                    </a>
+                    {s.cvUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => setOpenId(s.id)}
+                        className="text-sm font-semibold text-primary hover:text-primary-dark"
+                      >
+                        Preview
+                      </button>
+                    ) : (
+                      <span className="text-sm text-muted">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
@@ -187,6 +211,14 @@ export default function AdminSubmissionsPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {open && (
+        <SubmissionDetail
+          submission={open}
+          onClose={() => setOpenId(null)}
+          onStatusChange={(status) => changeStatus(open, status)}
+        />
       )}
     </div>
   );

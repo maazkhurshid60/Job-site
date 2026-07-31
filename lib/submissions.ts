@@ -50,9 +50,33 @@ export type Submission = {
      submission is read. Not stored, and not shareable for long. */
   cvUrl: string;
   cvName: string;
+  /** MIME type of the stored CV — decides whether it can be previewed. */
+  cvType: string;
+  /** Size of the stored CV in bytes, or null when there is no CV. */
+  cvSize: number | null;
   bounty: number | null;
   status: SubmissionStatus;
   /** ISO-8601 string from MySQL, or null. */
+  createdAt: string | null;
+  /* The referring recruiter's profile, for the admin console's detail view.
+     Only populated by the admin endpoint — a recruiter listing their own
+     submissions has no business reading other people's contact details, and
+     already knows their own. Null for an open application, or when the
+     recruiter's account has since been deleted. */
+  recruiter?: SubmissionRecruiter | null;
+};
+
+export type SubmissionRecruiter = {
+  uid: string;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  headline: string;
+  location: string;
+  linkedin: string;
+  photoURL: string;
+  /** When they joined — ISO-8601, or null. */
   createdAt: string | null;
 };
 
