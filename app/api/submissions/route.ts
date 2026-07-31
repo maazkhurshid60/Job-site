@@ -5,7 +5,7 @@ import {
   createSubmission, getOpenJob, listSubmissionsByRecruiter, getUserProfile,
   cvFileIsAvailable,
 } from "@/lib/server/repo";
-import { getUid, requireUid } from "@/lib/server/auth";
+import { requireUid } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,19 +19,19 @@ export function GET(req: Request) {
   });
 }
 
-/* Create a submission.
+/* Create a submission. Sign-in is REQUIRED.
 
-   Open applications: signing in is optional, matching the old Firestore rule.
-   A signed-in caller is recorded as the referrer; an anonymous one is stored
-   with recruiter_id NULL and the name "Public applicant".
+   This is the enforcement point. The form is also hidden from signed-out
+   visitors, but that is only presentation — a request straight to this endpoint
+   has to be refused here, or the rule does not exist.
 
    Note what is NOT taken from the body: jobTitle, company and bounty are read
    from the jobs table, not trusted from the client. Otherwise anyone could post
    a submission claiming a $50,000 commission. */
 export function POST(req: Request) {
   return handle(async () => {
+    const uid = await requireUid(req);
     const body = await jsonBody(req);
-    const uid = await getUid(req);
 
     const jobId = str(body.jobId, "jobId", { max: 64, required: true });
     const job = await getOpenJob(jobId);
@@ -46,11 +46,8 @@ export function POST(req: Request) {
       throw new BadRequest("That CV upload is missing or already used.");
     }
 
-    let recruiterName = "Public applicant";
-    if (uid) {
-      const profile = await getUserProfile(uid);
-      recruiterName = profile?.name || "Recruiter";
-    }
+    const profile = await getUserProfile(uid);
+    const recruiterName = profile?.name || "Recruiter";
 
     const id = await createSubmission({
       jobId: job.id,

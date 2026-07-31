@@ -63,8 +63,7 @@ export async function apiFetch<T>(
    Sent as multipart/form-data with no Content-Type header of our own — the
    browser must set it, because only it knows the multipart boundary.
 
-   Signing in is optional: a candidate applying to a role directly is not
-   logged in, and a signed-in recruiter gets recorded as the uploader. */
+   Requires a signed-in user; the server records them as the uploader. */
 export async function uploadFile(
   file: File,
   kind: "cv" | "avatar",
@@ -75,7 +74,8 @@ export async function uploadFile(
 
   const res = await fetch("/api/files", {
     method: "POST",
-    headers: await authHeader(kind === "avatar"),
+    // Both kinds require a signed-in user; throw before uploading if not.
+    headers: await authHeader(true),
     body: form,
   });
 

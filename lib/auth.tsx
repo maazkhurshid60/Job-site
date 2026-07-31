@@ -93,7 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signup: async (email, password, data) => {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(cred.user, { displayName: data.name });
-      await createUserProfile(cred.user.uid, { name: data.name, email });
+      /* From here the account genuinely exists, so a failure below must not be
+         reported as "couldn't create your account" — retrying would only hit
+         "email already in use". If the profile write doesn't land, GET /api/me
+         recreates the row from the token on the next load. */
+      await createUserProfile(cred.user.uid, { name: data.name, email }).catch(
+        () => {},
+      );
       await loadProfile(cred.user);
     },
     logout: async () => {

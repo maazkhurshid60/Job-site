@@ -63,13 +63,14 @@ export type SubmissionInput = {
   notes: string;
 };
 
-/* Upload the candidate's CV, then create the submission.
+/* Upload the candidate's CV, then create the submission. Requires a signed-in
+   recruiter — the server rejects both calls otherwise.
 
-   `recruiter` is kept in the signature for call-site compatibility but is no
-   longer trusted for identity: the server reads the referrer from the verified
-   ID token. Passing a different uid here would have no effect. Job title,
-   company and bounty are likewise read server-side from the jobs table, so a
-   client cannot claim a commission the role doesn't carry. */
+   `recruiter` is kept in the signature for call-site compatibility but is not
+   trusted for identity: the server reads the referrer from the verified ID
+   token, so passing a different uid here has no effect. Job title, company and
+   bounty are likewise read server-side from the jobs table, so a client cannot
+   claim a commission the role doesn't carry. */
 export async function createSubmission(
   job: Job,
   _recruiter: { uid: string; name: string } | null,
@@ -86,8 +87,7 @@ export async function createSubmission(
 
   await apiFetch("/api/submissions", {
     method: "POST",
-    // Open applications: signing in is optional, but credits you if present.
-    auth: "optional",
+    auth: true,
     body: {
       jobId: job.id,
       candidateName: input.candidateName,

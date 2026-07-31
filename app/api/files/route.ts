@@ -1,5 +1,5 @@
 import { handle, ok, BadRequest } from "@/lib/server/respond";
-import { getUid } from "@/lib/server/auth";
+import { requireUid } from "@/lib/server/auth";
 import { execute } from "@/lib/db";
 import {
   newFileId, validateUpload, safeFilename, MAX_CV_BYTES,
@@ -10,9 +10,10 @@ export const dynamic = "force-dynamic";
 
 /* File upload. Bytes go into the `files` table as a MEDIUMBLOB.
 
-   Anonymous uploads are allowed for CVs, matching the open-application rule
-   that has always applied — a candidate applying directly is not signed in.
-   Avatars require a signed-in user, since they attach to that user's profile.
+   Sign-in is REQUIRED for both kinds. Leaving CV upload open while the
+   submission endpoint required a login would be pointless: anyone could still
+   fill the table with 10 MB blobs against a 4 GB account-wide quota, with no
+   account to attribute or rate-limit.
 
    DEPLOYMENT LIMIT: Vercel caps a serverless function's request body at about
    4.5 MB. The 10 MB CV limit below is enforceable when self-hosting or on a
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
    the platform before this handler ever runs. */
 export function POST(req: Request) {
   return handle(async () => {
-    const uid = await getUid(req);
+    const uid = await requireUid(req);
 
     const form = await req.formData().catch(() => {
       throw new BadRequest("Expected a multipart form upload.");
@@ -30,9 +31,6 @@ export function POST(req: Request) {
     const kind = kindRaw === "avatar" ? "avatar" : "cv";
     if (kindRaw !== "cv" && kindRaw !== "avatar") {
       throw new BadRequest("kind must be 'cv' or 'avatar'.");
-    }
-    if (kind === "avatar" && !uid) {
-      throw new BadRequest("Sign in required to upload a profile photo.");
     }
 
     const file = form.get("file");

@@ -1,22 +1,37 @@
 import { handle, ok, jsonBody, str } from "@/lib/server/respond";
 import {
-  getUserProfile, createUserProfile, updateUserProfile,
+  getUserProfile, createUserProfile, ensureUserProfile, updateUserProfile,
 } from "@/lib/server/repo";
-import { requireUid, isAdmin } from "@/lib/server/auth";
+import { requireUid, requireIdentity, isAdmin } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** The caller's own profile, plus whether they're an admin. `profile` is null
-    for an admin-only account with no self-serve profile — the dashboard
-    already handles that case. */
+/* A recruiter always gets a usable name. Firebase only carries `name` when the
+   account has a displayName, and an empty one leaves the dashboard greeting
+   and every submission credited to a blank. The email local part is a poor
+   name but a real one, and the profile page invites them to correct it. */
+function displayName(name: string, email: string): string {
+  return name.trim() || email.split("@")[0] || "Recruiter";
+}
+
+/** The caller's own profile, plus whether they're an admin.
+ *
+ *  Signing in is what makes you a recruiter here: if a signed-in account has no
+ *  profile row yet, this creates one from the verified token rather than
+ *  handing back null. `profile` is therefore null only for an admin-only
+ *  account, which deliberately stays out of the recruiter table. */
 export function GET(req: Request) {
   return handle(async () => {
-    const uid = await requireUid(req);
-    const [profile, admin] = await Promise.all([
+    const { uid, email, name } = await requireIdentity(req);
+    const [existing, admin] = await Promise.all([
       getUserProfile(uid),
       isAdmin(uid),
     ]);
+
+    const profile =
+      existing ?? (admin ? null : await ensureUserProfile(uid, displayName(name, email), email));
+
     return ok({ profile, isAdmin: admin });
   });
 }

@@ -21,8 +21,8 @@ export default function JobDetailPage() {
   useEffect(() => {
     let active = true;
     getJob(id)
-      // Firestore rules only expose `open` roles publicly; anything else
-      // (draft/closed/not found/permission denied) is treated as missing.
+      // GET /api/jobs/[id] only serves `open` roles; anything else
+      // (draft/closed/not found) comes back null and is treated as missing.
       .then((j) => {
         if (!active) return;
         if (j && j.status === "open") {
@@ -151,7 +151,7 @@ export default function JobDetailPage() {
                 </div>
               </div>
 
-              {/* apply — open to everyone, no login required */}
+              {/* apply — signed-in recruiters only; the form renders a sign-in prompt otherwise */}
               <div className="lg:sticky lg:top-24">
                 <SubmitCandidateForm job={job} />
               </div>

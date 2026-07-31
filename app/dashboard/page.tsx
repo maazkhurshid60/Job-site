@@ -28,6 +28,15 @@ export default function DashboardOverview() {
   }, [user]);
 
   const firstName = profile?.name?.split(" ")[0] || "there";
+
+  /* A profile row is created the moment you sign in, so it exists but is bare.
+     These are the fields our team actually reads when deciding who to work
+     with — company, what you do, and how to reach you. */
+  const profileGaps = profile
+    ? (["company", "headline", "phone", "photoURL"] as const).filter(
+        (k) => !profile[k],
+      )
+    : [];
   const hired = subs.filter((s) => s.status === "hired");
   const active = subs.filter(
     (s) => s.status !== "hired" && s.status !== "rejected",
@@ -50,6 +59,24 @@ export default function DashboardOverview() {
           Browse jobs
         </Link>
       </div>
+
+      {profileGaps.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-cream/50 p-5">
+          <div>
+            <p className="text-sm font-bold text-ink">Finish your profile</p>
+            <p className="mt-0.5 text-sm text-muted">
+              Add your photo, company, and contact details — it&apos;s how our
+              recruiters know who they&apos;re working with on your referrals.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/profile"
+            className="shrink-0 rounded-pill border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-primary hover:text-primary"
+          >
+            Complete profile
+          </Link>
+        </div>
+      )}
 
       {loading ? (
         <div className="grid h-40 place-items-center rounded-2xl border border-line bg-white">

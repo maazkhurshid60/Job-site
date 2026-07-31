@@ -75,7 +75,7 @@ export const howSteps: HowStep[] = [
     sections: [
       {
         heading: "Apply directly",
-        body: "If you match the brief, apply for the role yourself. Your details go straight to our principal recruiter for screening — no middle layers, no lost applications.",
+        body: "If you match the brief, apply for the role yourself. Create a free account first — submissions are tied to it, which is how referrals and applications stay attributable. Your details then go straight to our principal recruiter for screening.",
       },
       {
         heading: "Refer from your network",

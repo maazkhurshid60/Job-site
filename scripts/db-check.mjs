@@ -27,6 +27,7 @@ const cfg = {
 
 const EXPECTED_TABLES = [
   "admins",
+  "files",
   "jobs",
   "messages",
   "settings",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { createSubmission } from "@/lib/submissions";
@@ -9,7 +10,7 @@ import type { Job } from "@/lib/jobs";
 
 export function SubmitCandidateForm({ job }: { job: Job }) {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
 
   const [form, setForm] = useState({
     candidateName: "",
@@ -36,6 +37,13 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
       setDone(true);
       return;
     }
+    /* The form is only rendered for a signed-in user, but a session can expire
+       while it sits open. Catch that here rather than letting the upload start
+       and fail with a 401 halfway through. */
+    if (!user) {
+      setError("Your session has ended. Please sign in again to submit.");
+      return;
+    }
     if (!cv) {
       setError("Please attach the candidate's CV.");
       return;
@@ -53,19 +61,75 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     try {
       await createSubmission(
         job,
-        user
-          ? { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" }
-          : null,
+        { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" },
         form,
         cv,
       );
       setDone(true);
     } catch (err) {
+      /* Show what actually failed. The API returns readable messages —
+         "This candidate has already been submitted for this role.",
+         "CV must be a PDF or Word document." — and apiFetch passes them
+         through, so the recruiter can act on it instead of guessing. */
       setError(
-        err instanceof Error ? err.message : "Could not submit. Try again.",
+        err instanceof Error && err.message
+          ? err.message
+          : "Could not save the submission. Please try again.",
       );
+    } finally {
+      // finally, not catch: a stuck "Submitting…" is the worst outcome here.
       setSubmitting(false);
     }
+  }
+
+  // Wait for auth to resolve before deciding what to show, so a signed-in
+  // recruiter never sees the sign-in prompt flash on load.
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-line bg-white p-8">
+        <div className="h-5 w-40 animate-pulse rounded bg-line" />
+        <div className="mt-4 h-4 w-full animate-pulse rounded bg-line" />
+        <div className="mt-2 h-4 w-2/3 animate-pulse rounded bg-line" />
+      </div>
+    );
+  }
+
+  /* Signed-out visitors get no form at all. This is presentation only — the
+     real rule is requireUid() on POST /api/submissions and POST /api/files. */
+  if (!user) {
+    const next = encodeURIComponent(`/jobs/${job.id}`);
+    return (
+      <div className="rounded-2xl border border-line bg-white p-8 text-center">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary-soft text-primary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="4" y="10" width="16" height="10" rx="2" />
+            <path d="M8 10V7a4 4 0 1 1 8 0v3" />
+          </svg>
+        </div>
+        <h3 className="mt-4 text-lg font-bold text-ink">
+          Sign in to submit a candidate
+        </h3>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
+          Referrals are tied to your account — that&apos;s how we know the{" "}
+          {job.bounty ? "commission" : "referral"} is yours when{" "}
+          {job.title} is filled. It&apos;s free to join.
+        </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          <Link
+            href={`/login?next=${next}`}
+            className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
+          >
+            Log in
+          </Link>
+          <Link
+            href={`/signup?next=${next}`}
+            className="rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:border-primary hover:text-primary"
+          >
+            Create an account
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (done) {
@@ -84,10 +148,10 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         </p>
         <button
           type="button"
-          onClick={() => router.push(user ? "/dashboard/submissions" : "/jobs")}
+          onClick={() => router.push("/dashboard/submissions")}
           className="mt-5 rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
         >
-          {user ? "View my submissions" : "Browse more jobs"}
+          View my submissions
         </button>
       </div>
     );

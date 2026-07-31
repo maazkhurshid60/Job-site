@@ -42,12 +42,18 @@ function bearerToken(req: Request): string | null {
   return token || null;
 }
 
+/* Who the caller is, straight from the verified token. `email` and `name` are
+   Firebase Auth's own record of the account — they are signed by Google, so
+   unlike anything in a request body they can be trusted to create a row with.
+   `name` is empty when the account has no displayName. */
+export type Identity = { uid: string; email: string; name: string };
+
 /**
- * Verify the caller's ID token and return their Firebase UID.
+ * Verify the caller's ID token and return their identity.
  * Returns null when no token was sent — callers decide whether that's allowed.
  * Throws AuthError(401) when a token was sent but is not valid.
  */
-export async function getUid(req: Request): Promise<string | null> {
+export async function getIdentity(req: Request): Promise<Identity | null> {
   const token = bearerToken(req);
   if (!token) return null;
 
@@ -68,18 +74,32 @@ export async function getUid(req: Request): Promise<string | null> {
     // `sub` is the Firebase UID. jose has already rejected expired tokens.
     const uid = typeof payload.sub === "string" ? payload.sub : null;
     if (!uid) throw new AuthError("Token has no subject.", 401);
-    return uid;
+    return {
+      uid,
+      email: typeof payload.email === "string" ? payload.email : "",
+      name: typeof payload.name === "string" ? payload.name : "",
+    };
   } catch (err) {
     if (err instanceof AuthError) throw err;
     throw new AuthError("Invalid or expired token.", 401);
   }
 }
 
+/** The caller's UID, or null when signed out. */
+export async function getUid(req: Request): Promise<string | null> {
+  return (await getIdentity(req))?.uid ?? null;
+}
+
 /** Require a signed-in user. Throws AuthError(401) otherwise. */
 export async function requireUid(req: Request): Promise<string> {
-  const uid = await getUid(req);
-  if (!uid) throw new AuthError("Sign in required.", 401);
-  return uid;
+  return (await requireIdentity(req)).uid;
+}
+
+/** Require a signed-in user and return their full identity. */
+export async function requireIdentity(req: Request): Promise<Identity> {
+  const identity = await getIdentity(req);
+  if (!identity) throw new AuthError("Sign in required.", 401);
+  return identity;
 }
 
 /** True when the UID is in the admins table — the old isAdmin() rule. */

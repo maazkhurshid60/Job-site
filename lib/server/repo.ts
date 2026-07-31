@@ -369,6 +369,31 @@ export async function createUserProfile(
   );
 }
 
+/* Make sure a signed-in account has a profile row, and return it.
+ *
+ * A Firebase Auth account and a `users` row are created by two separate calls
+ * at signup, so they can drift apart: the browser closes between them, the DB
+ * is briefly unreachable, or the account predates this table. The result was a
+ * login that reached the dashboard and found nothing — "No account profile
+ * found", with no way forward.
+ *
+ * Unlike createUserProfile this is non-destructive: the ON DUPLICATE branch is
+ * a deliberate no-op, so a concurrent request (or a returning user who has
+ * since edited their name) can never have their profile overwritten by whatever
+ * is stamped on the token. */
+export async function ensureUserProfile(
+  uid: string,
+  name: string,
+  email: string,
+): Promise<UserProfile | null> {
+  await execute(
+    `INSERT INTO users (uid, name, email) VALUES (?,?,?)
+       ON DUPLICATE KEY UPDATE uid = uid`,
+    [uid, name, email],
+  );
+  return getUserProfile(uid);
+}
+
 export type ProfileWrite = {
   name: string;
   phone: string;

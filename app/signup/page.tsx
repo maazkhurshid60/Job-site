@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/auth";
+import { useNextPath } from "@/lib/useNextPath";
 import { AuthCard, AuthField } from "@/components/auth/AuthCard";
 
 function signupErrorMessage(err: unknown): string {
@@ -20,6 +21,7 @@ function signupErrorMessage(err: unknown): string {
 
 export default function SignupPage() {
   const router = useRouter();
+  const nextPath = useNextPath();
   const { user, loading, signup } = useAuth();
 
   const [name, setName] = useState("");
@@ -29,8 +31,8 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) router.replace("/dashboard");
-  }, [loading, user, router]);
+    if (!loading && user) router.replace(nextPath);
+  }, [loading, user, router, nextPath]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,7 +40,7 @@ export default function SignupPage() {
     setSubmitting(true);
     try {
       await signup(email, password, { name });
-      router.replace("/dashboard");
+      router.replace(nextPath);
     } catch (err) {
       setError(signupErrorMessage(err));
       setSubmitting(false);
