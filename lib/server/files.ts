@@ -1,5 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual, randomUUID } from "node:crypto";
+import { ConfigError } from "./respond";
 
 /* Signed, expiring URLs for CV downloads.
 
@@ -18,11 +19,16 @@ import { createHmac, timingSafeEqual, randomUUID } from "node:crypto";
 
 const TTL_SECONDS = 60 * 60; // 1 hour — long enough to read, short enough to rot
 
+/* Note where this throws from: signedFileUrl() runs while SERIALISING a
+   submission, so a missing secret doesn't just break CV downloads — it takes
+   down the whole submissions list, and only once the first CV exists. That
+   delayed, misleading failure is why this raises a ConfigError, whose message
+   reaches the signed-in operator instead of being masked. */
 function secret(): string {
   const value = process.env.FILE_URL_SECRET;
   if (!value || value.length < 32) {
-    throw new Error(
-      "FILE_URL_SECRET is missing or too short (needs 32+ chars). Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+    throw new ConfigError(
+      "The server is missing FILE_URL_SECRET (needs 32+ characters), so CV links can't be signed. Add it to the deployment's environment variables and redeploy.",
     );
   }
   return value;

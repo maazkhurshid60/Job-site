@@ -20,6 +20,20 @@ export class NotFound extends Error {
   }
 }
 
+/* A deployment is misconfigured — a required environment variable is missing.
+ *
+ * This is worth its own class because it is the one 500 whose message is safe
+ * to show: it names a config key, never a query, a table, or candidate data.
+ * Masking it as "Something went wrong." cost real time — a missing
+ * FILE_URL_SECRET made the admin submissions list 500 the moment the first CV
+ * was uploaded, and the generic text pointed at nothing.
+ *
+ * Routes that throw this are all behind requireUid/requireAdmin, so the text
+ * only ever reaches a signed-in operator. */
+export class ConfigError extends Error {
+  readonly status = 500 as const;
+}
+
 export function ok<T>(data: T, init?: ResponseInit) {
   return NextResponse.json(data, init);
 }
@@ -31,6 +45,11 @@ export function handle<T>(fn: () => Promise<T>) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     if (err instanceof BadRequest || err instanceof NotFound) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    if (err instanceof ConfigError) {
+      // Still log it: this one always needs someone to go and fix a deployment.
+      console.error("[api] configuration error:", err.message);
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
 
