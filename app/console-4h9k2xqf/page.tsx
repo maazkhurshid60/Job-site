@@ -8,6 +8,7 @@ import { listAllUsers, type UserProfile } from "@/lib/users";
 import { adminRoutes } from "@/lib/routes";
 import { StatCard, SubmissionBadge } from "@/components/dashboard/parts";
 import { Loader } from "@/components/Loader";
+import { LoadError, errorMessage } from "@/components/admin/LoadError";
 
 export default function AdminDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -23,7 +24,9 @@ export default function AdminDashboard() {
         setSubs(s);
         setUsers(u);
       })
-      .catch(() => setError("Could not load data. Check your Firestore rules."))
+      .catch((err) =>
+        setError(errorMessage(err, "The server didn't respond. Please try again.")),
+      )
       .finally(() => setLoading(false));
   }, []);
 
@@ -52,9 +55,11 @@ export default function AdminDashboard() {
       </div>
 
       {error && (
-        <p className="mb-6 rounded-lg bg-coral-soft px-4 py-3 text-sm text-coral">
-          {error}
-        </p>
+        <LoadError
+          what="the dashboard"
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
       )}
 
       {loading ? (

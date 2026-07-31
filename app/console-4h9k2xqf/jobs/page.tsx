@@ -13,6 +13,7 @@ import {
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { adminRoutes } from "@/lib/routes";
 import { Loader } from "@/components/Loader";
+import { LoadError, errorMessage } from "@/components/admin/LoadError";
 
 const statusStyle: Record<JobStatus, string> = {
   open: "bg-primary-soft text-primary",
@@ -52,9 +53,7 @@ function JobsList() {
       setJobs(await listJobs());
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Could not load jobs. Check your Firestore rules.",
+        errorMessage(err, "The server didn't respond. Please try again."),
       );
     } finally {
       setLoading(false);
@@ -184,11 +183,7 @@ function JobsList() {
         </div>
       )}
 
-      {error && (
-        <p className="mb-6 rounded-lg bg-coral-soft px-4 py-3 text-sm text-coral">
-          {error}
-        </p>
-      )}
+      {error && <LoadError what="the job list" message={error} onRetry={load} />}
 
       {loading ? (
         <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">

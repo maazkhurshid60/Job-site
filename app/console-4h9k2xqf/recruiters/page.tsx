@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { listAllUsers, type UserProfile } from "@/lib/users";
 import { listAllSubmissions, type Submission } from "@/lib/submissions";
 import { Loader } from "@/components/Loader";
+import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { formatDate } from "@/lib/dates";
 
 function fmtDate(u: UserProfile): string {
@@ -23,8 +24,8 @@ export default function AdminRecruitersPage() {
         setUsers(u);
         setSubs(s);
       })
-      .catch(() =>
-        setError("Could not load recruiters. Check your Firestore rules."),
+      .catch((err) =>
+        setError(errorMessage(err, "The server didn't respond. Please try again.")),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -68,16 +69,18 @@ export default function AdminRecruitersPage() {
       </div>
 
       {error && (
-        <p className="mb-6 rounded-lg bg-coral-soft px-4 py-3 text-sm text-coral">
-          {error}
-        </p>
+        <LoadError
+          what="recruiters"
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
       )}
 
       {loading ? (
         <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">
           <Loader />
         </div>
-      ) : shown.length === 0 ? (
+      ) : error ? null : shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">
           <h2 className="font-bold text-ink">No recruiters</h2>
           <p className="mt-1 text-sm text-muted">

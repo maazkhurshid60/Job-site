@@ -11,6 +11,7 @@ import {
 } from "@/lib/submissions";
 import { money } from "@/components/dashboard/parts";
 import { Loader } from "@/components/Loader";
+import { LoadError, errorMessage } from "@/components/admin/LoadError";
 
 const tone: Record<SubmissionStatus, string> = {
   submitted: "bg-line text-muted",
@@ -32,8 +33,10 @@ export default function AdminSubmissionsPage() {
     setError(null);
     try {
       setSubs(await listAllSubmissions());
-    } catch {
-      setError("Could not load submissions. Check your Firestore rules.");
+    } catch (err) {
+      setError(
+        errorMessage(err, "The server didn't respond. Please try again."),
+      );
     } finally {
       setLoading(false);
     }
@@ -94,15 +97,18 @@ export default function AdminSubmissionsPage() {
       </div>
 
       {error && (
-        <p className="mb-6 rounded-lg bg-coral-soft px-4 py-3 text-sm text-coral">
-          {error}
-        </p>
+        <LoadError what="submissions" message={error} onRetry={load} />
       )}
 
       {loading ? (
         <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">
           <Loader />
         </div>
+      ) : error ? (
+        /* Nothing to say about the data when the load failed — "Nothing here"
+           next to an error reads as "there are no submissions", which is a
+           claim we can't make when we never got an answer. */
+        null
       ) : shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">
           <h2 className="font-bold text-ink">Nothing here</h2>

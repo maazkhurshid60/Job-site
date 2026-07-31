@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getCategories, saveCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { Loader } from "@/components/Loader";
+import { errorMessage } from "@/components/admin/LoadError";
 
 export default function CategoriesAdminPage() {
   const [items, setItems] = useState<string[]>([]);
@@ -53,7 +54,7 @@ export default function CategoriesAdminPage() {
     } catch (err) {
       setMsg({
         type: "err",
-        text: err instanceof Error ? err.message : "Could not save. Check your admin access / Firestore rules.",
+        text: errorMessage(err, "Could not save. Please try again."),
       });
     } finally {
       setSaving(false);
