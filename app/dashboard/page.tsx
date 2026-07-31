@@ -7,7 +7,10 @@ import {
   listSubmissionsByRecruiter,
   type Submission,
 } from "@/lib/submissions";
-import { StatCard, SubmissionBadge, money } from "@/components/dashboard/parts";
+import {
+  StatCard, SubmissionBadge, ProfileMeter, money,
+} from "@/components/dashboard/parts";
+import { profileCompletion } from "@/lib/profileCompletion";
 import {
   SubmissionsOverTime,
   PipelineByStage,
@@ -28,15 +31,7 @@ export default function DashboardOverview() {
   }, [user]);
 
   const firstName = profile?.name?.split(" ")[0] || "there";
-
-  /* A profile row is created the moment you sign in, so it exists but is bare.
-     These are the fields our team actually reads when deciding who to work
-     with — company, what you do, and how to reach you. */
-  const profileGaps = profile
-    ? (["company", "headline", "phone", "photoURL"] as const).filter(
-        (k) => !profile[k],
-      )
-    : [];
+  const completion = profileCompletion(profile);
   const hired = subs.filter((s) => s.status === "hired");
   const active = subs.filter(
     (s) => s.status !== "hired" && s.status !== "rejected",
@@ -60,21 +55,36 @@ export default function DashboardOverview() {
         </Link>
       </div>
 
-      {profileGaps.length > 0 && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-cream/50 p-5">
-          <div>
-            <p className="text-sm font-bold text-ink">Finish your profile</p>
-            <p className="mt-0.5 text-sm text-muted">
-              Add your photo, company, and contact details — it&apos;s how our
-              recruiters know who they&apos;re working with on your referrals.
-            </p>
+      {!completion.isComplete && (
+        <div className="mb-6 rounded-2xl border border-line bg-cream/50 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-ink">
+                Your profile is {completion.percent}% complete
+              </p>
+              <p className="mt-0.5 text-sm text-muted">
+                {completion.filled} of {completion.total} details added — it&apos;s
+                how our recruiters know who they&apos;re working with on your
+                referrals.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/profile"
+              className="shrink-0 rounded-pill border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-primary hover:text-primary"
+            >
+              Complete profile
+            </Link>
           </div>
-          <Link
-            href="/dashboard/profile"
-            className="shrink-0 rounded-pill border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-primary hover:text-primary"
-          >
-            Complete profile
-          </Link>
+
+          <ProfileMeter percent={completion.percent} className="mt-4" />
+
+          <p className="mt-3 text-xs text-muted">
+            <span className="font-semibold text-ink">Still to add:</span>{" "}
+            {/* Only the first few — a list of eight reads as a chore, not a nudge. */}
+            {completion.missing.slice(0, 4).map((f) => f.label).join(", ")}
+            {completion.missing.length > 4 &&
+              ` and ${completion.missing.length - 4} more`}
+          </p>
         </div>
       )}
 

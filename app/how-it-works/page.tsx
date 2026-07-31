@@ -4,6 +4,8 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Container } from "@/components/ui";
 import { JsonLd } from "@/components/JsonLd";
+import { PageHero, PhotoBand } from "@/components/PageHero";
+import { photo } from "@/components/images";
 import { howSteps } from "@/lib/howItWorks";
 import { absoluteUrl } from "@/lib/seo";
 
@@ -106,39 +108,16 @@ export default function HowItWorksPage() {
       <JsonLd schema={[faqSchema, breadcrumbSchema]} />
       <Navbar />
       <main className="flex-1">
-        {/* Hero */}
-        <section className="border-b border-gray-100 bg-gray-50/40 py-16 sm:py-20">
-          <Container>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
-              How it works
-            </span>
-            <h1 className="mt-3 max-w-3xl text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-              Crowdsourced engineering recruiting, with an agency doing the
-              quality control
-            </h1>
-            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">
-              JobFolder puts a network of specialist recruiters behind every
-              civil, transportation and DOT role, screens every candidate
-              in-house, and keeps you with one point of contact until the hire is
-              made. Here is exactly how that runs — for the companies hiring, and
-              for the recruiters referring.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/contact"
-                className="inline-flex items-center justify-center rounded-pill bg-blue-brand px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-brand-dark"
-              >
-                Start hiring
-              </Link>
-              <Link
-                href="/jobs"
-                className="inline-flex items-center justify-center rounded-pill border border-gray-200 bg-white px-7 py-3 text-sm font-semibold text-ink transition-colors hover:border-blue-brand hover:text-blue-brand"
-              >
-                Browse open roles
-              </Link>
-            </div>
-          </Container>
-        </section>
+        <PageHero
+          eyebrow="How it works"
+          title="Crowdsourced engineering recruiting, with an agency doing the quality control"
+          lead="JobFolder puts a network of specialist recruiters behind every civil, transportation and DOT role, screens every candidate in-house, and keeps you with one point of contact until the hire is made. Here is exactly how that runs — for the companies hiring, and for the recruiters referring."
+          photo={photo.civilEngineerWeir}
+          actions={[
+            { label: "Start hiring", href: "/contact" },
+            { label: "Browse open roles", href: "/jobs" },
+          ]}
+        />
 
         {/* Client journey */}
         <section className="py-16 sm:py-20">
@@ -165,6 +144,12 @@ export default function HowItWorksPage() {
             </div>
           </Container>
         </section>
+
+        <PhotoBand
+          photo={photo.landSurveyor}
+          caption="Every brief is worked by specialist recruiters who already know the discipline."
+          className="pb-4"
+        />
 
         {/* Recruiter journey — the three canonical steps */}
         <section className="border-t border-gray-100 bg-gray-50/40 py-16 sm:py-20">

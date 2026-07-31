@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { updateUserProfile, uploadAvatar } from "@/lib/users";
+import { profileCompletion } from "@/lib/profileCompletion";
+import { ProfileMeter } from "@/components/dashboard/parts";
 
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -77,6 +79,10 @@ export default function ProfilePage() {
 
   const initial = (form.name || user?.email || "R").charAt(0).toUpperCase();
 
+  /* Measured against the form, not the saved profile, so the bar moves as they
+     type instead of only after a save. */
+  const completion = profileCompletion(profile ? { ...profile, ...form } : null);
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-8">
@@ -88,6 +94,37 @@ export default function ProfilePage() {
           Add your details and a photo. Our team uses this to get to know the
           recruiters we work with.
         </p>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-line bg-cream/50 p-5">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm font-bold text-ink">
+            {completion.isComplete
+              ? "Your profile is complete"
+              : `Your profile is ${completion.percent}% complete`}
+          </p>
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-muted">
+            {completion.filled}/{completion.total}
+          </span>
+        </div>
+        <ProfileMeter percent={completion.percent} className="mt-3" />
+        {completion.isComplete ? (
+          <p className="mt-3 text-xs text-muted">
+            Nothing left to add — remember to save if you&apos;ve just made
+            changes.
+          </p>
+        ) : (
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {completion.missing.map((f) => (
+              <li
+                key={f.key}
+                className="rounded-pill bg-white px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line"
+              >
+                {f.label}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <form

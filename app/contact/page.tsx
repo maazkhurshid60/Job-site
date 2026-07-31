@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Container, Eyebrow } from "@/components/ui";
+import { photo } from "@/components/images";
 import { sendMessage } from "@/lib/messages";
 
 export default function ContactPage() {
@@ -49,20 +52,49 @@ export default function ContactPage() {
               you with how JobFolder can help — usually within one
               business day.
             </p>
+            {/* The phone row is gone rather than filled in: "TBD" was shipping
+                to production, and a placeholder where a number should be reads
+                worse than no row at all. Add it back when there's a real one. */}
             <dl className="mt-8 space-y-4 text-sm">
               <div>
                 <dt className="font-semibold text-ink">Email</dt>
-                <dd className="text-muted">hello@jobfolder.com</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-ink">Phone</dt>
-                <dd className="text-muted">TBD</dd>
+                <dd>
+                  <a
+                    href="mailto:hello@jobfolder.com"
+                    className="text-muted underline-offset-2 hover:text-primary hover:underline"
+                  >
+                    hello@jobfolder.com
+                  </a>
+                </dd>
               </div>
               <div>
                 <dt className="font-semibold text-ink">Hours</dt>
                 <dd className="text-muted">Mon–Fri, 9am–6pm</dd>
               </div>
+              <div>
+                <dt className="font-semibold text-ink">Recruiters</dt>
+                <dd className="text-muted">
+                  Looking to refer candidates rather than hire?{" "}
+                  <Link
+                    href="/recruiters"
+                    className="font-semibold text-primary underline-offset-2 hover:underline"
+                  >
+                    Join the network
+                  </Link>
+                  .
+                </dd>
+              </div>
             </dl>
+
+            <div className="relative mt-10 aspect-[5/3] w-full max-w-md overflow-hidden rounded-2xl shadow-lg ring-1 ring-black/5">
+              <Image
+                src={photo.interviewHandshake.src}
+                alt={photo.interviewHandshake.alt}
+                fill
+                sizes="(max-width: 1024px) 100vw, 28rem"
+                className="object-cover"
+              />
+            </div>
           </div>
 
           <div>

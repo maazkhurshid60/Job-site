@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { listOpenJobs } from "@/lib/jobs";
+import { profileCompletion } from "@/lib/profileCompletion";
 
 const nav = [
   { label: "Overview", href: "/dashboard", icon: "M4 9l6-5 6 5v7H4z" },
@@ -23,7 +26,31 @@ const nav = [
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
+
+  /* How many roles are open right now, for the "Browse jobs" badge. Null until
+     it's known — a badge reading "0" while still loading would tell recruiters
+     there's no work, which is the one wrong thing it could say. */
+  const [openJobs, setOpenJobs] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    listOpenJobs()
+      .then((jobs) => active && setOpenJobs(jobs.length))
+      .catch(() => {}); // a missing badge is fine; a broken sidebar is not
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const completion = profileCompletion(profile);
+
+  function badgeFor(href: string): string | null {
+    if (href === "/jobs") return openJobs === null ? null : String(openJobs);
+    if (href === "/dashboard/profile" && !completion.isComplete)
+      return `${completion.percent}%`;
+    return null;
+  }
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -63,6 +90,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 />
               </svg>
               {item.label}
+              {badgeFor(item.href) && (
+                <span
+                  className={`ml-auto rounded-pill px-2 py-0.5 text-xs font-bold tabular-nums ${
+                    item.href === "/dashboard/profile"
+                      ? "bg-coral-soft text-coral"
+                      : "bg-primary-soft text-primary"
+                  }`}
+                >
+                  {badgeFor(item.href)}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -101,13 +139,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${
                 isActive(item.href)
                   ? "bg-primary-soft text-primary"
                   : "text-muted"
               }`}
             >
               {item.label}
+              {badgeFor(item.href) && (
+                <span
+                  className={`rounded-pill px-1.5 py-0.5 text-xs font-bold tabular-nums ${
+                    item.href === "/dashboard/profile"
+                      ? "bg-coral-soft text-coral"
+                      : "bg-primary-soft text-primary"
+                  }`}
+                >
+                  {badgeFor(item.href)}
+                </span>
+              )}
             </Link>
           ))}
         </div>

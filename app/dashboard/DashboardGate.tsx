@@ -13,7 +13,8 @@ export default function DashboardGate({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, loading, profile, profileLoading, logout } = useAuth();
+  const { user, loading, profile, profileLoading, profileError, refreshProfile, logout } =
+    useAuth();
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -30,6 +31,36 @@ export default function DashboardGate({
   const switchAccount = () => goSignedOut("/login");
 
   if (loading || !user || profileLoading) return <PageLoader />;
+
+  /* The profile load failed rather than came back empty. Say so, and offer a
+     retry — telling someone their account doesn't exist because the server
+     hiccuped is both wrong and alarming. */
+  if (profileError) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-white px-6">
+        <div className="w-full max-w-sm rounded-2xl border border-line bg-white p-8 text-center">
+          <h1 className="font-bold text-ink">Couldn&apos;t load your account</h1>
+          <p className="mt-1 text-sm text-muted">
+            You&apos;re still signed in as {user.email} — we just couldn&apos;t
+            reach the server. Your account and submissions are safe.
+          </p>
+          <button
+            type="button"
+            onClick={() => refreshProfile()}
+            className="mt-5 w-full rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
+          >
+            Try again
+          </button>
+          <Link
+            href="/"
+            className="mt-4 inline-block text-sm font-semibold text-muted hover:text-ink"
+          >
+            ← Back to home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   /* Signed in, but this account has no recruiter profile. GET /api/me now
      creates one for any ordinary login, so in practice this is an admin-only

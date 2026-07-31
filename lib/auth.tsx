@@ -31,6 +31,11 @@ type AuthContextValue = {
   /* Admin status is resolved server-side and arrives with the profile, so the
      console gate doesn't need a second round trip to find out. */
   isAdmin: boolean;
+  /* True when the last profile load FAILED, as opposed to succeeding and
+     finding nothing. The two must never be conflated: treating an unreachable
+     database as "you have no account" bounces a signed-in admin out of the
+     console and makes them log in again for no reason. */
+  profileError: boolean;
   refreshProfile: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, data: SignupData) => Promise<void>;
@@ -45,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [profileError, setProfileError] = useState(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
@@ -57,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!u) {
       setProfile(null);
       setIsAdmin(false);
+      setProfileError(false);
       setProfileLoading(false);
       return;
     }
@@ -65,10 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const me = await getMe();
       setProfile(me.profile);
       setIsAdmin(me.isAdmin);
+      setProfileError(false);
     } catch {
-      // Never leave a stale isAdmin=true behind on a failed refresh.
+      /* Never leave a stale isAdmin=true behind on a failed refresh — that
+         would be a privilege decision made on stale data. But do record that
+         this was a failure, so the gates can offer a retry instead of
+         concluding the account doesn't exist. */
       setProfile(null);
       setIsAdmin(false);
+      setProfileError(true);
     } finally {
       setProfileLoading(false);
     }
@@ -86,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     profileLoading,
     isAdmin,
+    profileError,
     refreshProfile: () => loadProfile(user),
     login: async (email, password) => {
       await signInWithEmailAndPassword(auth, email, password);

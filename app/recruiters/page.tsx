@@ -4,6 +4,8 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Container } from "@/components/ui";
 import { JsonLd } from "@/components/JsonLd";
+import { PageHero, PhotoBand } from "@/components/PageHero";
+import { photo } from "@/components/images";
 import { absoluteUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -110,38 +112,30 @@ export default function RecruitersPage() {
       <JsonLd schema={breadcrumbSchema} />
       <Navbar />
       <main className="flex-1">
-        {/* Hero */}
-        <section className="border-b border-gray-100 bg-gray-50/40 py-16 sm:py-20">
-          <Container>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
-              For recruiters
-            </span>
-            <h1 className="mt-3 max-w-3xl text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-              A split fee recruiting network for engineering and DOT desks
-            </h1>
-            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">
-              Bring the candidates, we bring the roles. JobFolder publishes the
-              referral commission on every listing, screens and places the
-              candidates you refer, and handles the client end from brief to
-              offer — so you can spend your time doing the part you&apos;re good
-              at.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/recruiters/apply"
-                className="inline-flex items-center justify-center rounded-pill bg-blue-brand px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-brand-dark"
-              >
-                Join the network
-              </Link>
-              <Link
-                href="/jobs"
-                className="inline-flex items-center justify-center rounded-pill border border-gray-200 bg-white px-7 py-3 text-sm font-semibold text-ink transition-colors hover:border-blue-brand hover:text-blue-brand"
-              >
-                See open roles &amp; commissions
-              </Link>
-            </div>
-          </Container>
-        </section>
+        <PageHero
+          eyebrow="For recruiters"
+          title="A split fee recruiting network for engineering and DOT desks"
+          lead="Bring the candidates, we bring the roles. JobFolder publishes the referral commission on every listing, screens and places the candidates you refer, and handles the client end from brief to offer — so you can spend your time doing the part you're good at."
+          photo={photo.engineersSiteReview}
+          actions={[
+            { label: "Join the network", href: "/recruiters/apply" },
+            { label: "See open roles & commissions", href: "/jobs" },
+          ]}
+        >
+          {/* Facts that are true by construction — no invented metrics. */}
+          <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4 border-t border-blue-brand-light pt-6">
+            {[
+              ["Free", "to join and to refer"],
+              ["Published", "commission on every role"],
+              ["You keep", "your niche and your network"],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-base font-extrabold text-ink">{k}</dt>
+                <dd className="text-sm text-muted">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </PageHero>
 
         {/* Why */}
         <section className="py-16 sm:py-20">
@@ -204,6 +198,11 @@ export default function RecruitersPage() {
 
         {/* Disciplines */}
         <section className="py-16 sm:py-20">
+          <PhotoBand
+            photo={photo.steelBeams}
+            caption="Structural steel, bridges, water resources, MEP and CEI — the disciplines our board leans into."
+            className="mb-16"
+          />
           <Container>
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">

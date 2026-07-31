@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/jobs";
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { formatPay } from "@/components/jobFormat";
+import { photo } from "@/components/images";
 import { timeAgo } from "@/lib/dates";
 
 const US_STATES = [
@@ -105,12 +107,39 @@ export default function JobsPage() {
     <>
       <Navbar />
       <main className="flex-1 bg-white">
+        {/* Board banner. The count comes from the loaded jobs, so it can't
+            disagree with the list underneath it. */}
+        <Container className="pt-6">
+          <div className="relative overflow-hidden rounded-3xl">
+            <div className="relative aspect-[16/7] w-full sm:aspect-[21/6]">
+              <Image
+                src={photo.highwayInterchange.src}
+                alt={photo.highwayInterchange.alt}
+                fill
+                priority
+                sizes="(max-width: 1152px) 100vw, 1152px"
+                className="object-cover"
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-ink/85 via-ink/60 to-ink/10" />
+            <div className="absolute inset-0 flex flex-col justify-center px-6 py-6 sm:px-10">
+              <span className="text-xs font-bold uppercase tracking-wider text-white/70">
+                Open roles
+              </span>
+              <h1 className="mt-1.5 max-w-xl text-2xl font-extrabold tracking-tight text-white sm:text-4xl">
+                Engineering &amp; DOT jobs
+              </h1>
+              <p className="mt-2 hidden max-w-md text-sm text-white/80 sm:block">
+                Civil, structural, transportation and technical roles — each one
+                showing its referral commission before you apply or refer.
+              </p>
+            </div>
+          </div>
+        </Container>
+
         <Container className="py-8 lg:py-10">
-          {/* title + search */}
+          {/* search */}
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <h1 className="text-3xl font-extrabold tracking-tight text-ink">
-              Engineering &amp; DOT jobs
-            </h1>
             <label className="relative w-full max-w-xs">
               <span className="sr-only">Search</span>
               <input

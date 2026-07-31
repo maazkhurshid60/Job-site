@@ -3,6 +3,33 @@ import {
   type SubmissionStatus,
 } from "@/lib/submissions";
 
+/* Profile completeness bar. Exposed to assistive tech as a real progressbar
+   rather than a decorative div, since the number it carries is the whole
+   point of it. */
+export function ProfileMeter({
+  percent,
+  className = "",
+}: {
+  percent: number;
+  className?: string;
+}) {
+  return (
+    <div
+      role="progressbar"
+      aria-valuenow={percent}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label="Profile completeness"
+      className={`h-2 w-full overflow-hidden rounded-pill bg-line ${className}`}
+    >
+      <div
+        className="h-full rounded-pill bg-primary transition-[width] duration-500 ease-out"
+        style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+      />
+    </div>
+  );
+}
+
 export function StatCard({
   label,
   value,
