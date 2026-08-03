@@ -3,7 +3,9 @@ import {
   str, intOrNull, bool, oneOf, jsonArray, BadRequest,
 } from "@/lib/server/respond";
 import type { JobWrite } from "@/lib/server/repo";
+import { getSetting } from "@/lib/server/repo";
 import { EMPLOYMENT_TYPES } from "@/lib/jobs";
+import { DEFAULT_FILTERS, type BoardFilters } from "@/lib/boardFilters";
 
 const STATUSES = ["draft", "open", "closed"] as const;
 
@@ -15,7 +17,25 @@ const MAX_MONEY = 100_000_000;
 /* Shared body validation for POST /api/admin/jobs and PUT /api/admin/jobs/[id].
    Kept out of the route files because Next treats every export in a route.ts as
    a route config value, and an unrecognised one is a build error. */
-export function readJobWrite(body: Record<string, unknown>): JobWrite {
+/* The employment types this job may use.
+ *
+ * Read from settings, not the constant: job types are admin-editable now, and
+ * validating against the hardcoded list would reject a type the admin had just
+ * added on their own filters page — the posting form would offer it and the
+ * API would refuse it. Falls back to the constants if the read fails, so a
+ * settings outage can't block job posting entirely. */
+async function allowedEmploymentTypes(): Promise<string[]> {
+  try {
+    const saved = await getSetting<Partial<BoardFilters>>("boardFilters", {});
+    return saved.employmentTypes?.length
+      ? saved.employmentTypes
+      : DEFAULT_FILTERS.employmentTypes;
+  } catch {
+    return [...EMPLOYMENT_TYPES];
+  }
+}
+
+export async function readJobWrite(body: Record<string, unknown>): Promise<JobWrite> {
   const salaryMin = intOrNull(body.salaryMin, "salaryMin");
   const salaryMax = intOrNull(body.salaryMax, "salaryMax");
 
@@ -36,6 +56,8 @@ export function readJobWrite(body: Record<string, unknown>): JobWrite {
     }
   }
 
+  const types = await allowedEmploymentTypes();
+
   return {
     title: str(body.title, "title", { max: 255, required: true }),
     company: str(body.company, "company", { max: 255 }),
@@ -44,9 +66,9 @@ export function readJobWrite(body: Record<string, unknown>): JobWrite {
     remote: bool(body.remote),
     employmentType: oneOf(
       body.employmentType,
-      EMPLOYMENT_TYPES,
+      types,
       "employmentType",
-      "Full-time",
+      types[0],
     ),
     salaryMin,
     salaryMax,

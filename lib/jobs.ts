@@ -16,7 +16,17 @@ export const EMPLOYMENT_TYPES = [
   "Internship",
 ] as const;
 
-export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
+/* A plain string, not a union of the five constants above.
+ *
+ * Employment types are admin-editable (console → Board filters), so a recruiting
+ * desk can add "Contract to hire" or "Per diem" without a code change. A closed
+ * union would make every admin-defined type a type error the moment it reached
+ * the API, which is exactly the mismatch this widening prevents.
+ *
+ * EMPLOYMENT_TYPES below stays as the seed and the fallback; the API validates
+ * incoming values against the *saved* list, so the set is still closed at
+ * runtime — just not at compile time. */
+export type EmploymentType = string;
 
 export const JOB_CATEGORIES = [
   "Civil Engineering",

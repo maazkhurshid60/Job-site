@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { adminRoutes } from "@/lib/routes";
 import { listAllUsers, type UserProfile } from "@/lib/users";
 import { listAllSubmissions, type Submission } from "@/lib/submissions";
 import { Loader } from "@/components/Loader";
@@ -131,7 +133,12 @@ function RecruiterCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-bold text-ink">{user.name || "Unnamed"}</p>
+          <Link
+            href={`${adminRoutes.recruiters}/${encodeURIComponent(user.uid)}`}
+            className="block truncate font-bold text-ink hover:text-primary"
+          >
+            {user.name || "Unnamed"}
+          </Link>
           {user.headline && (
             <p className="truncate text-sm text-muted">{user.headline}</p>
           )}
@@ -170,6 +177,13 @@ function RecruiterCard({
           {user.bio}
         </p>
       )}
+
+      <Link
+        href={`${adminRoutes.recruiters}/${encodeURIComponent(user.uid)}`}
+        className="mt-4 inline-block text-sm font-semibold text-primary hover:text-primary-dark"
+      >
+        View recruiter →
+      </Link>
     </div>
   );
 }

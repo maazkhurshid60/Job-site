@@ -18,7 +18,7 @@ export function GET(req: Request) {
 export function POST(req: Request) {
   return handle(async () => {
     await requireAdmin(req);
-    const id = await createJob(readJobWrite(await jsonBody(req)));
+    const id = await createJob(await readJobWrite(await jsonBody(req)));
     return ok({ id }, { status: 201 });
   });
 }

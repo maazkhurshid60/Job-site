@@ -9,27 +9,18 @@ import { Footer } from "@/components/Footer";
 import { Container } from "@/components/ui";
 import { Loader } from "@/components/Loader";
 import { useAuth } from "@/lib/auth";
-import {
-  listOpenJobs,
-  EMPLOYMENT_TYPES,
-  type Job,
-} from "@/lib/jobs";
+import { listOpenJobs, type Job } from "@/lib/jobs";
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
+import {
+  getBoardFilters, statesFor, DEFAULT_FILTERS, type BoardFilters,
+} from "@/lib/boardFilters";
 import { formatPay } from "@/components/jobFormat";
 import { photo } from "@/components/images";
 import { timeAgo } from "@/lib/dates";
 
-const US_STATES = [
-  "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
-  "Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa",
-  "Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan",
-  "Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada",
-  "New Hampshire","New Jersey","New Mexico","New York","North Carolina",
-  "North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island",
-  "South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont",
-  "Virginia","Washington","West Virginia","Wisconsin","Wyoming","Washington, D.C.",
-];
-const SALARY_MAX = 200000;
+/* The state list and the pay ceiling used to be hardcoded here. They now come
+   from lib/boardFilters (defaults) and the console (overrides), so the board
+   and the admin screen can't disagree about them. */
 
 export default function JobsPage() {
   const { user } = useAuth();
@@ -45,6 +36,7 @@ export default function JobsPage() {
   const [q, setQ] = useState(() => searchParams.get("q") ?? "");
   const [cats, setCats] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [filters, setFilters] = useState<BoardFilters>(DEFAULT_FILTERS);
   const [types, setTypes] = useState<Set<string>>(new Set());
   const [stateFilter, setStateFilter] = useState("All");
   const [remote, setRemote] = useState(false);
@@ -62,6 +54,10 @@ export default function JobsPage() {
   }, []);
 
   useEffect(() => { getCategories().then(setCategories); }, []);
+  /* Job types, the pay ceiling and the location list are all set in the
+     console. Both helpers swallow their own errors and return defaults, so a
+     failed read leaves a working filter bar rather than empty dropdowns. */
+  useEffect(() => { getBoardFilters().then(setFilters); }, []);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -167,7 +163,7 @@ export default function JobsPage() {
 
             <Dropdown label="Job type" count={types.size}>
               <div className="space-y-1.5">
-                {EMPLOYMENT_TYPES.map((t) => (
+                {filters.employmentTypes.map((t) => (
                   <Check key={t} label={t} checked={types.has(t)} onChange={() => toggleIn(types, t, setTypes)} />
                 ))}
               </div>
@@ -181,7 +177,7 @@ export default function JobsPage() {
                 </div>
                 <select className="input" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
                   <option value="All">All US locations</option>
-                  {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {statesFor(filters).map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
             </Dropdown>
@@ -191,11 +187,11 @@ export default function JobsPage() {
                 <p className="text-center text-sm font-semibold text-ink">
                   {minSalary === 0 ? "Any salary" : `$${minSalary.toLocaleString()}+`}
                 </p>
-                <input type="range" min={0} max={SALARY_MAX} step={5000} value={minSalary}
+                <input type="range" min={0} max={filters.salaryMax} step={5000} value={minSalary}
                   onChange={(e) => setMinSalary(Number(e.target.value))}
                   className="mt-2 w-full accent-primary" />
                 <div className="mt-1 flex justify-between text-[11px] text-muted">
-                  <span>Any</span><span>${SALARY_MAX.toLocaleString()}+</span>
+                  <span>Any</span><span>${filters.salaryMax.toLocaleString()}+</span>
                 </div>
               </div>
             </Dropdown>

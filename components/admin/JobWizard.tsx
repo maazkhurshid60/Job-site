@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminRoutes } from "@/lib/routes";
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
+import { getBoardFilters, DEFAULT_FILTERS, type BoardFilters } from "@/lib/boardFilters";
 import {
-  EMPLOYMENT_TYPES,
   DEFAULT_HIRING_STAGES,
   createJob,
   updateJob,
@@ -194,7 +194,11 @@ type StepProps = {
 
 function BasicInfo({ form, set, num }: StepProps & { num: (v: string) => number | null }) {
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [filters, setFilters] = useState<BoardFilters>(DEFAULT_FILTERS);
   useEffect(() => { getCategories().then(setCategories); }, []);
+  /* Job types come from the console too, so this form offers exactly what the
+     API will accept — see allowedEmploymentTypes() in app/api/admin/jobWrite.ts. */
+  useEffect(() => { getBoardFilters().then(setFilters); }, []);
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Job title" full>
@@ -213,7 +217,7 @@ function BasicInfo({ form, set, num }: StepProps & { num: (v: string) => number 
       </Field>
       <Field label="Employment type">
         <select className="input" value={form.employmentType} onChange={(e) => set("employmentType", e.target.value as JobInput["employmentType"])}>
-          {EMPLOYMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          {filters.employmentTypes.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
       </Field>
       <Field label="Salary min">

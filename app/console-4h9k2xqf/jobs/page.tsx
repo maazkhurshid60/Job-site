@@ -6,11 +6,11 @@ import Link from "next/link";
 import {
   listJobs,
   deleteJob,
-  EMPLOYMENT_TYPES,
   type Job,
   type JobStatus,
 } from "@/lib/jobs";
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
+import { getBoardFilters, DEFAULT_FILTERS, type BoardFilters } from "@/lib/boardFilters";
 import { adminRoutes } from "@/lib/routes";
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
@@ -44,7 +44,9 @@ function JobsList() {
   const [category, setCategory] = useState("all");
   const [type, setType] = useState("all");
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [filters, setFilters] = useState<BoardFilters>(DEFAULT_FILTERS);
   useEffect(() => { getCategories().then(setCategories); }, []);
+  useEffect(() => { getBoardFilters().then(setFilters); }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,7 +170,7 @@ function JobsList() {
             </select>
             <select className="input h-10 w-auto" value={type} onChange={(e) => setType(e.target.value)}>
               <option value="all">All types</option>
-              {EMPLOYMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              {filters.employmentTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             {hasActiveFilters && (
               <button
@@ -231,7 +233,12 @@ function JobsList() {
               {filtered.map((job) => (
                 <tr key={job.id} className="hover:bg-cream/40">
                   <td className="px-5 py-4">
-                    <p className="font-semibold text-ink">{job.title}</p>
+                    <Link
+                      href={`${adminRoutes.jobs}/${encodeURIComponent(job.id)}`}
+                      className="font-semibold text-ink hover:text-primary"
+                    >
+                      {job.title}
+                    </Link>
                     <p className="text-xs text-muted">
                       {job.company}
                       {job.remote ? " · Remote" : ""} · {job.employmentType}
@@ -255,6 +262,12 @@ function JobsList() {
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-3">
+                      <Link
+                        href={`${adminRoutes.jobs}/${encodeURIComponent(job.id)}`}
+                        className="text-sm font-semibold text-ink hover:text-primary"
+                      >
+                        View
+                      </Link>
                       <Link
                         href={adminRoutes.editJob(job.id)}
                         className="text-sm font-semibold text-primary hover:text-primary-dark"

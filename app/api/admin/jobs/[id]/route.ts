@@ -27,7 +27,7 @@ export function PUT(
   return handle(async () => {
     await requireAdmin(req);
     const { id } = await params;
-    const updated = await updateJob(id, readJobWrite(await jsonBody(req)));
+    const updated = await updateJob(id, await readJobWrite(await jsonBody(req)));
     if (!updated) throw new NotFound("Job not found.");
     return ok({ id });
   });
