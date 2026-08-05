@@ -75,13 +75,19 @@ export default function MySubmissionsPage() {
                 <th className="px-5 py-3 font-semibold">Role</th>
                 <th className="px-5 py-3 font-semibold">Bounty</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {subs.map((s) => (
                 <tr key={s.id} className="hover:bg-cream/40">
                   <td className="px-5 py-4">
-                    <p className="font-semibold text-ink">{s.candidateName}</p>
+                    <Link
+                      href={`/dashboard/submissions/${s.id}`}
+                      className="font-semibold text-ink hover:text-primary"
+                    >
+                      {s.candidateName}
+                    </Link>
                     <p className="text-xs text-muted">{s.candidateEmail}</p>
                   </td>
                   <td className="px-5 py-4">
@@ -99,6 +105,14 @@ export default function MySubmissionsPage() {
                   </td>
                   <td className="px-5 py-4">
                     <SubmissionBadge status={s.status} />
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <Link
+                      href={`/dashboard/submissions/${s.id}`}
+                      className="whitespace-nowrap text-sm font-semibold text-primary hover:underline"
+                    >
+                      View
+                    </Link>
                   </td>
                 </tr>
               ))}

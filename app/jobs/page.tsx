@@ -8,7 +8,6 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Container } from "@/components/ui";
 import { Loader } from "@/components/Loader";
-import { useAuth } from "@/lib/auth";
 import { listOpenJobs, type Job } from "@/lib/jobs";
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import {
@@ -23,7 +22,6 @@ import { timeAgo } from "@/lib/dates";
    and the admin screen can't disagree about them. */
 
 export default function JobsPage() {
-  const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -289,18 +287,6 @@ export default function JobsPage() {
                 </ul>
               </SidebarCard>
 
-              <div className="rounded-2xl bg-ink p-6 text-white">
-                <h3 className="font-bold">{user ? "Ready to submit?" : "Want to apply?"}</h3>
-                <p className="mt-1 text-sm text-white/70">
-                  {user
-                    ? "Open a role and put your best candidate forward."
-                    : "Log in to submit your candidates to any open role."}
-                </p>
-                <Link href={user ? "/dashboard" : "/login"}
-                  className="mt-4 inline-block rounded-full bg-lime px-5 py-2.5 text-sm font-semibold text-ink hover:bg-lime/90">
-                  {user ? "Go to dashboard" : "Log in"}
-                </Link>
-              </div>
             </aside>
           </div>
         </Container>

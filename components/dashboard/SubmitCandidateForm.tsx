@@ -23,9 +23,25 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  /* Nothing stops a recruiter putting several people forward for one role —
+     the unique index is on (job, candidate), not (job, recruiter). Keep the
+     name of whoever was just sent for the confirmation, and a running count,
+     so submitting again is one click rather than a page reload. */
+  const [lastName, setLastName] = useState("");
+  const [sentCount, setSentCount] = useState(0);
+  // Bumping this remounts the file input, which is the only way to clear it.
+  const [formKey, setFormKey] = useState(0);
 
   function set(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function submitAnother() {
+    setForm({ candidateName: "", candidateEmail: "", candidatePhone: "", notes: "" });
+    setCv(null);
+    setError(null);
+    setDone(false);
+    setFormKey((k) => k + 1);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -65,6 +81,8 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         form,
         cv,
       );
+      setLastName(form.candidateName);
+      setSentCount((n) => n + 1);
       setDone(true);
     } catch (err) {
       /* Show what actually failed. The API returns readable messages —
@@ -142,17 +160,31 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         </div>
         <h3 className="mt-4 text-lg font-bold text-ink">Candidate submitted</h3>
         <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-          Our team will screen {form.candidateName || "your candidate"} for{" "}
+          Our team will screen {lastName || "your candidate"} for{" "}
           <span className="font-medium text-ink">{job.title}</span> and update
           the status in your submissions.
         </p>
-        <button
-          type="button"
-          onClick={() => router.push("/dashboard/submissions")}
-          className="mt-5 rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
-        >
-          View my submissions
-        </button>
+        {sentCount > 1 && (
+          <p className="mt-2 text-xs font-medium text-primary">
+            {sentCount} candidates submitted for this role
+          </p>
+        )}
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            onClick={submitAnother}
+            className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
+          >
+            Submit another candidate
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/submissions")}
+            className="rounded-pill border border-line bg-white px-5 py-2.5 text-sm font-semibold text-ink hover:bg-cream"
+          >
+            View my submissions
+          </button>
+        </div>
       </div>
     );
   }
@@ -215,6 +247,10 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         </Field>
         <Field label="CV (PDF or Word, max 10 MB)" className="sm:col-span-2">
           <input
+            /* Remounted on reset — a file input's value cannot be cleared by
+               React state, so the previous candidate's CV would otherwise stay
+               attached to the next submission. */
+            key={formKey}
             className="block w-full text-sm text-muted file:mr-4 file:rounded-pill file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
             type="file"
             required
