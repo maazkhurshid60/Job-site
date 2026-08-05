@@ -86,22 +86,30 @@ export default function BoardFiltersPage() {
 
   return (
     <div className="max-w-2xl">
-      <div className="mb-6">
-        <p className="eyebrow uppercase">Job board</p>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">
-          Board filters
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          Everything candidates and recruiters can filter by on{" "}
-          <span className="font-medium text-ink">/jobs</span>. Changes go live for
-          everyone as soon as you save.
-        </p>
+      <div className="mb-8 flex items-start gap-4">
+        <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-ink text-cream">
+          <FilterIcon />
+        </span>
+        <div>
+          <p className="eyebrow uppercase">Job board</p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-ink">
+            Board filters
+          </h1>
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+            Everything candidates and recruiters can filter by on{" "}
+            <span className="font-medium text-ink">/jobs</span> — changes go live
+            for everyone as soon as you save.
+          </p>
+        </div>
       </div>
 
       <div className="space-y-6">
         <SettingCard
           title="Categories"
           description="The disciplines shown in the Category filter and offered when posting a role."
+          icon={<TagIcon />}
+          accent="primary"
           saving={savingCats}
           message={catMsg}
           onSave={() => persistCategories(categories)}
@@ -111,12 +119,16 @@ export default function BoardFiltersPage() {
             items={categories}
             onChange={setCategories}
             placeholder="Add a category (e.g. Electrical Engineering)"
+            noun="category"
+            nounPlural="categories"
           />
         </SettingCard>
 
         <SettingCard
           title="Job types"
           description="The Job type filter, and the dropdown on the posting form. Add your own — “Contract to hire” and “Per diem” are common on engineering desks."
+          icon={<BriefcaseIcon />}
+          accent="lime"
           saving={savingTypes}
           message={typeMsg}
           onSave={() => persistFilters(filters, "types")}
@@ -129,18 +141,22 @@ export default function BoardFiltersPage() {
             items={filters.employmentTypes}
             onChange={(employmentTypes) => setFilters((f) => ({ ...f, employmentTypes }))}
             placeholder="Add a job type (e.g. Contract to hire)"
+            noun="job type"
           />
           {/* Renaming a type here does not rewrite jobs already saved with the
               old spelling, and those roles would drop out of the filter. */}
-          <p className="mt-3 text-xs text-muted">
+          <p className="mt-4 flex items-start gap-1.5 text-xs text-muted">
+            <InfoIcon className="mt-0.5 shrink-0" />
             Renaming a type doesn&apos;t update roles already posted under the old
             name — edit those roles too, or they won&apos;t match this filter.
           </p>
         </SettingCard>
 
         <SettingCard
-          title="Pay filter"
-          description="The top of the “Pay” slider on the board. Set it a little above your highest-paying role so the slider stays useful."
+          title="Pay & locations"
+          description="The “Pay” slider ceiling and which states appear in the Location filter."
+          icon={<CoinIcon />}
+          accent="coral"
           saving={savingRest}
           message={restMsg}
           onSave={() => persistFilters(filters, "rest")}
@@ -157,10 +173,10 @@ export default function BoardFiltersPage() {
             <span className="mb-1.5 block text-sm font-medium text-ink">
               Maximum salary on the slider
             </span>
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold text-muted">$</span>
+            <div className="flex max-w-56 items-center gap-2 rounded-xl border border-line bg-white px-3.5 py-2.5 transition-colors focus-within:border-primary focus-within:shadow-[0_0_0_3px_var(--color-primary-soft)]">
+              <span className="text-base font-semibold text-muted">$</span>
               <input
-                className="input max-w-48"
+                className="w-full border-0 bg-transparent p-0 text-base font-semibold text-ink outline-none"
                 type="number"
                 min={5000}
                 step={5000}
@@ -170,48 +186,125 @@ export default function BoardFiltersPage() {
                 }
               />
             </div>
-            <span className="mt-1.5 block text-xs text-muted">
-              Currently showing “Any” to ${filters.salaryMax.toLocaleString()}+ in
-              $5,000 steps.
-            </span>
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-pill bg-cream px-3 py-1 text-xs font-medium text-muted">
+              Slider shows “Any” to ${filters.salaryMax.toLocaleString()}+ in $5,000 steps
+            </p>
           </label>
 
-          <div className="mt-6">
-            <p className="text-sm font-medium text-ink">Locations</p>
+          <div className="mt-7">
+            <div className="flex items-center gap-1.5">
+              <MapPinIcon className="text-muted" />
+              <p className="text-sm font-medium text-ink">Locations</p>
+            </div>
             <p className="mt-0.5 text-xs text-muted">
-              Which states appear in the Location filter. Leave every box clear to
+              Which states appear in the Location filter. Leave every chip clear to
               offer all {US_STATES.length} — that&apos;s the default.
             </p>
-            <p className="mt-2 text-xs font-semibold text-primary">
-              {allStates
-                ? `All ${US_STATES.length} US locations`
-                : `${filters.states.length} selected`}
-            </p>
-            <div className="mt-2 grid max-h-56 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto rounded-xl border border-line bg-white p-3 sm:grid-cols-3">
-              {US_STATES.map((s) => (
-                <label key={s} className="flex items-center gap-2 text-sm text-ink">
-                  <input
-                    type="checkbox"
-                    className="accent-primary"
-                    checked={filters.states.includes(s)}
-                    onChange={() => toggleState(s)}
-                  />
-                  <span className="truncate">{s}</span>
-                </label>
-              ))}
-            </div>
-            {!allStates && (
-              <button
-                type="button"
-                onClick={() => setFilters((f) => ({ ...f, states: [] }))}
-                className="mt-2 text-sm font-semibold text-coral hover:opacity-80"
+
+            <div className="mt-3 flex items-center justify-between">
+              <span
+                className={`rounded-pill px-3 py-1 text-xs font-semibold ${
+                  allStates ? "bg-cream text-muted" : "bg-primary-soft text-primary"
+                }`}
               >
-                Clear selection (show all states)
-              </button>
-            )}
+                {allStates
+                  ? `All ${US_STATES.length} US locations`
+                  : `${filters.states.length} selected`}
+              </span>
+              {!allStates && (
+                <button
+                  type="button"
+                  onClick={() => setFilters((f) => ({ ...f, states: [] }))}
+                  className="text-xs font-semibold text-coral hover:opacity-80"
+                >
+                  Clear selection
+                </button>
+              )}
+            </div>
+
+            <div className="mt-3 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-line bg-cream/40 p-3">
+              {US_STATES.map((s) => {
+                const checked = filters.states.includes(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleState(s)}
+                    aria-pressed={checked}
+                    className={`rounded-pill border px-3 py-1 text-xs font-medium transition-colors ${
+                      checked
+                        ? "border-primary bg-primary text-white"
+                        : "border-line bg-white text-ink hover:border-primary/40"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </SettingCard>
       </div>
     </div>
+  );
+}
+
+/* ---- inline icons — 20×20, stroke currentColor, matching the console's style ---- */
+
+function FilterIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M3 5h14M6 10h8M9 15h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TagIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M4 4h6.2a1 1 0 01.7.3l6 6a1 1 0 010 1.4l-5.2 5.2a1 1 0 01-1.4 0l-6-6A1 1 0 014 10.2V4z"
+        stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"
+      />
+      <circle cx="7.5" cy="7.5" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function BriefcaseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <rect x="3" y="6.5" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7 6.5V5a2 2 0 012-2h2a2 2 0 012 2v1.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 10.5h14" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function CoinIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 6.5v7M8 8.2c0-.9.9-1.6 2-1.6s2 .6 2 1.4-.9 1.2-2 1.4-2 .6-2 1.4.9 1.4 2 1.4 2-.7 2-1.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MapPinIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M10 18s6-5.1 6-9.6A6 6 0 004 8.4C4 12.9 10 18 10 18z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="10" cy="8.3" r="2" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function InfoIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="10" cy="6.8" r="0.9" fill="currentColor" />
+      <path d="M10 9.5v4.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
   );
 }

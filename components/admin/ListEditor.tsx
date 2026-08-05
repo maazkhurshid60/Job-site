@@ -13,11 +13,17 @@ export function ListEditor({
   onChange,
   placeholder,
   addLabel = "Add",
+  noun = "item",
+  nounPlural,
 }: {
   items: string[];
   onChange: (next: string[]) => void;
   placeholder: string;
   addLabel?: string;
+  /** Singular label used in the count line above the list, e.g. "category". */
+  noun?: string;
+  /** Irregular plural, e.g. "categories". Defaults to `${noun}s` when omitted. */
+  nounPlural?: string;
 }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -53,61 +59,92 @@ export function ListEditor({
   return (
     <div>
       <div className="flex gap-2">
-        <input
-          className="input"
-          value={draft}
-          onChange={(e) => { setDraft(e.target.value); setError(null); }}
-          onKeyDown={(e) => {
-            // Enter adds a row; without preventDefault it submits the page form.
-            if (e.key === "Enter") { e.preventDefault(); add(); }
-          }}
-          placeholder={placeholder}
-        />
+        <div className="relative flex-1">
+          <PlusIcon className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted/60" />
+          <input
+            className="input"
+            style={{ paddingLeft: "2.25rem" }}
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); setError(null); }}
+            onKeyDown={(e) => {
+              // Enter adds a row; without preventDefault it submits the page form.
+              if (e.key === "Enter") { e.preventDefault(); add(); }
+            }}
+            placeholder={placeholder}
+          />
+        </div>
         <button
           type="button"
           onClick={add}
-          className="shrink-0 rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
+          className="shrink-0 rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
         >
           {addLabel}
         </button>
       </div>
 
-      {error && <p className="mt-2 text-sm text-coral">{error}</p>}
+      {error && (
+        <p className="mt-2 flex items-center gap-1.5 text-sm text-coral">
+          <AlertIcon /> {error}
+        </p>
+      )}
 
-      <ul className="mt-4 space-y-2">
+      <div className="mt-4 flex items-center justify-between">
+        <p className="text-xs font-medium text-muted">
+          {items.length} {items.length === 1 ? noun : nounPlural ?? `${noun}s`}
+        </p>
+      </div>
+
+      <ul className="mt-2 space-y-1.5">
         {items.map((item, i) => (
-          <li key={i} className="flex items-center gap-2 rounded-xl border border-line bg-white p-2">
-            <div className="flex flex-col">
-              <button
-                type="button" onClick={() => move(i, -1)} disabled={i === 0}
-                className="grid h-4 w-6 place-items-center text-muted hover:text-ink disabled:opacity-30"
-                aria-label={`Move ${item} up`}
-              >▲</button>
-              <button
-                type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1}
-                className="grid h-4 w-6 place-items-center text-muted hover:text-ink disabled:opacity-30"
-                aria-label={`Move ${item} down`}
-              >▼</button>
-            </div>
+          <li
+            key={i}
+            className="group flex items-center gap-1 rounded-xl border border-line bg-white pl-1 pr-1.5 py-1.5 transition-colors hover:border-primary/25 hover:bg-primary-soft/20"
+          >
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-cream text-xs font-bold text-muted">
+              {i + 1}
+            </span>
+
             <input
-              className="input flex-1"
+              className="min-w-0 flex-1 rounded-lg border-0 bg-transparent px-2 py-1 text-sm text-ink outline-none focus:bg-white"
               value={item}
               onChange={(e) => update(i, e.target.value)}
               aria-label={`Rename ${item}`}
             />
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-coral hover:bg-coral-soft"
-              aria-label={`Remove ${item}`}
-            >
-              ✕
-            </button>
+
+            <div className="flex shrink-0 items-center gap-0.5">
+              <div className="flex flex-col overflow-hidden rounded-lg border border-line">
+                <button
+                  type="button" onClick={() => move(i, -1)} disabled={i === 0}
+                  className="grid h-5 w-6 place-items-center text-muted transition-colors hover:bg-cream hover:text-ink disabled:opacity-25 disabled:hover:bg-transparent"
+                  aria-label={`Move ${item} up`}
+                >
+                  <ChevronIcon dir="up" />
+                </button>
+                <button
+                  type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1}
+                  className="grid h-5 w-6 place-items-center border-t border-line text-muted transition-colors hover:bg-cream hover:text-ink disabled:opacity-25 disabled:hover:bg-transparent"
+                  aria-label={`Move ${item} down`}
+                >
+                  <ChevronIcon dir="down" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted/60 transition-colors hover:bg-coral-soft hover:text-coral"
+                aria-label={`Remove ${item}`}
+              >
+                <XIcon />
+              </button>
+            </div>
           </li>
         ))}
         {items.length === 0 && (
-          <li className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">
-            Nothing here yet — add one above.
+          <li className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line p-8 text-center">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-cream text-muted">
+              <PlusIcon />
+            </span>
+            <p className="text-sm text-muted">Nothing here yet — add one above.</p>
           </li>
         )}
       </ul>
@@ -119,6 +156,8 @@ export function ListEditor({
 export function SettingCard({
   title,
   description,
+  icon,
+  accent = "primary",
   saving,
   message,
   onSave,
@@ -127,37 +166,42 @@ export function SettingCard({
 }: {
   title: string;
   description: string;
+  icon?: React.ReactNode;
+  accent?: "primary" | "lime" | "coral";
   saving: boolean;
   message: { type: "ok" | "err"; text: string } | null;
   onSave: () => void;
   onReset?: () => void;
   children: React.ReactNode;
 }) {
+  const badge = {
+    primary: "bg-primary-soft text-primary",
+    lime: "bg-lime/25 text-ink",
+    coral: "bg-coral-soft text-coral",
+  }[accent];
+
   return (
-    <section className="rounded-2xl border border-line bg-cream/30 p-6">
-      <h2 className="text-lg font-bold text-ink">{title}</h2>
-      <p className="mt-1 mb-5 text-sm text-muted">{description}</p>
+    <section className="rounded-3xl border border-line bg-white p-6 shadow-[0_1px_2px_rgba(23,19,15,0.04)] sm:p-7">
+      <div className="flex items-start gap-4">
+        {icon && (
+          <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${badge}`}>
+            {icon}
+          </span>
+        )}
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold text-ink">{title}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
+        </div>
+      </div>
 
-      {children}
+      <div className="mt-6">{children}</div>
 
-      {message && (
-        <p
-          className={`mt-4 rounded-lg px-3 py-2 text-sm ${
-            message.type === "ok"
-              ? "bg-primary-soft text-primary"
-              : "bg-coral-soft text-coral"
-          }`}
-        >
-          {message.text}
-        </p>
-      )}
-
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-line pt-5">
         <button
           type="button"
           onClick={onSave}
           disabled={saving}
-          className="rounded-pill bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-60"
+          className="rounded-pill bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save"}
         </button>
@@ -165,12 +209,73 @@ export function SettingCard({
           <button
             type="button"
             onClick={onReset}
-            className="rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:bg-black/[0.02]"
+            className="rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-black/[0.02]"
           >
             Reset to defaults
           </button>
         )}
+
+        {message && (
+          <p
+            className={`flex items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-sm font-medium ${
+              message.type === "ok"
+                ? "bg-primary-soft text-primary"
+                : "bg-coral-soft text-coral"
+            }`}
+          >
+            {message.type === "ok" ? <CheckIcon /> : <AlertIcon />}
+            {message.text}
+          </p>
+        )}
       </div>
     </section>
+  );
+}
+
+/* ---- inline icons — 20×20, stroke currentColor, matching the console's style ---- */
+
+function ChevronIcon({ dir }: { dir: "up" | "down" }) {
+  return (
+    <svg width="11" height="11" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d={dir === "up" ? "M5 12l5-5 5 5" : "M5 8l5 5 5-5"}
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6.5 10l2.3 2.3L14 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 6.5v4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="10" cy="13.75" r="0.9" fill="currentColor" />
+    </svg>
   );
 }
