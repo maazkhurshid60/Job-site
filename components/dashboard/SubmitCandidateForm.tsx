@@ -1,47 +1,101 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { createSubmission } from "@/lib/submissions";
+import {
+  createSubmission, listSubmissionsByRecruiter, SUBMISSION_STATUS_LABEL,
+  type Submission,
+} from "@/lib/submissions";
 import { ACCEPTED_CV_TYPES, MAX_CV_BYTES } from "@/lib/cv";
 import type { Job } from "@/lib/jobs";
 
-export function SubmitCandidateForm({ job }: { job: Job }) {
-  const router = useRouter();
-  const { user, profile, loading } = useAuth();
+const MAX_CANDIDATES = 10;
 
-  const [form, setForm] = useState({
+type CandidateDraft = {
+  key: string;
+  candidateName: string;
+  candidateEmail: string;
+  candidatePhone: string;
+  notes: string;
+  cv: File | null;
+};
+
+function emptyDraft(): CandidateDraft {
+  return {
+    key: crypto.randomUUID(),
     candidateName: "",
     candidateEmail: "",
     candidatePhone: "",
     notes: "",
-  });
-  const [cv, setCv] = useState<File | null>(null);
+    cv: null,
+  };
+}
+
+type SubmitOutcome = { name: string; ok: boolean; error?: string };
+
+export function SubmitCandidateForm({ job }: { job: Job }) {
+  const router = useRouter();
+  const { user, profile, loading, isAdmin } = useAuth();
+
+  const [drafts, setDrafts] = useState<CandidateDraft[]>([emptyDraft()]);
   const [hp, setHp] = useState(""); // honeypot — real users leave this empty
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-  /* Nothing stops a recruiter putting several people forward for one role —
-     the unique index is on (job, candidate), not (job, recruiter). Keep the
-     name of whoever was just sent for the confirmation, and a running count,
-     so submitting again is one click rather than a page reload. */
-  const [lastName, setLastName] = useState("");
-  const [sentCount, setSentCount] = useState(0);
-  // Bumping this remounts the file input, which is the only way to clear it.
-  const [formKey, setFormKey] = useState(0);
+  const [outcomes, setOutcomes] = useState<SubmitOutcome[] | null>(null);
 
-  function set(key: keyof typeof form, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
+  /* This recruiter's own prior submissions for THIS job — so re-visiting a
+     role they've already referred candidates for shows that, instead of
+     looking like a blank slate. Fetched client-side from their own list (the
+     API has no per-job filter, and this list is never large enough to need
+     one); admins never reach this component, so no extra request is wasted
+     on them. */
+  const [priorSubmissions, setPriorSubmissions] = useState<Submission[]>([]);
+
+  useEffect(() => {
+    if (!user || isAdmin) return;
+    let active = true;
+    listSubmissionsByRecruiter()
+      .then((all) => {
+        if (active) setPriorSubmissions(all.filter((s) => s.jobId === job.id));
+      })
+      .catch(() => {}); // non-critical — the form still works without it
+    return () => {
+      active = false;
+    };
+  }, [user, isAdmin, job.id]);
+
+  function updateDraft(key: string, patch: Partial<CandidateDraft>) {
+    setDrafts((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }
 
-  function submitAnother() {
-    setForm({ candidateName: "", candidateEmail: "", candidatePhone: "", notes: "" });
-    setCv(null);
+  function addDraft() {
+    setDrafts((rows) =>
+      rows.length >= MAX_CANDIDATES ? rows : [...rows, emptyDraft()],
+    );
+  }
+
+  function removeDraft(key: string) {
+    setDrafts((rows) => (rows.length <= 1 ? rows : rows.filter((r) => r.key !== key)));
+  }
+
+  function submitMore() {
+    setDrafts([emptyDraft()]);
     setError(null);
-    setDone(false);
-    setFormKey((k) => k + 1);
+    setOutcomes(null);
+  }
+
+  /** One row's problem, or null if it's ready to send. Checked before any
+      network call so an obviously incomplete row never starts an upload. */
+  function draftProblem(d: CandidateDraft): string | null {
+    if (!d.candidateName.trim()) return "Candidate name is required.";
+    if (!d.candidateEmail.trim()) return "Candidate email is required.";
+    if (!d.candidatePhone.trim()) return "Candidate phone is required.";
+    if (!d.cv) return "Please attach the candidate's CV.";
+    if (!ACCEPTED_CV_TYPES.includes(d.cv.type)) return "CV must be a PDF or Word document.";
+    if (d.cv.size > MAX_CV_BYTES) return "CV is larger than 10 MB.";
+    return null;
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -50,54 +104,63 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
 
     // Bot filled the hidden field — pretend success, write nothing.
     if (hp) {
-      setDone(true);
+      setOutcomes(drafts.map((d) => ({ name: d.candidateName || "Candidate", ok: true })));
       return;
     }
-    /* The form is only rendered for a signed-in user, but a session can expire
-       while it sits open. Catch that here rather than letting the upload start
-       and fail with a 401 halfway through. */
+    /* The form is only rendered for a signed-in, non-admin user, but a session
+       can expire while it sits open. Catch that here rather than letting the
+       upload start and fail with a 401 halfway through. */
     if (!user) {
       setError("Your session has ended. Please sign in again to submit.");
       return;
     }
-    if (!cv) {
-      setError("Please attach the candidate's CV.");
-      return;
-    }
-    if (!ACCEPTED_CV_TYPES.includes(cv.type)) {
-      setError("CV must be a PDF or Word document.");
-      return;
-    }
-    if (cv.size > MAX_CV_BYTES) {
-      setError("CV is larger than 10 MB.");
-      return;
+
+    for (const d of drafts) {
+      const problem = draftProblem(d);
+      if (problem) {
+        setError(
+          drafts.length > 1
+            ? `${d.candidateName || "One candidate"}: ${problem}`
+            : problem,
+        );
+        return;
+      }
     }
 
     setSubmitting(true);
-    try {
-      await createSubmission(
-        job,
-        { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" },
-        form,
-        cv,
-      );
-      setLastName(form.candidateName);
-      setSentCount((n) => n + 1);
-      setDone(true);
-    } catch (err) {
-      /* Show what actually failed. The API returns readable messages —
-         "This candidate has already been submitted for this role.",
-         "CV must be a PDF or Word document." — and apiFetch passes them
-         through, so the recruiter can act on it instead of guessing. */
-      setError(
-        err instanceof Error && err.message
-          ? err.message
-          : "Could not save the submission. Please try again.",
-      );
-    } finally {
-      // finally, not catch: a stuck "Submitting…" is the worst outcome here.
-      setSubmitting(false);
+    // Sequential, not Promise.all: each row uploads a CV then creates a row,
+    // and running ten of those at once against a three-connection MySQL pool
+    // would starve every other request the site is serving.
+    const results: SubmitOutcome[] = [];
+    for (const d of drafts) {
+      try {
+        await createSubmission(
+          job,
+          { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" },
+          d,
+          d.cv as File,
+        );
+        results.push({ name: d.candidateName, ok: true });
+      } catch (err) {
+        /* Show what actually failed. The API returns readable messages —
+           "This candidate has already been submitted for this role.",
+           "CV must be a PDF or Word document." — and apiFetch passes them
+           through, so the recruiter can act on it instead of guessing. */
+        results.push({
+          name: d.candidateName,
+          ok: false,
+          error: err instanceof Error && err.message ? err.message : "Could not save this submission.",
+        });
+      }
     }
+    setOutcomes(results);
+    // Refresh so the "already submitted" banner includes what just landed —
+    // best-effort, the confirmation screen already shows the same names.
+    listSubmissionsByRecruiter()
+      .then((all) => setPriorSubmissions(all.filter((s) => s.jobId === job.id)))
+      .catch(() => {});
+    // finally, not catch: a stuck "Submitting…" is the worst outcome here.
+    setSubmitting(false);
   }
 
   // Wait for auth to resolve before deciding what to show, so a signed-in
@@ -150,7 +213,25 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     );
   }
 
-  if (done) {
+  /* Admins screen and decide every submission — including their own, if they
+     could make one. The real block is on the server (POST /api/submissions);
+     this just keeps the console gate from offering an action that's a
+     conflict of interest to begin with. */
+  if (isAdmin) {
+    return (
+      <div className="rounded-2xl border border-line bg-white p-8 text-center">
+        <h3 className="text-lg font-bold text-ink">Submissions are recruiter-only</h3>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
+          Admin accounts screen candidates, so they can&apos;t also refer them
+          for {job.title}.
+        </p>
+      </div>
+    );
+  }
+
+  if (outcomes) {
+    const succeeded = outcomes.filter((o) => o.ok);
+    const failed = outcomes.filter((o) => !o.ok);
     return (
       <div className="rounded-2xl border border-line bg-white p-8 text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary-soft text-primary">
@@ -158,24 +239,42 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
             <path d="M5 13l4 4 10-11" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h3 className="mt-4 text-lg font-bold text-ink">Candidate submitted</h3>
+        <h3 className="mt-4 text-lg font-bold text-ink">
+          {failed.length === 0
+            ? succeeded.length > 1
+              ? `${succeeded.length} candidates submitted`
+              : "Candidate submitted"
+            : "Submission complete"}
+        </h3>
         <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-          Our team will screen {lastName || "your candidate"} for{" "}
+          Our team will screen {succeeded.length === 1 ? succeeded[0].name || "your candidate" : "each candidate"} for{" "}
           <span className="font-medium text-ink">{job.title}</span> and update
           the status in your submissions.
         </p>
-        {sentCount > 1 && (
-          <p className="mt-2 text-xs font-medium text-primary">
-            {sentCount} candidates submitted for this role
-          </p>
+
+        {outcomes.length > 1 && (
+          <ul className="mx-auto mt-4 max-w-sm space-y-1.5 text-left text-sm">
+            {outcomes.map((o, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className={o.ok ? "text-primary" : "text-coral"}>
+                  {o.ok ? "✓" : "✕"}
+                </span>
+                <span className="text-ink">
+                  {o.name || "Candidate"}
+                  {!o.ok && <span className="block text-xs text-coral">{o.error}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
+
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <button
             type="button"
-            onClick={submitAnother}
+            onClick={submitMore}
             className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
           >
-            Submit another candidate
+            Submit more candidates
           </button>
           <button
             type="button"
@@ -190,6 +289,29 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
   }
 
   return (
+    <div className="space-y-4">
+      {priorSubmissions.length > 0 && (
+        <div className="rounded-2xl border border-primary/25 bg-primary-soft p-4">
+          <p className="text-sm font-bold text-primary">
+            You&apos;ve already submitted {priorSubmissions.length}{" "}
+            {priorSubmissions.length === 1 ? "candidate" : "candidates"} for this role
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-ink">
+            {priorSubmissions.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-2">
+                <span>{s.candidateName || "Candidate"}</span>
+                <span className="text-xs font-semibold text-primary">
+                  {SUBMISSION_STATUS_LABEL[s.status]}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-primary/80">
+            You can still submit more candidates for this role below.
+          </p>
+        </div>
+      )}
+
     <form onSubmit={onSubmit} className="rounded-2xl border border-line bg-white p-6">
       {/* honeypot — hidden from real users; bots that fill it are dropped */}
       <input
@@ -207,58 +329,85 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         Your candidate goes to our screening team, not the client directly.
       </p>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <Field label="Candidate name">
-          <input
-            className="input"
-            required
-            value={form.candidateName}
-            onChange={(e) => set("candidateName", e.target.value)}
-            placeholder="Jordan Lee"
-          />
-        </Field>
-        <Field label="Candidate email">
-          <input
-            className="input"
-            type="email"
-            required
-            value={form.candidateEmail}
-            onChange={(e) => set("candidateEmail", e.target.value)}
-            placeholder="jordan@email.com"
-          />
-        </Field>
-        <Field label="Candidate phone" className="sm:col-span-2">
-          <input
-            className="input"
-            type="tel"
-            required
-            value={form.candidatePhone}
-            onChange={(e) => set("candidatePhone", e.target.value)}
-            placeholder="+44 7700 900000"
-          />
-        </Field>
-        <Field label="Why they're a fit (optional)" className="sm:col-span-2">
-          <textarea
-            className="input min-h-28 resize-y"
-            value={form.notes}
-            onChange={(e) => set("notes", e.target.value)}
-            placeholder="A short pitch for this candidate…"
-          />
-        </Field>
-        <Field label="CV (PDF or Word, max 10 MB)" className="sm:col-span-2">
-          <input
-            /* Remounted on reset — a file input's value cannot be cleared by
-               React state, so the previous candidate's CV would otherwise stay
-               attached to the next submission. */
-            key={formKey}
-            className="block w-full text-sm text-muted file:mr-4 file:rounded-pill file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
-            type="file"
-            required
-            accept=".pdf,.doc,.docx"
-            onChange={(e) => setCv(e.target.files?.[0] ?? null)}
-          />
-        </Field>
+      <div className="mt-5 space-y-6">
+        {drafts.map((d, i) => (
+          <div key={d.key} className={drafts.length > 1 ? "rounded-xl border border-line p-4" : ""}>
+            {drafts.length > 1 && (
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-muted">
+                  Candidate {i + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeDraft(d.key)}
+                  className="text-xs font-semibold text-muted hover:text-coral"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Candidate name">
+                <input
+                  className="input"
+                  required
+                  value={d.candidateName}
+                  onChange={(e) => updateDraft(d.key, { candidateName: e.target.value })}
+                  placeholder="Jordan Lee"
+                />
+              </Field>
+              <Field label="Candidate email">
+                <input
+                  className="input"
+                  type="email"
+                  required
+                  value={d.candidateEmail}
+                  onChange={(e) => updateDraft(d.key, { candidateEmail: e.target.value })}
+                  placeholder="jordan@email.com"
+                />
+              </Field>
+              <Field label="Candidate phone" className="sm:col-span-2">
+                <input
+                  className="input"
+                  type="tel"
+                  required
+                  value={d.candidatePhone}
+                  onChange={(e) => updateDraft(d.key, { candidatePhone: e.target.value })}
+                  placeholder="+44 7700 900000"
+                />
+              </Field>
+              <Field label="Why they're a fit (optional)" className="sm:col-span-2">
+                <textarea
+                  className="input min-h-28 resize-y"
+                  value={d.notes}
+                  onChange={(e) => updateDraft(d.key, { notes: e.target.value })}
+                  placeholder="A short pitch for this candidate…"
+                />
+              </Field>
+              <Field label="CV (PDF or Word, max 10 MB)" className="sm:col-span-2">
+                <input
+                  className="block w-full text-sm text-muted file:mr-4 file:rounded-pill file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
+                  type="file"
+                  required
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => updateDraft(d.key, { cv: e.target.files?.[0] ?? null })}
+                />
+              </Field>
+            </div>
+          </div>
+        ))}
       </div>
+
+      <button
+        type="button"
+        onClick={addDraft}
+        disabled={drafts.length >= MAX_CANDIDATES}
+        className="mt-4 w-full rounded-xl border border-dashed border-line py-2.5 text-sm font-semibold text-primary hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {drafts.length >= MAX_CANDIDATES
+          ? `Up to ${MAX_CANDIDATES} candidates per submission`
+          : "+ Add another candidate"}
+      </button>
 
       {error && (
         <p className="mt-4 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">
@@ -271,9 +420,14 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         disabled={submitting}
         className="mt-6 w-full rounded-pill bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60 sm:w-auto"
       >
-        {submitting ? "Submitting…" : "Submit candidate"}
+        {submitting
+          ? "Submitting…"
+          : drafts.length > 1
+            ? `Submit ${drafts.length} candidates`
+            : "Submit candidate"}
       </button>
     </form>
+    </div>
   );
 }
 

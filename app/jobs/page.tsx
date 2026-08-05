@@ -299,32 +299,42 @@ export default function JobsPage() {
 /* ---- job card ---- */
 function JobCard({ job, saved, onSave }: { job: Job; saved: boolean; onSave: () => void }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-line bg-white p-5 transition-shadow hover:shadow-[0_20px_50px_-30px_rgba(23,19,15,0.35)]">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-medium text-muted">
-          <span>{job.company}</span>
-          <span title="JobFolder-vetted role" className="grid h-4 w-4 place-items-center rounded-full bg-primary text-white">
-            <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden>
-              <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+    <div className="group flex flex-col rounded-2xl border border-line bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_20px_50px_-30px_rgba(23,19,15,0.35)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-sm font-bold text-primary"
+          >
+            {initials(job.company)}
           </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-sm font-semibold text-ink">{job.company}</span>
+              <span title="JobFolder-vetted role" className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full bg-primary text-white">
+                <svg width="8" height="8" viewBox="0 0 12 12" fill="none" aria-hidden>
+                  <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </div>
+            <p className="text-xs text-muted">Posted {timeAgo(job.createdAt)}</p>
+          </div>
         </div>
         <button type="button" onClick={onSave} aria-label={saved ? "Remove bookmark" : "Save job"}
-          className={saved ? "text-primary" : "text-muted hover:text-ink"}>
+          className={`shrink-0 transition-colors ${saved ? "text-primary" : "text-muted hover:text-ink"}`}>
           <svg width="18" height="18" viewBox="0 0 20 20" fill={saved ? "currentColor" : "none"} aria-hidden>
             <path d="M5 3h10v14l-5-3.5L5 17V3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
           </svg>
         </button>
       </div>
 
-      <Link href={`/jobs/${job.id}`} className="mt-2 text-lg font-bold text-ink hover:text-primary">
+      <Link href={`/jobs/${job.id}`} className="mt-3 text-lg font-bold leading-snug text-ink group-hover:text-primary">
         {job.title}
       </Link>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
         <Meta icon="M4 7h12v9H4zM7 7V5h6v2" text={job.employmentType} />
         <Meta icon="M10 2a5 5 0 015 5c0 3.5-5 9-5 9S5 10.5 5 7a5 5 0 015-5zM10 9a2 2 0 100-4 2 2 0 000 4z" text={job.remote ? "Remote" : job.location || "Onsite"} />
-        <Meta icon="M10 2a8 8 0 100 16 8 8 0 000-16zM10 6v4l3 2" text={`Posted ${timeAgo(job.createdAt)}`} />
       </div>
 
       {job.description && (
@@ -336,14 +346,37 @@ function JobCard({ job, saved, onSave }: { job: Job; saved: boolean; onSave: () 
         {job.remote && <Tag>Remote</Tag>}
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
-        <p className="text-base font-extrabold text-ink">{formatPay(job)}</p>
-        <Link href={`/jobs/${job.id}`} className="text-sm font-semibold text-primary hover:text-primary-dark">
-          View &amp; apply →
-        </Link>
+      <div className="mt-4 flex flex-col gap-3 border-t border-line pt-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-base font-extrabold text-ink">{formatPay(job)}</p>
+          <Link
+            href={`/jobs/${job.id}`}
+            className="inline-flex items-center gap-1 rounded-pill bg-cream px-3.5 py-1.5 text-sm font-semibold text-ink transition-colors group-hover:bg-primary group-hover:text-white"
+          >
+            View &amp; apply
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+        </div>
+        {job.bounty != null && job.bounty > 0 && (
+          <div className="inline-flex w-fit items-center gap-1.5 rounded-pill bg-sage-soft px-3 py-1 text-xs font-bold text-ink">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <path d="M10 2v16M14.5 5.5H8.25a2.25 2.25 0 000 4.5h3.5a2.25 2.25 0 010 4.5H5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Earn ${job.bounty.toLocaleString()} referral commission
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+/** Up to two initials from a company name, for the card avatar. */
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  return (words[0][0] + (words[1]?.[0] ?? "")).toUpperCase();
 }
 
 function Meta({ icon, text }: { icon: string; text: string }) {

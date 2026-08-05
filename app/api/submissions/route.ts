@@ -5,7 +5,7 @@ import {
   createSubmission, getOpenJob, listSubmissionsByRecruiter, getUserProfile,
   cvFileIsAvailable,
 } from "@/lib/server/repo";
-import { requireUid } from "@/lib/server/auth";
+import { requireUid, isAdmin, AuthError } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,11 +19,17 @@ export function GET(req: Request) {
   });
 }
 
-/* Create a submission. Sign-in is REQUIRED.
+/* Create a submission. Sign-in is REQUIRED, and the caller must NOT be an
+   admin.
 
    This is the enforcement point. The form is also hidden from signed-out
-   visitors, but that is only presentation — a request straight to this endpoint
-   has to be refused here, or the rule does not exist.
+   visitors and from admins, but that is only presentation — a request straight
+   to this endpoint has to be refused here, or the rule does not exist.
+
+   Why admins are blocked: an admin screens and decides every submission's
+   status, including their own if they were allowed to create one. Letting the
+   same account both refer a candidate and judge that referral is a conflict of
+   interest the UI shouldn't even offer.
 
    Note what is NOT taken from the body: jobTitle, company and bounty are read
    from the jobs table, not trusted from the client. Otherwise anyone could post
@@ -31,6 +37,9 @@ export function GET(req: Request) {
 export function POST(req: Request) {
   return handle(async () => {
     const uid = await requireUid(req);
+    if (await isAdmin(uid)) {
+      throw new AuthError("Admin accounts can't submit candidates.", 403);
+    }
     const body = await jsonBody(req);
 
     const jobId = str(body.jobId, "jobId", { max: 64, required: true });

@@ -85,7 +85,8 @@ export default function BoardFiltersPage() {
   const allStates = filters.states.length === 0;
 
   return (
-    <div className="max-w-2xl">
+    <div className="flex gap-8">
+      <div className="min-w-0 max-w-2xl flex-1">
       <div className="mb-8 flex items-start gap-4">
         <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-ink text-cream">
           <FilterIcon />
@@ -245,8 +246,79 @@ export default function BoardFiltersPage() {
           </div>
         </SettingCard>
       </div>
+      </div>
+
+      {/* Unsaved edits show here immediately, before the admin even hits Save
+          on that card — this reads live off the same state the cards edit,
+          not a re-fetch, so it previews what's about to go live. */}
+      <aside className="hidden w-72 shrink-0 xl:block">
+        <div className="sticky top-6 rounded-2xl border border-line bg-cream/40 p-5">
+          <p className="eyebrow uppercase">Live preview</p>
+          <h2 className="mt-1 text-sm font-bold text-ink">How this looks on /jobs</h2>
+
+          <PreviewSection label={`Categories (${categories.length})`}>
+            {categories.slice(0, 8).map((c) => (
+              <PreviewChip key={c}>{c}</PreviewChip>
+            ))}
+            {categories.length > 8 && (
+              <PreviewChip>+{categories.length - 8} more</PreviewChip>
+            )}
+            {categories.length === 0 && <PreviewEmpty />}
+          </PreviewSection>
+
+          <PreviewSection label={`Job types (${filters.employmentTypes.length})`}>
+            {filters.employmentTypes.map((t) => (
+              <PreviewChip key={t}>{t}</PreviewChip>
+            ))}
+            {filters.employmentTypes.length === 0 && <PreviewEmpty />}
+          </PreviewSection>
+
+          <PreviewSection label="Pay slider">
+            <PreviewChip>Any – ${filters.salaryMax.toLocaleString()}+</PreviewChip>
+          </PreviewSection>
+
+          <PreviewSection label="Locations">
+            <PreviewChip>
+              {allStates ? `All ${US_STATES.length} states` : `${filters.states.length} states`}
+            </PreviewChip>
+          </PreviewSection>
+
+          <a
+            href="/jobs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 flex items-center justify-center gap-1.5 rounded-pill border border-line bg-white py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+          >
+            Open the live board
+            <svg width="11" height="11" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <path d="M7 13L13 7M8 6h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+        </div>
+      </aside>
     </div>
   );
+}
+
+function PreviewSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-4 border-t border-line pt-4">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-muted">{label}</p>
+      <div className="mt-2 flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function PreviewChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex rounded-pill border border-line bg-white px-2.5 py-1 text-[11px] font-medium text-ink">
+      {children}
+    </span>
+  );
+}
+
+function PreviewEmpty() {
+  return <span className="text-xs text-muted">Nothing set — falls back to defaults.</span>;
 }
 
 /* ---- inline icons — 20×20, stroke currentColor, matching the console's style ---- */
