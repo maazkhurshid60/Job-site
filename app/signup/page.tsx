@@ -6,7 +6,7 @@ import Link from "next/link";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/auth";
 import { useNextPath } from "@/lib/useNextPath";
-import { AuthCard, AuthField } from "@/components/auth/AuthCard";
+import { AuthCard, AuthField, RecruiterAside } from "@/components/auth/AuthCard";
 
 function signupErrorMessage(err: unknown): string {
   if (err instanceof FirebaseError) {
@@ -51,6 +51,13 @@ export default function SignupPage() {
     <AuthCard
       title="Create your account"
       subtitle="Sign up to browse our jobs and submit your candidates."
+      aside={
+        <RecruiterAside
+          eyebrow="For recruiters"
+          headline="Bring the candidates. We'll bring the roles."
+          body="Join the JobFolder network and get matched to funded, well-defined roles. Submit your best people, and get paid when they land the job."
+        />
+      }
       footer={
         <>
           Already have an account?{" "}

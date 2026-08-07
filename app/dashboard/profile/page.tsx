@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { updateUserProfile, uploadAvatar } from "@/lib/users";
 import { profileCompletion } from "@/lib/profileCompletion";
 import { ProfileMeter } from "@/components/dashboard/parts";
+import { SOCIAL_FIELDS, SocialIcon, type SocialKind } from "@/components/SocialLinks";
 
 export default function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -16,6 +17,10 @@ export default function ProfilePage() {
     headline: "",
     location: "",
     linkedin: "",
+    website: "",
+    twitter: "",
+    facebook: "",
+    instagram: "",
     bio: "",
     photoURL: "",
   });
@@ -35,6 +40,10 @@ export default function ProfilePage() {
       headline: profile.headline ?? "",
       location: profile.location ?? "",
       linkedin: profile.linkedin ?? "",
+      website: profile.website ?? "",
+      twitter: profile.twitter ?? "",
+      facebook: profile.facebook ?? "",
+      instagram: profile.instagram ?? "",
       bio: profile.bio ?? "",
       photoURL: profile.photoURL ?? "",
     });
@@ -133,7 +142,7 @@ export default function ProfilePage() {
       >
         {/* photo */}
         <div className="flex items-center gap-5">
-          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft text-2xl font-bold text-primary">
+          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft text-2xl font-bold text-primary ring-4 ring-cream">
             {form.photoURL ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -210,15 +219,31 @@ export default function ProfilePage() {
               placeholder="London, UK"
             />
           </Field>
-          <Field label="LinkedIn URL" className="sm:col-span-2">
-            <input
-              className="input"
-              value={form.linkedin}
-              onChange={(e) => set("linkedin", e.target.value)}
-              placeholder="https://linkedin.com/in/…"
-            />
-          </Field>
-          <Field label="About you" className="sm:col-span-2">
+        </div>
+
+        <div className="mt-8 border-t border-line pt-6">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">
+            Social &amp; links
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Optional — anything you add here shows up on your recruiter profile.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {SOCIAL_FIELDS.map((f) => (
+              <IconField
+                key={f.key}
+                kind={f.key}
+                label={f.label}
+                value={form[f.key]}
+                onChange={(v) => set(f.key, v)}
+                placeholder={f.placeholder}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4">
+          <Field label="About you">
             <textarea
               className="input min-h-28 resize-y"
               value={form.bio}
@@ -265,5 +290,36 @@ function Field({
       <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
       {children}
     </label>
+  );
+}
+
+function IconField({
+  kind,
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  kind: SocialKind;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <Field label={label}>
+      <div className="relative">
+        <SocialIcon
+          kind={kind}
+          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+        />
+        <input
+          className="input pl-10"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      </div>
+    </Field>
   );
 }

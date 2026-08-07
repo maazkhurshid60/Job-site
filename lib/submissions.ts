@@ -75,6 +75,10 @@ export type SubmissionRecruiter = {
   headline: string;
   location: string;
   linkedin: string;
+  website: string;
+  twitter: string;
+  facebook: string;
+  instagram: string;
   photoURL: string;
   /** When they joined — ISO-8601, or null. */
   createdAt: string | null;

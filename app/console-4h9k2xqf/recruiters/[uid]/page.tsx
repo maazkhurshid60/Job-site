@@ -17,6 +17,7 @@ import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { SubmissionDetail } from "@/components/admin/SubmissionDetail";
 import { adminRoutes } from "@/lib/routes";
 import { formatDate } from "@/lib/dates";
+import { SocialLinkList } from "@/components/SocialLinks";
 
 /* One recruiter, in full: their profile as they filled it in, and every
    candidate they have referred.
@@ -139,12 +140,12 @@ export default function RecruiterDetailPage() {
               <Row label="Email" value={user.email} href={`mailto:${user.email}`} />
               <Row label="Phone" value={user.phone} href={`tel:${user.phone}`} />
               <Row label="Location" value={user.location} />
-              <Row label="LinkedIn" value={user.linkedin} href={user.linkedin} external />
               <Row label="Joined" value={formatDate(user.createdAt)} />
               {/* The Firebase UID — the join key for every table. Worth showing
                   when reconciling a submission against an account by hand. */}
               <Row label="Account ID" value={user.uid} mono />
             </dl>
+            <SocialLinkList links={user} className="mt-4" />
           </div>
         </div>
 

@@ -207,6 +207,10 @@ type SubmissionRow = {
   r_headline?: string | null;
   r_location?: string | null;
   r_linkedin?: string | null;
+  r_website?: string | null;
+  r_twitter?: string | null;
+  r_facebook?: string | null;
+  r_instagram?: string | null;
   r_photo_url?: string | null;
   r_created_at?: string | null;
 };
@@ -251,6 +255,10 @@ function toSubmission(r: SubmissionRow): Submission {
                 headline: r.r_headline ?? "",
                 location: r.r_location ?? "",
                 linkedin: r.r_linkedin ?? "",
+                website: r.r_website ?? "",
+                twitter: r.r_twitter ?? "",
+                facebook: r.r_facebook ?? "",
+                instagram: r.r_instagram ?? "",
                 photoURL: r.r_photo_url ?? "",
                 createdAt: r.r_created_at ?? null,
               }
@@ -276,8 +284,9 @@ const SUB_FROM = `FROM submissions s LEFT JOIN files f ON f.id = s.cv_file_id`;
 const SUB_RECRUITER_COLUMNS = `,
   u.uid AS r_uid, u.name AS r_name, u.email AS r_email, u.phone AS r_phone,
   u.company AS r_company, u.headline AS r_headline, u.location AS r_location,
-  u.linkedin AS r_linkedin, u.photo_url AS r_photo_url,
-  u.created_at AS r_created_at`;
+  u.linkedin AS r_linkedin, u.website AS r_website, u.twitter AS r_twitter,
+  u.facebook AS r_facebook, u.instagram AS r_instagram,
+  u.photo_url AS r_photo_url, u.created_at AS r_created_at`;
 
 const SUB_FROM_WITH_RECRUITER = `${SUB_FROM} LEFT JOIN users u ON u.uid = s.recruiter_id`;
 
@@ -367,6 +376,10 @@ type UserRow = {
   headline: string;
   location: string;
   linkedin: string;
+  website: string;
+  twitter: string;
+  facebook: string;
+  instagram: string;
   bio: string | null;
   photo_url: string;
   created_at: string | null;
@@ -382,6 +395,10 @@ function toUserProfile(r: UserRow): UserProfile {
     headline: r.headline,
     location: r.location,
     linkedin: r.linkedin,
+    website: r.website,
+    twitter: r.twitter,
+    facebook: r.facebook,
+    instagram: r.instagram,
     bio: r.bio ?? "",
     photoURL: r.photo_url,
     createdAt: r.created_at,
@@ -389,8 +406,8 @@ function toUserProfile(r: UserRow): UserProfile {
 }
 
 const USER_COLUMNS = `
-  uid, name, email, phone, company, headline, location, linkedin, bio,
-  photo_url, created_at`;
+  uid, name, email, phone, company, headline, location, linkedin, website,
+  twitter, facebook, instagram, bio, photo_url, created_at`;
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const row = await queryOne<UserRow>(
@@ -452,6 +469,10 @@ export type ProfileWrite = {
   headline: string;
   location: string;
   linkedin: string;
+  website: string;
+  twitter: string;
+  facebook: string;
+  instagram: string;
   bio: string;
   photoURL: string;
 };
@@ -466,11 +487,13 @@ export async function updateUserProfile(
   await execute(
     `UPDATE users SET
        name = ?, phone = ?, company = ?, headline = ?, location = ?,
-       linkedin = ?, bio = ?, photo_url = ?
+       linkedin = ?, website = ?, twitter = ?, facebook = ?, instagram = ?,
+       bio = ?, photo_url = ?
      WHERE uid = ?`,
     [
       input.name, input.phone, input.company, input.headline, input.location,
-      input.linkedin, input.bio, input.photoURL, uid,
+      input.linkedin, input.website, input.twitter, input.facebook, input.instagram,
+      input.bio, input.photoURL, uid,
     ],
   );
 }

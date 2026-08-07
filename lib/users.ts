@@ -17,6 +17,10 @@ export type UserProfile = {
   headline: string; // e.g. "Technical recruiter" / job title
   location: string;
   linkedin: string;
+  website: string;
+  twitter: string;
+  facebook: string;
+  instagram: string;
   bio: string;
   photoURL: string;
   /** ISO-8601 string from MySQL, or null. */
@@ -32,6 +36,10 @@ export type UserProfileInput = {
   headline: string;
   location: string;
   linkedin: string;
+  website: string;
+  twitter: string;
+  facebook: string;
+  instagram: string;
   bio: string;
   photoURL: string;
 };

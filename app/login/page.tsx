@@ -6,7 +6,7 @@ import Link from "next/link";
 import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/auth";
 import { useNextPath } from "@/lib/useNextPath";
-import { AuthCard, AuthField } from "@/components/auth/AuthCard";
+import { AuthCard, AuthField, RecruiterAside } from "@/components/auth/AuthCard";
 
 /* Firebase deliberately returns the same `auth/invalid-credential` for a wrong
    password and an email with no account — that's its email-enumeration
@@ -57,6 +57,13 @@ export default function LoginPage() {
     <AuthCard
       title="Welcome back"
       subtitle="Sign in to your JobFolder account."
+      aside={
+        <RecruiterAside
+          eyebrow="Recruiter dashboard"
+          headline="Your referrals, bounties, and briefs — all in one place."
+          body="Sign in to track every candidate you've submitted, see where they stand, and pick up new roles worth referring into."
+        />
+      }
       footer={
         <>
           New here?{" "}

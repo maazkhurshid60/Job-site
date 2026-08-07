@@ -10,6 +10,7 @@ import {
 import { money } from "@/components/dashboard/parts";
 import { formatDate } from "@/lib/dates";
 import { CvPreview } from "./CvPreview";
+import { SocialLinkList } from "@/components/SocialLinks";
 
 /* Full detail for one submission: the candidate, the CV itself, and the
    recruiter who referred them — the three things needed to screen someone
@@ -159,13 +160,8 @@ export function SubmissionDetail({
                   <Row label="Email" value={r.email} href={`mailto:${r.email}`} />
                   <Row label="Phone" value={r.phone} href={`tel:${r.phone}`} />
                   <Row label="Location" value={r.location} />
-                  <Row
-                    label="LinkedIn"
-                    value={r.linkedin}
-                    href={r.linkedin}
-                    external
-                  />
                   <Row label="Joined" value={formatDate(r.createdAt)} />
+                  <SocialLinkList links={r} className="mt-3" />
                 </>
               ) : (
                 /* recruiter_id is NULL — either an open application, or the

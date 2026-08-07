@@ -62,6 +62,10 @@ export function PUT(req: Request) {
       headline: str(body.headline, "headline", { max: 255 }),
       location: str(body.location, "location", { max: 255 }),
       linkedin: str(body.linkedin, "linkedin", { max: 512 }),
+      website: str(body.website, "website", { max: 512 }),
+      twitter: str(body.twitter, "twitter", { max: 512 }),
+      facebook: str(body.facebook, "facebook", { max: 512 }),
+      instagram: str(body.instagram, "instagram", { max: 512 }),
       bio: str(body.bio, "bio"),
       photoURL: str(body.photoURL, "photoURL", { max: 1024 }),
     });
