@@ -63,8 +63,12 @@ export const DEFAULT_HIRING_STAGES = [
   "Offer",
 ];
 
-/* A role JobFolder is sourcing for. `company` is the client;
-   `bounty` is what a recruiter earns on a confirmed hire. */
+/* A role JobFolder is sourcing for. `company` is the client. `bounty` is an
+   internal/admin figure (what the client pays JobFolder, per the client
+   agreement) — it is never shown to recruiters. `feeTier` (lib/feeTiers.ts)
+   is the recruiter-facing amount: what a recruiter earns on a confirmed
+   hire, published up front. The two are deliberately decoupled so JobFolder
+   controls its own margin. */
 export type Job = {
   id: string;
   title: string;
@@ -76,6 +80,8 @@ export type Job = {
   salaryMin: number | null;
   salaryMax: number | null;
   bounty: number | null;
+  /** Recruiter fee tier — see lib/feeTiers.ts. Null on jobs posted before the tier system. */
+  feeTier: string | null;
   description: string; // the "Job Brief"
   responsibilities: string;
   requirements: string;
@@ -86,6 +92,9 @@ export type Job = {
   /** ISO-8601 string from MySQL, or null. */
   createdAt: string | null;
   updatedAt: string | null;
+  /** Only present on GET /api/jobs/[id] (the recruiter-facing detail read) — how
+      many candidates have been submitted for this role so far. */
+  submissionCount?: number;
 };
 
 /* Fields the admin form supplies (everything except server-managed ones). */

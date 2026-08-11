@@ -8,6 +8,35 @@ import { PageHero, PhotoBand } from "@/components/PageHero";
 import { photo } from "@/components/images";
 import { howSteps } from "@/lib/howItWorks";
 import { absoluteUrl } from "@/lib/seo";
+import { FEE_TIERS } from "@/lib/feeTiers";
+
+const recruiterSteps = [
+  { title: "Join JobFolder", body: "Recruiters create an account at no cost." },
+  {
+    title: "Browse Active Positions",
+    body: "Choose from real recruiting assignments. Every position clearly shows the available recruiter fee: $1,000 | $2,000 | $3,000.",
+  },
+  {
+    title: "Find a Qualified Candidate",
+    body: "Recruit using your existing network, database, LinkedIn, referrals, or other sourcing methods.",
+  },
+  {
+    title: "Submit Through JobFolder",
+    body: "Upload the candidate's resume and required information. Your submission is timestamped to establish recruiter ownership.",
+  },
+  {
+    title: "JobFolder Reviews the Candidate",
+    body: "JobFolder checks the candidate against the position requirements before presenting them to the client.",
+  },
+  {
+    title: "Client Interviews",
+    body: "You can follow the candidate's progress through your dashboard.",
+  },
+  {
+    title: "Candidate Gets Hired",
+    body: "When your candidate successfully starts the position and satisfies the applicable placement terms, you earn $1,000, $2,000, or $3,000 — depending on the advertised recruiter fee for that position.",
+  },
+];
 
 export const metadata: Metadata = {
   title: "How It Works — Crowdsourced Engineering Recruiting",
@@ -51,7 +80,7 @@ const clientSteps = [
   },
   {
     heading: "5. You pay on the hire",
-    body: "No retainer and no upfront cost. Our fee and the recruiter's referral commission are settled only once your new hire is confirmed — the contingency model, run across a whole network.",
+    body: "No retainer and no upfront cost. Our fee and the recruiter's success fee are settled only once your new hire is confirmed — the contingency model, run across a whole network.",
   },
 ];
 
@@ -74,7 +103,7 @@ const faqs = [
   {
     question: "What does it cost?",
     answer:
-      "Nothing until you hire. There is no retainer and no upfront fee — our placement fee and the referring recruiter's commission are both settled only when your hire is confirmed.",
+      "Nothing until you hire. There is no retainer and no upfront fee — our placement fee and the referring recruiter's success fee are both settled only when your hire is confirmed.",
   },
 ];
 
@@ -151,19 +180,80 @@ export default function HowItWorksPage() {
           className="pb-4"
         />
 
-        {/* Recruiter journey — the three canonical steps */}
-        <section className="border-t border-gray-100 bg-gray-50/40 py-16 sm:py-20">
+        {/* The 7-step recruiter process, spelled out literally */}
+        <section className="border-t border-gray-100 py-16 sm:py-20">
           <Container>
             <div className="mx-auto max-w-3xl text-center">
               <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
                 For recruiters
               </span>
               <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-                Refer a candidate, earn the commission
+                Seven steps, start to paid
+              </h2>
+            </div>
+
+            <ol className="mx-auto mt-12 max-w-2xl space-y-6">
+              {recruiterSteps.map((s, i) => (
+                <li key={s.title} className="flex gap-4">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-blue-brand text-sm font-bold text-white">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <h3 className="font-bold text-ink">{s.title}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted">{s.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Container>
+        </section>
+
+        {/* Why the fee varies by position */}
+        <section className="border-t border-gray-100 bg-gray-50/40 py-16 sm:py-20">
+          <Container>
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
+                Recruiter fee levels
+              </span>
+              <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+                Why the fee varies by position
               </h2>
               <p className="mt-4 leading-relaxed text-muted">
-                Every role publishes its referral commission before you submit
-                anyone. Free to join, no retainers, and you keep working the
+                JobFolder determines the recruiter fee before the position
+                becomes available to the recruiting network. The fee shown on
+                the position is the fee the recruiter can earn.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {FEE_TIERS.map((t) => (
+                <div key={t.value} className="rounded-2xl border border-gray-100 bg-white p-6">
+                  <p className="text-2xl font-extrabold text-blue-brand">${t.amount.toLocaleString()}</p>
+                  <p className="mt-1 text-sm font-bold text-ink">{t.label}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">{t.blurb}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-muted">
+              There is no charge to join JobFolder. Recruiters are compensated
+              only when their referred candidate is successfully placed.
+            </p>
+          </Container>
+        </section>
+
+        {/* Recruiter journey — the three canonical detail pages */}
+        <section className="border-t border-gray-100 py-16 sm:py-20">
+          <Container>
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
+                Go deeper
+              </span>
+              <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+                Browse, submit, get paid
+              </h2>
+              <p className="mt-4 leading-relaxed text-muted">
+                Free to join, no retainers, and you keep working the
                 disciplines you already know.
               </p>
             </div>

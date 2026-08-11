@@ -11,6 +11,7 @@ import { money } from "@/components/dashboard/parts";
 import { formatDate } from "@/lib/dates";
 import { CvPreview } from "./CvPreview";
 import { SocialLinkList } from "@/components/SocialLinks";
+import { MessageThread } from "@/components/dashboard/MessageThread";
 
 /* Full detail for one submission: the candidate, the CV itself, and the
    recruiter who referred them — the three things needed to screen someone
@@ -173,6 +174,12 @@ export function SubmissionDetail({
                     : "Submitted directly, with no referring recruiter."}
                 </p>
               )}
+            </Section>
+
+            <Section title="Messages">
+              <div className="h-80">
+                <MessageThread submissionId={s.id} role="admin" />
+              </div>
             </Section>
           </div>
         </div>

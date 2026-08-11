@@ -1,5 +1,7 @@
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
+import { OpenPositions } from "@/components/OpenPositions";
+import { RecruiterFeeSection } from "@/components/RecruiterFeeSection";
 import { SocialProof } from "@/components/SocialProof";
 import { HowItWorks } from "@/components/HowItWorks";
 import { Reasons } from "@/components/Reasons";
@@ -16,9 +18,17 @@ export default function Home() {
         <Hero />
 
         <Reveal>
+          <OpenPositions />
+        </Reveal>
+
+        <Reveal>
+          <RecruiterFeeSection />
+        </Reveal>
+
+        <Reveal>
           <SocialProof />
         </Reveal>
-        
+
         <Reveal>
           <HowItWorks />
         </Reveal>

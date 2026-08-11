@@ -4,7 +4,7 @@ import { Suspense } from "react";
 export const metadata: Metadata = {
   title: "Engineering & DOT Jobs — Browse Open Roles",
   description:
-    "Browse open civil engineering, transportation and DOT roles across the US — structural, MEP, water resources, CEI inspection and project management. Every listing shows the referral commission up front.",
+    "Browse open civil engineering, transportation and DOT roles across the US — structural, MEP, water resources, CEI inspection and project management. Every listing shows the recruiter fee up front.",
   keywords: [
     "civil engineering jobs",
     "DOT jobs",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Engineering & DOT Jobs — Browse Open Roles",
     description:
-      "Open civil, transportation and DOT engineering roles across the US, with the referral commission published on every listing.",
+      "Open civil, transportation and DOT engineering roles across the US, with the recruiter fee published on every listing.",
     url: "/jobs",
   },
 };

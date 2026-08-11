@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Container, Eyebrow } from "@/components/ui";
@@ -10,10 +11,13 @@ import { photo } from "@/components/images";
 import { sendMessage } from "@/lib/messages";
 
 export default function ContactPage() {
+  // Pre-fills from a job's "Ask a question" link (?subject=…). Read during
+  // the initial render, not an effect, so it doesn't cause a second pass.
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({
     name: "",
     email: "",
-    subject: "",
+    subject: searchParams.get("subject") ?? "",
     message: "",
   });
   const [submitting, setSubmitting] = useState(false);

@@ -16,6 +16,8 @@ import {
 import { formatPay } from "@/components/jobFormat";
 import { photo } from "@/components/images";
 import { timeAgo } from "@/lib/dates";
+import { FEE_TIERS, feeTierMeta } from "@/lib/feeTiers";
+import { useSavedJobs } from "@/lib/savedJobs";
 
 /* The state list and the pay ceiling used to be hardcoded here. They now come
    from lib/boardFilters (defaults) and the console (overrides), so the board
@@ -36,11 +38,12 @@ export default function JobsPage() {
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [filters, setFilters] = useState<BoardFilters>(DEFAULT_FILTERS);
   const [types, setTypes] = useState<Set<string>>(new Set());
+  const [feeTiers, setFeeTiers] = useState<Set<string>>(new Set());
   const [stateFilter, setStateFilter] = useState("All");
   const [remote, setRemote] = useState(false);
   const [onsite, setOnsite] = useState(false);
   const [minSalary, setMinSalary] = useState(0);
-  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const { saved, toggle: toggleSaved } = useSavedJobs();
   const [view, setView] = useState<"board" | "list">("board");
   const [onlySaved, setOnlySaved] = useState(false);
 
@@ -67,6 +70,7 @@ export default function JobsPage() {
       if (st && !j.location.toLowerCase().includes(st)) return false;
       if (types.size && !types.has(j.employmentType)) return false;
       if (cats.size && !cats.has(j.category)) return false;
+      if (feeTiers.size && !(j.feeTier && feeTiers.has(j.feeTier))) return false;
       if (minSalary > 0 && (j.salaryMax ?? j.salaryMin ?? 0) < minSalary) return false;
       if (needle) {
         const hay = `${j.title} ${j.company} ${j.category} ${j.location} ${j.description}`.toLowerCase();
@@ -74,19 +78,20 @@ export default function JobsPage() {
       }
       return true;
     });
-  }, [jobs, q, cats, types, stateFilter, remote, onsite, minSalary, onlySaved, saved]);
+  }, [jobs, q, cats, types, feeTiers, stateFilter, remote, onsite, minSalary, onlySaved, saved]);
 
   const activeCount =
-    cats.size + types.size + (stateFilter !== "All" ? 1 : 0) +
+    cats.size + types.size + feeTiers.size + (stateFilter !== "All" ? 1 : 0) +
     (remote ? 1 : 0) + (onsite ? 1 : 0) + (minSalary > 0 ? 1 : 0);
 
   function toggleIn(set: Set<string>, key: string, apply: (s: Set<string>) => void) {
     const n = new Set(set);
-    n.has(key) ? n.delete(key) : n.add(key);
+    if (n.has(key)) n.delete(key);
+    else n.add(key);
     apply(n);
   }
   function clearAll() {
-    setQ(""); setCats(new Set()); setTypes(new Set());
+    setQ(""); setCats(new Set()); setTypes(new Set()); setFeeTiers(new Set());
     setStateFilter("All"); setRemote(false); setOnsite(false); setMinSalary(0);
   }
 
@@ -125,7 +130,7 @@ export default function JobsPage() {
               </h1>
               <p className="mt-2 hidden max-w-md text-sm text-white/80 sm:block">
                 Civil, structural, transportation and technical roles — each one
-                showing its referral commission before you apply or refer.
+                showing the recruiter fee you earn on a successful hire.
               </p>
             </div>
           </div>
@@ -177,6 +182,19 @@ export default function JobsPage() {
                   <option value="All">All US locations</option>
                   {statesFor(filters).map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
+              </div>
+            </Dropdown>
+
+            <Dropdown label="Recruiter Fee" count={feeTiers.size}>
+              <div className="space-y-1.5">
+                {FEE_TIERS.map((t) => (
+                  <Check
+                    key={t.value}
+                    label={`$${t.amount.toLocaleString()} — ${t.label}`}
+                    checked={feeTiers.has(t.value)}
+                    onChange={() => toggleIn(feeTiers, t.value, setFeeTiers)}
+                  />
+                ))}
               </div>
             </Dropdown>
 
@@ -244,7 +262,7 @@ export default function JobsPage() {
               ) : (
                 <div className={view === "board" ? "grid gap-4 md:grid-cols-2" : "space-y-4"}>
                   {filtered.map((job) => (
-                    <JobCard key={job.id} job={job} saved={saved.has(job.id)} onSave={() => toggleIn(saved, job.id, setSaved)} />
+                    <JobCard key={job.id} job={job} saved={saved.has(job.id)} onSave={() => toggleSaved(job.id)} />
                   ))}
                 </div>
               )}
@@ -335,38 +353,38 @@ function JobCard({ job, saved, onSave }: { job: Job; saved: boolean; onSave: () 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
         <Meta icon="M4 7h12v9H4zM7 7V5h6v2" text={job.employmentType} />
         <Meta icon="M10 2a5 5 0 015 5c0 3.5-5 9-5 9S5 10.5 5 7a5 5 0 015-5zM10 9a2 2 0 100-4 2 2 0 000 4z" text={job.remote ? "Remote" : job.location || "Onsite"} />
+        <Tag>{job.category}</Tag>
       </div>
+
+      {/* Recruiter fee — the thing a recruiter scans for first, so it sits
+          right under the title/meta, not buried at the card's bottom. */}
+      {(() => {
+        const tier = feeTierMeta(job.feeTier);
+        return tier ? (
+          <div className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-pill bg-sage-soft px-3 py-1.5 text-sm font-bold text-ink">
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <path d="M10 2v16M14.5 5.5H8.25a2.25 2.25 0 000 4.5h3.5a2.25 2.25 0 010 4.5H5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Recruiter Fee: ${tier.amount.toLocaleString()}
+          </div>
+        ) : null;
+      })()}
 
       {job.description && (
         <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted">{job.description}</p>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Tag>{job.category}</Tag>
-        {job.remote && <Tag>Remote</Tag>}
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 border-t border-line pt-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-base font-extrabold text-ink">{formatPay(job)}</p>
-          <Link
-            href={`/jobs/${job.id}`}
-            className="inline-flex items-center gap-1 rounded-pill bg-cream px-3.5 py-1.5 text-sm font-semibold text-ink transition-colors group-hover:bg-primary group-hover:text-white"
-          >
-            View &amp; apply
-            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
-              <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-        </div>
-        {job.bounty != null && job.bounty > 0 && (
-          <div className="inline-flex w-fit items-center gap-1.5 rounded-pill bg-sage-soft px-3 py-1 text-xs font-bold text-ink">
-            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden>
-              <path d="M10 2v16M14.5 5.5H8.25a2.25 2.25 0 000 4.5h3.5a2.25 2.25 0 010 4.5H5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Earn ${job.bounty.toLocaleString()} referral commission
-          </div>
-        )}
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
+        <p className="text-sm font-semibold text-muted">{formatPay(job)}</p>
+        <Link
+          href={`/jobs/${job.id}`}
+          className="inline-flex items-center gap-1 rounded-pill bg-cream px-3.5 py-1.5 text-sm font-semibold text-ink transition-colors group-hover:bg-primary group-hover:text-white"
+        >
+          View &amp; work position
+          <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+            <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
       </div>
     </div>
   );

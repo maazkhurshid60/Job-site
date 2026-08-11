@@ -5,9 +5,11 @@ import {
 import type { JobWrite } from "@/lib/server/repo";
 import { getSetting } from "@/lib/server/repo";
 import { EMPLOYMENT_TYPES } from "@/lib/jobs";
+import { FEE_TIERS } from "@/lib/feeTiers";
 import { DEFAULT_FILTERS, type BoardFilters } from "@/lib/boardFilters";
 
 const STATUSES = ["draft", "open", "closed"] as const;
+const FEE_TIER_VALUES = FEE_TIERS.map((t) => t.value);
 
 /* Salary and commission columns are INT UNSIGNED (max 4,294,967,295). Rejecting
    anything above a plausible ceiling here gives the admin a clear message
@@ -73,6 +75,7 @@ export async function readJobWrite(body: Record<string, unknown>): Promise<JobWr
     salaryMin,
     salaryMax,
     bounty: intOrNull(body.bounty, "bounty"),
+    feeTier: body.feeTier ? oneOf(body.feeTier, FEE_TIER_VALUES, "feeTier") : null,
     description: str(body.description, "description"),
     responsibilities: str(body.responsibilities, "responsibilities"),
     requirements: str(body.requirements, "requirements"),

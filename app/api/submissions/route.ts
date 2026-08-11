@@ -70,6 +70,7 @@ export function POST(req: Request) {
       notes: str(body.notes, "notes"),
       cvFileId,
       bounty: job.bounty,
+      feeTier: job.feeTier,
     }).catch((err: unknown) => {
       // uq_subs_job_candidate — this candidate is already referred for this role.
       if (

@@ -12,6 +12,7 @@ import {
   type SubmissionStatus,
 } from "@/lib/submissions";
 import { money } from "@/components/dashboard/parts";
+import { feeTierAmount } from "@/lib/feeTiers";
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { SubmissionDetail } from "@/components/admin/SubmissionDetail";
@@ -71,10 +72,13 @@ export default function RecruiterDetailPage() {
     const hired = subs.filter((s) => s.status === "hired");
     return {
       total: subs.length,
+      interviewing: subs.filter((s) => s.status === "client_review").length,
       active: subs.filter((s) => s.status !== "hired" && s.status !== "rejected").length,
       hired: hired.length,
-      // What this recruiter has earned — bounties on confirmed hires only.
-      earned: hired.reduce((sum, s) => sum + (s.bounty ?? 0), 0),
+      // What this recruiter has earned — the fee tier on confirmed hires, not
+      // bounty. Bounty is what the client pays JobFolder, a separate figure
+      // this recruiter never sees, even in their own admin record.
+      earned: hired.reduce((sum, s) => sum + (feeTierAmount(s.feeTier) ?? 0), 0),
     };
   }, [subs]);
 
@@ -160,11 +164,12 @@ export default function RecruiterDetailPage() {
       </div>
 
       {/* stats */}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Referrals" value={String(stats.total)} />
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Stat label="Candidates submitted" value={String(stats.total)} />
+        <Stat label="Interviewing" value={String(stats.interviewing)} />
         <Stat label="In progress" value={String(stats.active)} />
         <Stat label="Hired" value={String(stats.hired)} />
-        <Stat label="Earned" value={money(stats.earned)} hint="Bounties on hires" />
+        <Stat label="Earned" value={money(stats.earned)} hint="Recruiter fee on hires" />
       </div>
 
       {/* their candidates */}
@@ -197,7 +202,9 @@ export default function RecruiterDetailPage() {
                     {s.company ? ` · ${s.company}` : ""} · {formatDate(s.createdAt)}
                   </p>
                 </button>
-                <span className="shrink-0 text-sm text-muted">{money(s.bounty)}</span>
+                <span className="shrink-0 text-sm text-muted">
+                  {money(feeTierAmount(s.feeTier))}
+                </span>
                 <select
                   value={s.status}
                   onChange={(e) => changeStatus(s, e.target.value as SubmissionStatus)}

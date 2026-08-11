@@ -1,16 +1,24 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Container } from "./ui";
 import { img } from "./images";
 import { CountUp } from "./motion/CountUp";
+
+const BULLETS = [
+  "No membership fee. No upfront cost.",
+  "Choose the positions you want to work.",
+  "Submit qualified candidates.",
+  "Earn the published recruiter fee when your candidate is successfully hired.",
+];
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-white pb-16 pt-6">
       {/* Royal Blue Curved Banner Container */}
       <div className="relative mx-auto max-w-[1400px] overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-3xl md:rounded-[40px] px-6 pb-32 pt-20 md:pb-48 md:pt-28 shadow-2xl">
-        
+
         {/* Floating Shapes Background */}
         <div className="absolute inset-0 opacity-15 pointer-events-none">
           <div className="absolute -top-12 -left-12 h-64 w-64 rounded-full bg-blue-400 blur-3xl" />
@@ -22,37 +30,43 @@ export function Hero() {
         <Container className="relative z-10 text-center">
           <div className="hero-rise mx-auto max-w-3xl">
             <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-200 mb-6">
-              Engineering &amp; DOT Recruiting
+              No Membership Fee — Recruiter Network
             </span>
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl leading-tight">
-              The engineering recruiting agency built for hard-to-fill roles.
+              Find Candidates. Make Placements.
+              <br className="hidden sm:block" /> Earn $1,000–$3,000 Per Hire.
             </h1>
             <p className="mt-6 text-lg md:text-xl text-blue-100 leading-relaxed max-w-2xl mx-auto font-medium">
-              Civil, transportation and DOT hiring, handled end to end. We put a
-              network of specialist recruiters behind every role, screen every
-              candidate ourselves, and stay your single point of contact — so you
-              only ever meet talent worth hiring.
+              JobFolder connects experienced recruiters with active positions
+              from hiring companies across every engineering discipline.
             </p>
+
+            <ul className="mt-8 mx-auto flex max-w-xl flex-col gap-2.5 text-left sm:mx-auto">
+              {BULLETS.map((b) => (
+                <li key={b} className="flex items-start gap-2.5 text-sm md:text-base text-blue-50 font-medium">
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="mt-0.5 shrink-0" aria-hidden>
+                    <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.4" className="text-cyan-200" />
+                    <path d="M6.5 10l2.3 2.3L14 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-200" />
+                  </svg>
+                  {b}
+                </li>
+              ))}
+            </ul>
 
             {/* CTAs */}
             <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
-              <a
-                href="/signup"
+              <Link
+                href="/jobs"
                 className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-8 py-4 text-base font-bold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg bg-white text-blue-brand hover:bg-blue-50"
               >
-                Get started
-              </a>
-              <a
-                href="#how"
-                className="group inline-flex w-full sm:w-auto items-center justify-center gap-3 text-base font-bold text-white transition-all duration-300"
+                Browse Open Positions
+              </Link>
+              <Link
+                href="/signup"
+                className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-white/30 px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:bg-white/10"
               >
-                <span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white transition-transform group-hover:scale-110">
-                  <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden>
-                    <path d="M3 2l6 4-6 4V2z" fill="currentColor" />
-                  </svg>
-                </span>
-                See how it works
-              </a>
+                Join as a Recruiter
+              </Link>
             </div>
 
             {/* Placed Candidates Counter */}

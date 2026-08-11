@@ -7,6 +7,8 @@ import {
   listSubmissionsByRecruiter,
   type Submission,
 } from "@/lib/submissions";
+import { listOpenJobs, type Job } from "@/lib/jobs";
+import { feeTierAmount } from "@/lib/feeTiers";
 import {
   StatCard, SubmissionBadge, ProfileMeter, money,
 } from "@/components/dashboard/parts";
@@ -21,12 +23,16 @@ import { Loader } from "@/components/Loader";
 export default function DashboardOverview() {
   const { user, profile } = useAuth();
   const [subs, setSubs] = useState<Submission[]>([]);
+  const [openJobs, setOpenJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    listSubmissionsByRecruiter()
-      .then(setSubs)
+    Promise.all([listSubmissionsByRecruiter(), listOpenJobs()])
+      .then(([s, jobs]) => {
+        setSubs(s);
+        setOpenJobs(jobs);
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -36,7 +42,19 @@ export default function DashboardOverview() {
   const active = subs.filter(
     (s) => s.status !== "hired" && s.status !== "rejected",
   );
-  const earnings = hired.reduce((sum, s) => sum + (s.bounty ?? 0), 0);
+  const interviewing = subs.filter((s) => s.status === "client_review");
+
+  // Fee-tier amounts, never bounty — this is the recruiter's own dashboard,
+  // it must show what they actually earn, not what the client pays JobFolder.
+  const earned = hired.reduce((sum, s) => sum + (feeTierAmount(s.feeTier) ?? 0), 0);
+  const pending = interviewing.reduce(
+    (sum, s) => sum + (feeTierAmount(s.feeTier) ?? 0),
+    0,
+  );
+  const potential = active.reduce(
+    (sum, s) => sum + (feeTierAmount(s.feeTier) ?? 0),
+    0,
+  );
 
   return (
     <div>
@@ -94,14 +112,34 @@ export default function DashboardOverview() {
         </div>
       ) : (
         <>
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
+            My activity
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Submissions" value={subs.length} />
-            <StatCard label="In progress" value={active.length} />
-            <StatCard label="Hired" value={hired.length} />
+            <StatCard label="Open positions" value={openJobs.length} />
+            <StatCard label="Candidates submitted" value={subs.length} />
+            <StatCard label="Candidates interviewing" value={interviewing.length} />
+            <StatCard label="Placements" value={hired.length} />
+          </div>
+
+          <h2 className="mb-3 mt-6 text-sm font-bold uppercase tracking-wide text-muted">
+            Earnings
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-3">
             <StatCard
               label="Earned"
-              value={money(earnings)}
-              hint="Bounties on hires"
+              value={money(earned)}
+              hint="Recruiter fee on confirmed placements"
+            />
+            <StatCard
+              label="Pending"
+              value={money(pending)}
+              hint="Candidates with the client now"
+            />
+            <StatCard
+              label="Potential from active candidates"
+              value={money(potential)}
+              hint="Every candidate still in your pipeline"
             />
           </div>
 
@@ -115,7 +153,17 @@ export default function DashboardOverview() {
           </div>
 
           <div className="mt-6 rounded-2xl border border-line bg-white p-6">
-            <h2 className="mb-4 font-bold text-ink">Recent submissions</h2>
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2 className="font-bold text-ink">Your candidates</h2>
+              {subs.length > 8 && (
+                <Link
+                  href="/dashboard/submissions"
+                  className="text-sm font-semibold text-primary hover:text-primary-dark"
+                >
+                  View all →
+                </Link>
+              )}
+            </div>
             {subs.length === 0 ? (
               <div>
                 <p className="text-sm text-muted">
@@ -129,22 +177,39 @@ export default function DashboardOverview() {
                 </Link>
               </div>
             ) : (
-              <ul className="divide-y divide-line">
-                {subs.slice(0, 6).map((s) => (
-                  <li
-                    key={s.id}
-                    className="flex items-center justify-between py-3"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-ink">
-                        {s.candidateName}
-                      </p>
-                      <p className="text-xs text-muted">{s.jobTitle}</p>
-                    </div>
-                    <SubmissionBadge status={s.status} />
-                  </li>
-                ))}
-              </ul>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-left text-sm">
+                  <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
+                    <tr>
+                      <th className="py-2 pr-4 font-semibold">Candidate</th>
+                      <th className="py-2 pr-4 font-semibold">Position</th>
+                      <th className="py-2 pr-4 font-semibold">Status</th>
+                      <th className="py-2 pr-4 font-semibold">Fee</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {subs.slice(0, 8).map((s) => (
+                      <tr key={s.id}>
+                        <td className="py-3 pr-4">
+                          <Link
+                            href={`/dashboard/submissions/${s.id}`}
+                            className="font-semibold text-ink hover:text-primary"
+                          >
+                            {s.candidateName}
+                          </Link>
+                        </td>
+                        <td className="py-3 pr-4 text-muted">{s.jobTitle}</td>
+                        <td className="py-3 pr-4">
+                          <SubmissionBadge status={s.status} />
+                        </td>
+                        <td className="py-3 pr-4 font-semibold text-ink">
+                          {money(feeTierAmount(s.feeTier))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>

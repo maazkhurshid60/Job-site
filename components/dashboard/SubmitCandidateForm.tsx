@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import {
-  createSubmission, listSubmissionsByRecruiter, SUBMISSION_STATUS_LABEL,
-  type Submission,
+  createSubmission, listSubmissionsByRecruiter, submissionRef,
+  SUBMISSION_STATUS_LABEL, type Submission,
 } from "@/lib/submissions";
 import { ACCEPTED_CV_TYPES, MAX_CV_BYTES } from "@/lib/cv";
+import { feeTierMeta } from "@/lib/feeTiers";
+import { formatDate } from "@/lib/dates";
 import type { Job } from "@/lib/jobs";
 
 const MAX_CANDIDATES = 10;
@@ -33,7 +35,7 @@ function emptyDraft(): CandidateDraft {
   };
 }
 
-type SubmitOutcome = { name: string; ok: boolean; error?: string };
+type SubmitOutcome = { name: string; ok: boolean; error?: string; id?: string };
 
 export function SubmitCandidateForm({ job }: { job: Job }) {
   const router = useRouter();
@@ -44,6 +46,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [outcomes, setOutcomes] = useState<SubmitOutcome[] | null>(null);
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
   /* This recruiter's own prior submissions for THIS job — so re-visiting a
      role they've already referred candidates for shows that, instead of
@@ -84,6 +87,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     setDrafts([emptyDraft()]);
     setError(null);
     setOutcomes(null);
+    setSubmittedAt(null);
   }
 
   /** One row's problem, or null if it's ready to send. Checked before any
@@ -105,6 +109,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     // Bot filled the hidden field — pretend success, write nothing.
     if (hp) {
       setOutcomes(drafts.map((d) => ({ name: d.candidateName || "Candidate", ok: true })));
+      setSubmittedAt(new Date().toISOString());
       return;
     }
     /* The form is only rendered for a signed-in, non-admin user, but a session
@@ -134,13 +139,13 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     const results: SubmitOutcome[] = [];
     for (const d of drafts) {
       try {
-        await createSubmission(
+        const { id } = await createSubmission(
           job,
           { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" },
           d,
           d.cv as File,
         );
-        results.push({ name: d.candidateName, ok: true });
+        results.push({ name: d.candidateName, ok: true, id });
       } catch (err) {
         /* Show what actually failed. The API returns readable messages —
            "This candidate has already been submitted for this role.",
@@ -154,6 +159,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
       }
     }
     setOutcomes(results);
+    setSubmittedAt(new Date().toISOString());
     // Refresh so the "already submitted" banner includes what just landed —
     // best-effort, the confirmation screen already shows the same names.
     listSubmissionsByRecruiter()
@@ -192,7 +198,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         </h3>
         <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
           Referrals are tied to your account — that&apos;s how we know the{" "}
-          {job.bounty ? "commission" : "referral"} is yours when{" "}
+          {job.feeTier ? "fee" : "referral"} is yours when{" "}
           {job.title} is filled. It&apos;s free to join.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
@@ -232,6 +238,9 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
   if (outcomes) {
     const succeeded = outcomes.filter((o) => o.ok);
     const failed = outcomes.filter((o) => !o.ok);
+    const fee = feeTierMeta(job.feeTier);
+    const single = succeeded.length === 1 ? succeeded[0] : null;
+
     return (
       <div className="rounded-2xl border border-line bg-white p-8 text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary-soft text-primary">
@@ -252,6 +261,22 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
           the status in your submissions.
         </p>
 
+        {single && (
+          <dl className="mx-auto mt-5 max-w-sm space-y-2 rounded-xl border border-line bg-cream/40 p-4 text-left text-sm">
+            <ConfirmRow label="Candidate" value={single.name || "Candidate"} />
+            <ConfirmRow label="Position" value={job.title} />
+            <ConfirmRow
+              label="Recruiter fee"
+              value={fee ? `$${fee.amount.toLocaleString()}` : "No fee tier set"}
+            />
+            <ConfirmRow label="Submitted" value={formatDate(submittedAt)} />
+            <ConfirmRow label="Status" value={SUBMISSION_STATUS_LABEL.submitted} />
+            {single.id && (
+              <ConfirmRow label="Submission ID" value={submissionRef(single.id)} mono />
+            )}
+          </dl>
+        )}
+
         {outcomes.length > 1 && (
           <ul className="mx-auto mt-4 max-w-sm space-y-1.5 text-left text-sm">
             {outcomes.map((o, i) => (
@@ -259,8 +284,15 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
                 <span className={o.ok ? "text-primary" : "text-coral"}>
                   {o.ok ? "✓" : "✕"}
                 </span>
-                <span className="text-ink">
-                  {o.name || "Candidate"}
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2 text-ink">
+                    <span>{o.name || "Candidate"}</span>
+                    {o.ok && o.id && (
+                      <span className="shrink-0 font-mono text-xs text-muted">
+                        {submissionRef(o.id)}
+                      </span>
+                    )}
+                  </span>
                   {!o.ok && <span className="block text-xs text-coral">{o.error}</span>}
                 </span>
               </li>
@@ -445,5 +477,24 @@ function Field({
       <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
       {children}
     </label>
+  );
+}
+
+function ConfirmRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <dt className="shrink-0 text-muted">{label}</dt>
+      <dd className={`min-w-0 truncate text-right font-semibold text-ink ${mono ? "font-mono" : ""}`}>
+        {value}
+      </dd>
+    </div>
   );
 }

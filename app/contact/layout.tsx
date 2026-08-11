@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Contact Our Engineering Recruiters",
@@ -19,10 +20,13 @@ export const metadata: Metadata = {
   },
 };
 
+/* "Ask a question" links from a job detail page pass ?subject=…, which the
+   page reads via useSearchParams — that requires a Suspense boundary so the
+   rest of the tree can still be prerendered (same pattern as app/jobs). */
 export default function ContactLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <Suspense>{children}</Suspense>;
 }

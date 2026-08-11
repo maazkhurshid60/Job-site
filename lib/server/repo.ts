@@ -30,6 +30,7 @@ type JobRow = {
   salary_min: number | null;
   salary_max: number | null;
   bounty: number | null;
+  fee_tier: string | null;
   description: string | null;
   responsibilities: string | null;
   requirements: string | null;
@@ -67,6 +68,7 @@ function toJob(r: JobRow): Job {
     salaryMin: r.salary_min,
     salaryMax: r.salary_max,
     bounty: r.bounty,
+    feeTier: r.fee_tier,
     description: r.description ?? "",
     responsibilities: r.responsibilities ?? "",
     requirements: r.requirements ?? "",
@@ -81,7 +83,7 @@ function toJob(r: JobRow): Job {
 
 const JOB_COLUMNS = `
   id, title, company, category, location, remote, employment_type,
-  salary_min, salary_max, bounty, description, responsibilities, requirements,
+  salary_min, salary_max, bounty, fee_tier, description, responsibilities, requirements,
   faqs, screening_questions, hiring_stages, status, created_at, updated_at`;
 
 export async function listOpenJobs(): Promise<Job[]> {
@@ -109,11 +111,13 @@ export async function getJob(id: string): Promise<Job | null> {
 
 /** Public reads must never surface a draft or closed role. */
 export async function getOpenJob(id: string): Promise<Job | null> {
-  const row = await queryOne<JobRow>(
-    `SELECT ${JOB_COLUMNS} FROM jobs WHERE id = ? AND status = 'open'`,
+  const row = await queryOne<JobRow & { submission_count: number }>(
+    `SELECT ${JOB_COLUMNS},
+       (SELECT COUNT(*) FROM submissions s WHERE s.job_id = jobs.id) AS submission_count
+     FROM jobs WHERE id = ? AND status = 'open'`,
     [id],
   );
-  return row ? toJob(row) : null;
+  return row ? { ...toJob(row), submissionCount: Number(row.submission_count) } : null;
 }
 
 export type JobWrite = {
@@ -126,6 +130,7 @@ export type JobWrite = {
   salaryMin: number | null;
   salaryMax: number | null;
   bounty: number | null;
+  feeTier: string | null;
   description: string;
   responsibilities: string;
   requirements: string;
@@ -139,13 +144,13 @@ export async function createJob(input: JobWrite, id = newId()): Promise<string> 
   await execute(
     `INSERT INTO jobs
        (id, title, company, category, location, remote, employment_type,
-        salary_min, salary_max, bounty, description, responsibilities,
+        salary_min, salary_max, bounty, fee_tier, description, responsibilities,
         requirements, faqs, screening_questions, hiring_stages, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       id, input.title, input.company, input.category, input.location,
       input.remote, input.employmentType, input.salaryMin, input.salaryMax,
-      input.bounty, input.description, input.responsibilities,
+      input.bounty, input.feeTier, input.description, input.responsibilities,
       input.requirements, input.faqs, input.screeningQuestions,
       input.hiringStages, input.status,
     ],
@@ -158,13 +163,13 @@ export async function updateJob(id: string, input: JobWrite): Promise<boolean> {
     `UPDATE jobs SET
        title = ?, company = ?, category = ?, location = ?, remote = ?,
        employment_type = ?, salary_min = ?, salary_max = ?, bounty = ?,
-       description = ?, responsibilities = ?, requirements = ?, faqs = ?,
+       fee_tier = ?, description = ?, responsibilities = ?, requirements = ?, faqs = ?,
        screening_questions = ?, hiring_stages = ?, status = ?
      WHERE id = ?`,
     [
       input.title, input.company, input.category, input.location, input.remote,
       input.employmentType, input.salaryMin, input.salaryMax, input.bounty,
-      input.description, input.responsibilities, input.requirements,
+      input.feeTier, input.description, input.responsibilities, input.requirements,
       input.faqs, input.screeningQuestions, input.hiringStages, input.status,
       id,
     ],
@@ -195,6 +200,7 @@ type SubmissionRow = {
   cv_type: string | null;
   cv_size: number | null;
   bounty: number | null;
+  fee_tier: string | null;
   status: SubmissionStatus;
   created_at: string | null;
   /* Present only on the admin query, which joins users. Prefixed to keep them
@@ -237,6 +243,7 @@ function toSubmission(r: SubmissionRow): Submission {
     cvType: r.cv_type ?? "",
     cvSize: r.cv_size,
     bounty: r.bounty,
+    feeTier: r.fee_tier,
     status: r.status,
     createdAt: r.created_at,
     /* Only the admin query selects these. `r_uid` is the tell: undefined means
@@ -274,7 +281,7 @@ const SUB_COLUMNS = `
   s.id, s.job_id, s.job_title, s.company, s.recruiter_id, s.recruiter_name,
   s.candidate_name, s.candidate_email, s.candidate_phone, s.notes,
   s.cv_file_id, f.filename AS cv_name, f.content_type AS cv_type,
-  f.byte_size AS cv_size, s.bounty, s.status, s.created_at`;
+  f.byte_size AS cv_size, s.bounty, s.fee_tier, s.status, s.created_at`;
 
 const SUB_FROM = `FROM submissions s LEFT JOIN files f ON f.id = s.cv_file_id`;
 
@@ -310,6 +317,16 @@ export async function listAllSubmissions(): Promise<Submission[]> {
   return rows.map(toSubmission);
 }
 
+/** One submission, any owner. Used to check ownership before returning its
+    message thread — a recruiter may only read their own. */
+export async function getSubmission(id: string): Promise<Submission | null> {
+  const row = await queryOne<SubmissionRow>(
+    `SELECT ${SUB_COLUMNS} ${SUB_FROM} WHERE s.id = ?`,
+    [id],
+  );
+  return row ? toSubmission(row) : null;
+}
+
 export type SubmissionWrite = {
   jobId: string;
   jobTitle: string;
@@ -322,6 +339,7 @@ export type SubmissionWrite = {
   notes: string;
   cvFileId: string;
   bounty: number | null;
+  feeTier: string | null;
 };
 
 export async function createSubmission(
@@ -332,12 +350,13 @@ export async function createSubmission(
     `INSERT INTO submissions
        (id, job_id, job_title, company, recruiter_id, recruiter_name,
         candidate_name, candidate_email, candidate_phone, notes,
-        cv_file_id, bounty, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'submitted')`,
+        cv_file_id, bounty, fee_tier, status)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'submitted')`,
     [
       id, input.jobId, input.jobTitle, input.company, input.recruiterId,
       input.recruiterName, input.candidateName, input.candidateEmail,
       input.candidatePhone, input.notes, input.cvFileId, input.bounty,
+      input.feeTier,
     ],
   );
   return id;
@@ -363,6 +382,73 @@ export async function setSubmissionStatus(
     [status, id],
   );
   return result.affectedRows > 0;
+}
+
+/* ------------------------------------------------- submission_messages */
+
+export type SubmissionMessage = {
+  id: string;
+  submissionId: string;
+  senderRole: "recruiter" | "admin";
+  senderUid: string | null;
+  senderName: string;
+  body: string;
+  createdAt: string | null;
+};
+
+type SubmissionMessageRow = {
+  id: string;
+  submission_id: string;
+  sender_role: "recruiter" | "admin";
+  sender_uid: string | null;
+  sender_name: string;
+  body: string;
+  created_at: string | null;
+};
+
+function toSubmissionMessage(r: SubmissionMessageRow): SubmissionMessage {
+  return {
+    id: r.id,
+    submissionId: r.submission_id,
+    senderRole: r.sender_role,
+    senderUid: r.sender_uid,
+    senderName: r.sender_name,
+    body: r.body,
+    createdAt: r.created_at,
+  };
+}
+
+export async function listSubmissionMessages(
+  submissionId: string,
+): Promise<SubmissionMessage[]> {
+  const rows = await query<SubmissionMessageRow>(
+    `SELECT id, submission_id, sender_role, sender_uid, sender_name, body, created_at
+       FROM submission_messages
+      WHERE submission_id = ?
+      ORDER BY created_at ASC`,
+    [submissionId],
+  );
+  return rows.map(toSubmissionMessage);
+}
+
+export async function createSubmissionMessage(input: {
+  submissionId: string;
+  senderRole: "recruiter" | "admin";
+  senderUid: string | null;
+  senderName: string;
+  body: string;
+}): Promise<string> {
+  const id = newId();
+  await execute(
+    `INSERT INTO submission_messages
+       (id, submission_id, sender_role, sender_uid, sender_name, body)
+     VALUES (?,?,?,?,?,?)`,
+    [
+      id, input.submissionId, input.senderRole, input.senderUid,
+      input.senderName, input.body,
+    ],
+  );
+  return id;
 }
 
 /* ----------------------------------------------------------------- users */

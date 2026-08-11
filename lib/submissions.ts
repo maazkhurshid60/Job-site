@@ -54,7 +54,11 @@ export type Submission = {
   cvType: string;
   /** Size of the stored CV in bytes, or null when there is no CV. */
   cvSize: number | null;
+  /** Internal/client-facing figure — never shown to the recruiter. */
   bounty: number | null;
+  /** Recruiter-facing fee tier, snapshotted from the job at submission time —
+      see lib/feeTiers.ts. This, not bounty, is what a recruiter earns. */
+  feeTier: string | null;
   status: SubmissionStatus;
   /** ISO-8601 string from MySQL, or null. */
   createdAt: string | null;
@@ -91,6 +95,18 @@ export type SubmissionInput = {
   notes: string;
 };
 
+/* A short, friendly reference for a submission's confirmation screen — the
+   real primary key is a UUID, which is not something to hand a recruiter as
+   "your reference number". Deterministic (same id always renders the same
+   code), just not the raw key. */
+export function submissionRef(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return `JF-${String(hash % 100000).padStart(5, "0")}`;
+}
+
 /* Upload the candidate's CV, then create the submission. Requires a signed-in
    recruiter — the server rejects both calls otherwise.
 
@@ -104,7 +120,7 @@ export async function createSubmission(
   _recruiter: { uid: string; name: string } | null,
   input: SubmissionInput,
   cv: File,
-): Promise<void> {
+): Promise<{ id: string }> {
   // Checked again server-side; this is just a fast, friendly failure.
   if (cv.size > MAX_CV_BYTES) throw new Error("CV is larger than 10 MB.");
   if (!ACCEPTED_CV_TYPES.includes(cv.type))
@@ -113,7 +129,7 @@ export async function createSubmission(
   // Store the bytes first, then reference them from the submission.
   const { id: cvFileId } = await uploadFile(cv, "cv");
 
-  await apiFetch("/api/submissions", {
+  return apiFetch<{ id: string }>("/api/submissions", {
     method: "POST",
     auth: true,
     body: {
@@ -147,4 +163,48 @@ export async function setSubmissionStatus(
     body: { status },
     auth: true,
   });
+}
+
+/* ------------------------------------------------- submission messages */
+
+/* A conversation thread attached to one submission — the recruiter and
+   JobFolder staff talking about that specific candidate. There is no general
+   inbox: JobFolder has no employer accounts yet, so these two parties are the
+   only ones who can ever be on a thread. */
+export type SubmissionMessage = {
+  id: string;
+  submissionId: string;
+  senderRole: "recruiter" | "admin";
+  senderUid: string | null;
+  senderName: string;
+  body: string;
+  createdAt: string | null;
+};
+
+export function listSubmissionMessages(submissionId: string): Promise<SubmissionMessage[]> {
+  return apiFetch<SubmissionMessage[]>(
+    `/api/submissions/${encodeURIComponent(submissionId)}/messages`,
+    { auth: true },
+  );
+}
+
+export function sendSubmissionMessage(submissionId: string, body: string): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(
+    `/api/submissions/${encodeURIComponent(submissionId)}/messages`,
+    { method: "POST", auth: true, body: { body } },
+  );
+}
+
+export function listAdminSubmissionMessages(submissionId: string): Promise<SubmissionMessage[]> {
+  return apiFetch<SubmissionMessage[]>(
+    `/api/admin/submissions/${encodeURIComponent(submissionId)}/messages`,
+    { auth: true },
+  );
+}
+
+export function sendAdminSubmissionMessage(submissionId: string, body: string): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(
+    `/api/admin/submissions/${encodeURIComponent(submissionId)}/messages`,
+    { method: "POST", auth: true, body: { body } },
+  );
 }

@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { listSubmissionsByRecruiter, type Submission } from "@/lib/submissions";
+import { feeTierAmount } from "@/lib/feeTiers";
 import { SubmissionBadge, money } from "@/components/dashboard/parts";
 import { CvPreview, canPreview } from "@/components/admin/CvPreview";
+import { MessageThread } from "@/components/dashboard/MessageThread";
 import { Loader } from "@/components/Loader";
 import { formatDate } from "@/lib/dates";
 
@@ -122,8 +124,10 @@ export default function SubmissionDetailPage() {
           </section>
 
           <section className="rounded-2xl border border-line bg-white p-6">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Bounty</h2>
-            <p className="mt-2 text-2xl font-extrabold text-ink">{money(sub.bounty)}</p>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Recruiter fee</h2>
+            <p className="mt-2 text-2xl font-extrabold text-ink">
+              {money(feeTierAmount(sub.feeTier))}
+            </p>
             <p className="mt-1 text-xs text-muted">
               {sub.status === "hired"
                 ? "This placement has been marked hired."
@@ -137,6 +141,16 @@ export default function SubmissionDetailPage() {
               <p className="mt-3 whitespace-pre-wrap text-sm text-ink">{sub.notes}</p>
             </section>
           )}
+
+          <section className="rounded-2xl border border-line bg-white p-6">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Messages</h2>
+            <p className="mt-1 text-xs text-muted">
+              Ask JobFolder a question about this candidate.
+            </p>
+            <div className="mt-4 h-96">
+              <MessageThread submissionId={sub.id} role="recruiter" />
+            </div>
+          </section>
         </div>
 
         {/* CV */}

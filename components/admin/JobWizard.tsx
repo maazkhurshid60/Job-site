@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { adminRoutes } from "@/lib/routes";
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { getBoardFilters, DEFAULT_FILTERS, type BoardFilters } from "@/lib/boardFilters";
+import { FEE_TIERS, feeTierMeta } from "@/lib/feeTiers";
 import {
   DEFAULT_HIRING_STAGES,
   createJob,
@@ -36,6 +37,7 @@ function emptyDraft(): JobInput {
     salaryMin: null,
     salaryMax: null,
     bounty: null,
+    feeTier: null,
     description: "",
     responsibilities: "",
     requirements: "",
@@ -226,7 +228,21 @@ function BasicInfo({ form, set, num }: StepProps & { num: (v: string) => number 
       <Field label="Salary max">
         <input className="input" type="number" min={0} value={form.salaryMax ?? ""} onChange={(e) => set("salaryMax", num(e.target.value))} placeholder="90000" />
       </Field>
-      <Field label="Recruiter bounty">
+      <Field label="Recruiter fee tier — what recruiters see and earn">
+        <select
+          className="input"
+          value={form.feeTier ?? ""}
+          onChange={(e) => set("feeTier", e.target.value || null)}
+        >
+          <option value="">No tier set — hides the fee badge</option>
+          {FEE_TIERS.map((t) => (
+            <option key={t.value} value={t.value}>
+              ${t.amount.toLocaleString()} — {t.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Client fee (internal — never shown to recruiters)">
         <input className="input" type="number" min={0} value={form.bounty ?? ""} onChange={(e) => set("bounty", num(e.target.value))} placeholder="8000" />
       </Field>
       <Field label="Status">
@@ -346,7 +362,8 @@ function Confirm({ form }: { form: JobInput }) {
       <Row label="Location" value={`${form.location || "—"}${form.remote ? " · Remote" : ""}`} />
       <Row label="Type" value={form.employmentType} />
       <Row label="Salary" value={form.salaryMin || form.salaryMax ? `${form.salaryMin ?? "?"} – ${form.salaryMax ?? "?"}` : "—"} />
-      <Row label="Bounty" value={form.bounty != null ? `$${form.bounty.toLocaleString()}` : "—"} />
+      <Row label="Recruiter fee (public)" value={feeTierMeta(form.feeTier)?.label ? `$${feeTierMeta(form.feeTier)!.amount.toLocaleString()} — ${feeTierMeta(form.feeTier)!.label}` : "No tier set"} />
+      <Row label="Client fee (internal)" value={form.bounty != null ? `$${form.bounty.toLocaleString()}` : "—"} />
       <Row label="FAQs" value={`${form.faqs.length}`} />
       <Row label="Screening questions" value={`${form.screeningQuestions.length}`} />
       <Row label="Hiring stages" value={form.hiringStages.filter(Boolean).join(" → ") || "—"} />

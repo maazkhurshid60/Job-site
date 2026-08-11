@@ -12,11 +12,14 @@ import { getJob, type Job } from "@/lib/jobs";
 import { Loader } from "@/components/Loader";
 import { JsonLd } from "@/components/JsonLd";
 import { jobPostingSchema } from "@/lib/jobSchema";
+import { feeTierMeta } from "@/lib/feeTiers";
+import { useSavedJobs } from "@/lib/savedJobs";
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing">("loading");
+  const { saved, toggle: toggleSaved } = useSavedJobs();
 
   useEffect(() => {
     let active = true;
@@ -152,7 +155,64 @@ export default function JobDetailPage() {
               </div>
 
               {/* apply — signed-in recruiters only; the form renders a sign-in prompt otherwise */}
-              <div className="lg:sticky lg:top-24">
+              <div className="lg:sticky lg:top-24 space-y-4">
+                {(() => {
+                  const tier = feeTierMeta(job.feeTier);
+                  if (!tier) return null;
+                  return (
+                    <div className="rounded-2xl border border-line bg-white p-6">
+                      <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                        Recruiter Opportunity
+                      </p>
+                      <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
+                        Successful Placement Fee
+                      </p>
+                      <p className="mt-1 text-4xl font-extrabold tracking-tight text-ink">
+                        ${tier.amount.toLocaleString()}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-muted">
+                        Paid when your submitted candidate is successfully hired and
+                        all applicable placement conditions are satisfied.
+                      </p>
+
+                      <dl className="mt-5 space-y-2.5 border-t border-line pt-4 text-sm">
+                        <div className="flex items-center justify-between">
+                          <dt className="text-muted">Position Status</dt>
+                          <dd className="font-semibold text-ink">
+                            {job.status === "open" ? "Active" : job.status}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <dt className="text-muted">Candidates Submitted</dt>
+                          <dd className="font-semibold text-ink">{job.submissionCount ?? 0}</dd>
+                        </div>
+                      </dl>
+
+                      <div className="mt-5 flex gap-2 border-t border-line pt-4">
+                        <button
+                          type="button"
+                          onClick={() => toggleSaved(job.id)}
+                          className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-pill border px-3 py-2 text-xs font-semibold transition-colors ${
+                            saved.has(job.id)
+                              ? "border-primary bg-primary-soft text-primary"
+                              : "border-line text-ink hover:bg-black/[0.03]"
+                          }`}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 20 20" fill={saved.has(job.id) ? "currentColor" : "none"} aria-hidden>
+                            <path d="M5 3h10v14l-5-3.5L5 17V3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                          </svg>
+                          {saved.has(job.id) ? "Saved" : "Save position"}
+                        </button>
+                        <Link
+                          href={`/contact?subject=${encodeURIComponent(`Question about: ${job.title}`)}`}
+                          className="inline-flex flex-1 items-center justify-center rounded-pill border border-line px-3 py-2 text-xs font-semibold text-ink transition-colors hover:bg-black/[0.03]"
+                        >
+                          Ask a question
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <SubmitCandidateForm job={job} />
               </div>
             </div>

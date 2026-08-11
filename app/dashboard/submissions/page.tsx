@@ -7,6 +7,7 @@ import {
   listSubmissionsByRecruiter,
   type Submission,
 } from "@/lib/submissions";
+import { feeTierAmount } from "@/lib/feeTiers";
 import { SubmissionBadge, money } from "@/components/dashboard/parts";
 import { Loader } from "@/components/Loader";
 
@@ -73,7 +74,7 @@ export default function MySubmissionsPage() {
               <tr>
                 <th className="px-5 py-3 font-semibold">Candidate</th>
                 <th className="px-5 py-3 font-semibold">Role</th>
-                <th className="px-5 py-3 font-semibold">Bounty</th>
+                <th className="px-5 py-3 font-semibold">Fee</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3" />
               </tr>
@@ -97,10 +98,10 @@ export default function MySubmissionsPage() {
                   <td className="px-5 py-4 text-muted">
                     {s.status === "hired" ? (
                       <span className="font-semibold text-primary">
-                        {money(s.bounty)}
+                        {money(feeTierAmount(s.feeTier))}
                       </span>
                     ) : (
-                      money(s.bounty)
+                      money(feeTierAmount(s.feeTier))
                     )}
                   </td>
                   <td className="px-5 py-4">

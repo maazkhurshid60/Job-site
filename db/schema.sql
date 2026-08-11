@@ -104,6 +104,10 @@ CREATE TABLE jobs (
   salary_min       INT UNSIGNED NULL,
   salary_max       INT UNSIGNED NULL,
   bounty           INT UNSIGNED NULL,       -- recruiter referral commission
+  -- Recruiter-facing fee tier (see lib/feeTiers.ts). NULL means this job
+  -- predates the tier system and shows no fee badge until an admin sets one
+  -- — existing jobs are deliberately left alone, not auto-migrated.
+  fee_tier         ENUM('standard','professional','specialized') NULL,
   description      MEDIUMTEXT,              -- the "Job Brief"
   responsibilities MEDIUMTEXT,
   requirements     MEDIUMTEXT,
@@ -151,6 +155,11 @@ CREATE TABLE submissions (
   -- the candidate's document.
   cv_file_id      CHAR(36)     NULL,
   bounty          INT UNSIGNED NULL,
+  -- Snapshotted from jobs.fee_tier at submission time, same reasoning as
+  -- bounty above: what the recruiter earns must not change if the job's
+  -- tier is edited later. This is what the recruiter dashboard/earnings are
+  -- computed from — bounty is the client-facing figure and must never be.
+  fee_tier        ENUM('standard','professional','specialized') NULL,
   status          ENUM('submitted','screening','approved','client_review','hired','rejected')
                                NOT NULL DEFAULT 'submitted',
   created_at      DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -190,6 +199,34 @@ CREATE TABLE messages (
   created_at DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   KEY idx_messages_created (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ------------------------------------------------ submission_messages
+
+-- A conversation thread attached to one candidate submission — the natural
+-- anchor, since every message a recruiter or JobFolder staff would send is
+-- "about this candidate for this role." JobFolder has no employer accounts
+-- yet, so the only two parties who can ever message are the referring
+-- recruiter and JobFolder admin — there is no general inbox.
+CREATE TABLE submission_messages (
+  id            CHAR(36)     NOT NULL,
+  submission_id VARCHAR(64)  NOT NULL,
+  sender_role   ENUM('recruiter','admin') NOT NULL,
+  -- The recruiter's uid when sender_role = 'recruiter'. NULL for admin: any
+  -- admin may reply on JobFolder's behalf, and the thread is not any one
+  -- admin's individually.
+  sender_uid    VARCHAR(128) NULL,
+  sender_name   VARCHAR(255) NOT NULL DEFAULT '',
+  body          MEDIUMTEXT   NOT NULL,
+  created_at    DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_sub_msgs_submission (submission_id, created_at),
+  CONSTRAINT fk_sub_msgs_submission FOREIGN KEY (submission_id)
+    REFERENCES submissions (id) ON DELETE CASCADE,
+  -- SET NULL, not RESTRICT: deleting a recruiter must not destroy or block
+  -- deletion of a message they sent while their account existed.
+  CONSTRAINT fk_sub_msgs_sender FOREIGN KEY (sender_uid)
+    REFERENCES users (uid) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ------------------------------------------------------------- settings
