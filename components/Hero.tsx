@@ -39,8 +39,18 @@ export function Hero() {
             sizes="100vw"
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-brand-dark/95 via-blue-brand-dark/92 to-ink/95" />
-          <div className="absolute inset-0 bg-blue-brand-dark/25 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-brand-dark/80 via-blue-brand-dark/65 to-blue-brand-dark/85" />
+          {/* Blueprint-style grid — gives the navy wash some texture instead
+              of reading as a flat tint over the photo. */}
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+              backgroundSize: "48px 48px",
+            }}
+          />
         </div>
 
         {/* Hero Content */}

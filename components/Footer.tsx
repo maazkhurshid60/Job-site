@@ -44,7 +44,7 @@ const columns = [
 
 export function Footer() {
   return (
-    <footer className="relative overflow-hidden border-t border-white/10 bg-ink pt-16 pb-10">
+    <footer className="relative overflow-hidden border-t border-white/10 bg-blue-brand-dark pt-16 pb-10">
 
       {/* Brand wave accent at the bottom-right corner */}
       <div className="absolute -bottom-4 -right-16 h-36 w-64 pointer-events-none opacity-10">

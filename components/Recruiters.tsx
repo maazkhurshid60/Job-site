@@ -10,7 +10,7 @@ export function Recruiters() {
   return (
     <section id="recruiters" className="bg-cream">
       <Container className="py-16 lg:py-24">
-        <div className="rounded-3xl bg-ink px-8 py-12 text-white sm:px-12 lg:px-16">
+        <div className="rounded-3xl bg-blue-brand-dark px-8 py-12 text-white sm:px-12 lg:px-16">
           <div className="max-w-xl">
             <p className="text-sm font-semibold uppercase tracking-wide text-lime">
               For recruiters

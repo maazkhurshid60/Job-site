@@ -10,7 +10,7 @@ import { photo } from "./images";
    state — why the number changes from role to role. */
 export function RecruiterFeeSection() {
   return (
-    <section className="relative overflow-hidden bg-ink py-16 lg:py-24">
+    <section className="relative overflow-hidden bg-blue-brand-dark py-16 lg:py-24">
       {/* Background photograph, heavily darkened — texture behind the pitch
           rather than competing with it. */}
       <div className="absolute inset-0" aria-hidden>
@@ -21,7 +21,7 @@ export function RecruiterFeeSection() {
           sizes="100vw"
           className="object-cover opacity-25"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink via-ink/95 to-ink" />
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-brand-dark via-blue-brand-dark/95 to-blue-brand-dark" />
       </div>
 
       <Container className="relative">

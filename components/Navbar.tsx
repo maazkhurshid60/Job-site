@@ -42,8 +42,14 @@ export function Navbar() {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-ink/95 backdrop-blur-md">
-      <Container className="flex h-20 items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 border-b border-white/15 bg-blue-brand-dark/80 shadow-lg shadow-black/10 backdrop-blur-xl backdrop-saturate-150">
+      {/* Glass sheen — a soft highlight along the top edge is what reads as
+          "glass" rather than just a translucent panel. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/6 via-white/0 to-transparent"
+      />
+      <Container className="relative flex h-20 items-center justify-between gap-4">
         <Logo variant="onDark" />
 
         {/* nav group */}
@@ -134,7 +140,7 @@ export function Navbar() {
       </Container>
 
       {open && (
-        <div className="border-t border-white/10 bg-ink lg:hidden">
+        <div className="border-t border-white/15 bg-blue-brand-dark/80 backdrop-blur-xl backdrop-saturate-150 lg:hidden">
           <Container className="flex flex-col gap-1 py-4">
             {links.map((l) => (
               <Link
