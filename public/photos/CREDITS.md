@@ -48,3 +48,9 @@ Nothing here is Unsplash+ / Getty-licensed content.
 - **Photographer:** ThisisEngineering ([@thisisengineering](https://unsplash.com/@thisisengineering))
 - **Source:** https://unsplash.com/photos/man-in-white-cap-and-yellow-vest-cdSKgXv2Vz4
 - **Described as:** Female civil engineer on site
+
+## hero-recruiter-interview.jpg
+- **Used on:** Homepage hero
+- **Photographer:** Vitaly Gariev ([@silverkblack](https://unsplash.com/@silverkblack))
+- **Source:** https://unsplash.com/photos/two-professionals-shaking-hands-across-a-table-jEpZNyFSQwQ
+- **Described as:** HR manager shaking hands with a job candidate across a table after an interview

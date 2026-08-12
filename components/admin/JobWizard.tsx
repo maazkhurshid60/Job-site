@@ -19,11 +19,11 @@ import {
 const STATUSES: JobStatus[] = ["draft", "open", "closed"];
 
 const STEPS = [
-  "Basic information",
-  "Job description",
-  "Applicable questions",
-  "Hiring process",
-  "Confirmation",
+  { label: "Job details", title: "Let's Get Started", subtitle: "Tell us about the position you need to fill." },
+  { label: "Description", title: "Describe the Role", subtitle: "Give recruiters everything they need to pitch this job." },
+  { label: "Screening", title: "Screening Questions", subtitle: "What should a recruiter ask before submitting a candidate?" },
+  { label: "Hiring process", title: "Hiring Process", subtitle: "The stages a candidate moves through for this role." },
+  { label: "Review & publish", title: "Review & Publish", subtitle: "Double check the details before this goes live." },
 ] as const;
 
 function emptyDraft(): JobInput {
@@ -86,42 +86,45 @@ export function JobWizard({ job }: { job?: Job }) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-      {/* stepper */}
-      <div className="rounded-2xl border border-line bg-white p-5 lg:sticky lg:top-6 lg:h-fit">
-        <ol className="space-y-1">
-          {STEPS.map((label, i) => {
+    <div className="overflow-hidden rounded-2xl border border-line bg-white">
+      {/* Horizontal step indicator — numbered circles joined by a progress
+          line, so where you are in a 5-step form reads at a glance instead
+          of requiring a scan down a sidebar list. */}
+      <div className="border-b border-line px-6 py-6 sm:px-8">
+        <ol className="flex items-center">
+          {STEPS.map((s, i) => {
             const done = i < step;
             const active = i === step;
             return (
-              <li key={label}>
+              <li key={s.label} className={`flex items-center ${i < STEPS.length - 1 ? "flex-1" : ""}`}>
                 <button
                   type="button"
                   onClick={() => i <= step && setStep(i)}
                   disabled={i > step}
-                  className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm ${
-                    active ? "font-semibold text-ink" : "text-muted"
-                  } ${i <= step ? "hover:bg-black/[0.03]" : "cursor-default"}`}
+                  className={`flex shrink-0 flex-col items-center gap-2 ${i <= step ? "" : "cursor-default"}`}
                 >
                   <span
-                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
-                      done
+                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold transition-colors ${
+                      done || active
                         ? "bg-ink text-white"
-                        : active
-                          ? "bg-primary text-white"
-                          : "border border-line text-muted"
+                        : "border-2 border-line text-muted"
                     }`}
                   >
                     {done ? (
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                      <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden>
                         <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     ) : (
                       i + 1
                     )}
                   </span>
-                  {label}
+                  <span className={`hidden text-xs font-semibold sm:block ${active ? "text-ink" : "text-muted"}`}>
+                    {s.label}
+                  </span>
                 </button>
+                {i < STEPS.length - 1 && (
+                  <span className={`mx-2 mb-6 h-0.5 flex-1 sm:mb-7 ${done ? "bg-ink" : "bg-line"}`} />
+                )}
               </li>
             );
           })}
@@ -129,10 +132,11 @@ export function JobWizard({ job }: { job?: Job }) {
       </div>
 
       {/* content */}
-      <div className="rounded-2xl border border-line bg-white p-6 lg:p-8">
-        <h2 className="text-xl font-extrabold tracking-tight text-ink">
-          {STEPS[step]}
+      <div className="p-6 lg:p-8">
+        <h2 className="text-2xl font-extrabold tracking-tight text-ink">
+          {STEPS[step].title}
         </h2>
+        <p className="mt-1 text-sm text-muted">{STEPS[step].subtitle}</p>
         <div className="mt-6">
           {step === 0 && <BasicInfo form={form} set={set} num={num} />}
           {step === 1 && <Description form={form} set={set} />}
@@ -149,17 +153,26 @@ export function JobWizard({ job }: { job?: Job }) {
 
         {/* footer */}
         <div className="mt-8 flex items-center justify-between border-t border-line pt-5">
-          <button
-            type="button"
-            onClick={() => setStep((s) => Math.max(0, s - 1))}
-            disabled={step === 0}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink disabled:opacity-40"
-          >
-            ← Previous
-          </button>
+          {step === 0 ? (
+            <button
+              type="button"
+              onClick={() => router.push(adminRoutes.jobs)}
+              className="rounded-pill border border-line px-6 py-2.5 text-sm font-semibold text-ink hover:bg-black/[0.03]"
+            >
+              Cancel
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setStep((s) => Math.max(0, s - 1))}
+              className="rounded-pill border border-line px-6 py-2.5 text-sm font-semibold text-ink hover:bg-black/[0.03]"
+            >
+              ← Previous
+            </button>
+          )}
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted">
-              {step + 1} of {STEPS.length} steps
+            <span className="hidden text-sm text-muted sm:inline">
+              Step {step + 1} of {STEPS.length}
             </span>
             {last ? (
               <button
@@ -177,7 +190,7 @@ export function JobWizard({ job }: { job?: Job }) {
                 disabled={!canContinue}
                 className="rounded-pill bg-ink px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40"
               >
-                Next
+                Next step
               </button>
             )}
           </div>

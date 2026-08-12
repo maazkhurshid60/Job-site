@@ -38,7 +38,7 @@ export function RecruiterFeeSection() {
             candidate is hired.
           </p>
         </div>
-
+ 
         <div className="mt-12 grid gap-6 sm:grid-cols-3">
           {FEE_TIERS.map((t) => (
             <div key={t.value} className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">

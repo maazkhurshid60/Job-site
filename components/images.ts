@@ -58,4 +58,8 @@ export const photo = {
     src: "/photos/engineer-on-site.jpg",
     alt: "A civil engineer in a hard hat and high-visibility vest working on site",
   },
+  heroInterview: {
+    src: "/photos/hero-recruiter-interview.jpg",
+    alt: "A hiring manager in a suit shaking hands with a job candidate across a table after a successful interview",
+  },
 } satisfies Record<string, Photo>;

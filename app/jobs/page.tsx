@@ -259,10 +259,16 @@ export default function JobsPage() {
                     {onlySaved ? "Bookmark roles to see them here." : "Try clearing some filters."}
                   </p>
                 </div>
-              ) : (
-                <div className={view === "board" ? "grid gap-4 md:grid-cols-2" : "space-y-4"}>
+              ) : view === "board" ? (
+                <div className="grid gap-4 md:grid-cols-2">
                   {filtered.map((job) => (
                     <JobCard key={job.id} job={job} saved={saved.has(job.id)} onSave={() => toggleSaved(job.id)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y divide-line rounded-2xl border border-line bg-white">
+                  {filtered.map((job) => (
+                    <JobListRow key={job.id} job={job} saved={saved.has(job.id)} onSave={() => toggleSaved(job.id)} />
                   ))}
                 </div>
               )}
@@ -386,6 +392,53 @@ function JobCard({ job, saved, onSave }: { job: Job; saved: boolean; onSave: () 
           </svg>
         </Link>
       </div>
+    </div>
+  );
+}
+
+/* ---- compact list row — dense, scannable rows for recruiters skimming a
+   lot of roles at once; the fee is what they're scanning for, so it sits
+   right-aligned where the eye lands after the title. ---- */
+function JobListRow({ job, saved, onSave }: { job: Job; saved: boolean; onSave: () => void }) {
+  const tier = feeTierMeta(job.feeTier);
+  return (
+    <div className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-cream/40">
+      <span
+        title="Open role"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-sage bg-sage-soft text-ink"
+      >
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
+          <path d="M4 10.5l4 4 8-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+
+      <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
+        <p className="truncate text-base font-bold text-ink group-hover:text-primary">{job.title}</p>
+        <p className="mt-0.5 truncate text-xs text-muted">
+          {job.company} · {job.remote ? "Remote" : job.location || "Onsite"} · {job.employmentType}
+        </p>
+      </Link>
+
+      {tier && (
+        <div className="hidden shrink-0 text-right sm:block">
+          <p className="text-lg font-extrabold text-primary">${tier.amount.toLocaleString()}</p>
+          <p className="mt-0.5 text-xs text-muted">Posted {timeAgo(job.createdAt)}</p>
+          <span className="mt-1 inline-block rounded-full bg-sage-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink">
+            Success fee
+          </span>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={onSave}
+        aria-label={saved ? "Remove bookmark" : "Save job"}
+        className={`shrink-0 transition-colors ${saved ? "text-primary" : "text-muted hover:text-ink"}`}
+      >
+        <svg width="18" height="18" viewBox="0 0 20 20" fill={saved ? "currentColor" : "none"} aria-hidden>
+          <path d="M5 3h10v14l-5-3.5L5 17V3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        </svg>
+      </button>
     </div>
   );
 }

@@ -3,112 +3,100 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Container } from "./ui";
-import { img } from "./images";
+import { photo } from "./images";
 import { CountUp } from "./motion/CountUp";
 
-const BULLETS = [
-  "No membership fee. No upfront cost.",
-  "Choose the positions you want to work.",
-  "Submit qualified candidates.",
-  "Earn the published recruiter fee when your candidate is successfully hired.",
+type Stat = {
+  label: string;
+  to?: number;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
+  value?: string;
+};
+
+const STATS: Stat[] = [
+  { to: 20, suffix: "K+", label: "Hires made" },
+  { to: 1.3, decimals: 1, suffix: "M+", label: "Candidates sourced" },
+  { to: 8.5, decimals: 1, prefix: "$", suffix: "B+", label: "Salaries placed" },
+  { value: "$0", label: "Membership fees" },
 ];
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-white pb-16 pt-6">
-      {/* Royal Blue Curved Banner Container */}
-      <div className="relative mx-auto max-w-[1400px] overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-3xl md:rounded-[40px] px-6 pb-32 pt-20 md:pb-48 md:pt-28 shadow-2xl">
-
-        {/* Floating Shapes Background */}
-        <div className="absolute inset-0 opacity-15 pointer-events-none">
-          <div className="absolute -top-12 -left-12 h-64 w-64 rounded-full bg-blue-400 blur-3xl" />
-          <div className="absolute top-1/2 right-12 h-80 w-80 rounded-full bg-indigo-300 blur-3xl" />
-          <div className="absolute bottom-4 left-1/3 h-52 w-52 rounded-full bg-white blur-3xl" />
+      {/* Navy photo banner — a duotone wash over a real interview photo reads
+          as far more purpose-built than a flat gradient, while the overlay
+          keeps the white headline text legible on top of it. */}
+      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-3xl md:rounded-[40px] shadow-2xl">
+        <div className="absolute inset-0">
+          <Image
+            src={photo.heroInterview.src}
+            alt={photo.heroInterview.alt}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-brand-dark/95 via-blue-brand-dark/92 to-ink/95" />
+          <div className="absolute inset-0 bg-blue-brand-dark/25 mix-blend-multiply" />
         </div>
 
         {/* Hero Content */}
-        <Container className="relative z-10 text-center">
+        <Container className="relative z-10 px-6 pb-16 pt-20 text-center md:pb-24 md:pt-28">
           <div className="hero-rise mx-auto max-w-3xl">
-            <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-200 mb-6">
+            <span className="mb-6 inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-300 ring-1 ring-white/15">
               No Membership Fee — Recruiter Network
             </span>
-            <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl leading-tight">
-              Find Candidates. Make Placements.
-              <br className="hidden sm:block" /> Earn $1,000–$3,000 Per Hire.
+            <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
+              The Smarter Way to
+              <br className="hidden sm:block" />{" "}
+              <span className="text-amber-400">Get Positions Filled</span>
             </h1>
-            <p className="mt-6 text-lg md:text-xl text-blue-100 leading-relaxed max-w-2xl mx-auto font-medium">
+            <p className="mx-auto mt-6 max-w-2xl text-lg font-medium leading-relaxed text-blue-100 md:text-xl">
               JobFolder connects experienced recruiters with active positions
-              from hiring companies across every engineering discipline.
+              from hiring companies across every engineering discipline —
+              earn $1,000–$3,000 per successful hire.
             </p>
 
-            <ul className="mt-8 mx-auto flex max-w-xl flex-col gap-2.5 text-left sm:mx-auto">
-              {BULLETS.map((b) => (
-                <li key={b} className="flex items-start gap-2.5 text-sm md:text-base text-blue-50 font-medium">
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="mt-0.5 shrink-0" aria-hidden>
-                    <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.4" className="text-cyan-200" />
-                    <path d="M6.5 10l2.3 2.3L14 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-200" />
-                  </svg>
-                  {b}
-                </li>
-              ))}
-            </ul>
-
             {/* CTAs */}
-            <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
-              <Link
-                href="/jobs"
-                className="inline-flex w-full sm:w-auto items-center justify-center rounded-full px-8 py-4 text-base font-bold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg bg-white text-blue-brand hover:bg-blue-50"
-              >
-                Browse Open Positions
-              </Link>
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/signup"
-                className="inline-flex w-full sm:w-auto items-center justify-center rounded-full border border-white/30 px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:bg-white/10"
+                className="inline-flex w-full items-center justify-center rounded-full bg-amber-400 px-8 py-4 text-base font-bold text-blue-brand-dark transition-all duration-300 hover:-translate-y-0.5 hover:bg-amber-300 hover:shadow-lg sm:w-auto"
               >
                 Join as a Recruiter
               </Link>
+              <Link
+                href="/jobs"
+                className="inline-flex w-full items-center justify-center rounded-full border border-white/30 px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:bg-white/10 sm:w-auto"
+              >
+                Browse Open Positions
+              </Link>
             </div>
 
-            {/* Placed Candidates Counter */}
-            <div className="mt-14 flex flex-col sm:flex-row items-center justify-center gap-4 border-t border-white/15 pt-8">
-              <div className="flex -space-x-2">
-                {img.avatars.map((src, i) => (
-                  <span
-                    key={src}
-                    className="relative h-9 w-9 overflow-hidden rounded-full border-2 border-indigo-600 bg-indigo-500 shrink-0"
-                  >
-                    <Image
-                      src={src}
-                      alt={`Placed candidate ${i + 1}`}
-                      fill
-                      sizes="36px"
-                      className="object-cover"
-                    />
-                  </span>
-                ))}
-              </div>
-              <p className="text-sm text-blue-100 font-medium">
-                <span className="font-extrabold text-white">
-                  <CountUp to={27500} suffix="+" />
-                </span>{" "}
-                candidates placed through JobFolder
-              </p>
+            {/* Stats */}
+            <div className="mt-14 grid grid-cols-2 gap-y-8 border-t border-white/15 pt-10 sm:grid-cols-4 sm:gap-4">
+              {STATS.map((s) => (
+                <div key={s.label} className="text-center">
+                  <p className="text-2xl font-extrabold text-white sm:text-3xl">
+                    {s.value ?? (
+                      <CountUp
+                        to={s.to ?? 0}
+                        decimals={s.decimals}
+                        prefix={s.prefix}
+                        suffix={s.suffix}
+                      />
+                    )}
+                  </p>
+                  <p className="mt-1.5 text-xs font-semibold text-blue-100/80 sm:text-sm">
+                    {s.label}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </Container>
-
-        {/* Custom SVG Asymmetric Wave Divider at the Bottom */}
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none z-10">
-          <svg
-            viewBox="0 0 1200 120"
-            preserveAspectRatio="none"
-            className="relative block w-full h-[60px] md:h-[100px] text-white fill-current"
-          >
-            <path
-              d="M0,0 C150,90 350,120 600,100 C850,80 1050,40 1200,0 L1200,120 L0,120 Z"
-            />
-          </svg>
-        </div>
       </div>
     </section>
   );

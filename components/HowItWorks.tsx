@@ -13,59 +13,48 @@ const steps = howSteps.map((s) => ({
 
 export function HowItWorks() {
   return (
-    <section id="how" className="bg-gray-50/30 py-20 border-b border-gray-100">
+    <section id="how" className="bg-white py-20 border-b border-gray-100">
       <Container>
         <div className="mx-auto max-w-2xl text-center mb-16">
-          <span className="text-xs font-bold uppercase tracking-wider text-blue-brand">
-            How it works
-          </span>
-          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-            Crowdsourced recruiting, with an agency doing the quality control
+          <h2 className="text-3xl font-black uppercase tracking-tight text-ink sm:text-4xl">
+            How It Works
           </h2>
           <p className="mt-4 text-base leading-relaxed text-muted">
-            A network of specialist recruiters works every engineering brief in
-            parallel. We screen everything it produces before it reaches you.
+            A simple, transparent process that turns your network into commission.
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
-          {steps.map((s, i) => (
-            <div
-              key={s.title}
-              className="group relative rounded-3xl border border-gray-100 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-blue-brand/20"
-            >
-              {/* Icon Container */}
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-brand-soft mb-6 transition-colors duration-300 group-hover:bg-blue-brand group-hover:text-white text-blue-brand">
-                <div className="group-hover:scale-110 transition-transform duration-300">
-                  {s.icon}
-                </div>
-              </div>
+        <div className="relative grid gap-y-14 gap-x-8 sm:grid-cols-3">
+          {/* Connector line — sits behind the numbered circles on desktop,
+              where there's room for the process to read left-to-right. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-17 hidden h-px bg-gray-200 sm:block"
+            style={{ marginInline: `${100 / steps.length / 2}%` }}
+          />
 
-              {/* Step number badge */}
-              <span className="absolute top-8 right-8 text-4xl font-black text-gray-100 select-none group-hover:text-blue-brand/10 transition-colors duration-300">
-                0{i + 1}
+          {steps.map((s, i) => (
+            <Link
+              key={s.title}
+              href={s.href}
+              className="group relative flex flex-col items-center text-center"
+            >
+              <span className="text-sm font-black tracking-wide text-blue-brand">
+                {String(i + 1).padStart(2, "0")}
               </span>
 
-              <h3 className="text-xl font-bold text-ink group-hover:text-blue-brand transition-colors duration-200">
+              <span className="relative mt-3 flex h-16 w-16 items-center justify-center rounded-full border-2 border-blue-brand-soft bg-white text-blue-brand shadow-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:border-blue-brand group-hover:bg-blue-brand group-hover:text-white group-hover:shadow-lg">
+                {s.icon}
+              </span>
+
+              <h3 className="mt-5 text-base font-extrabold uppercase tracking-wide text-ink transition-colors group-hover:text-blue-brand">
                 {s.title}
               </h3>
-              
-              <p className="mt-4 text-sm leading-relaxed text-muted">
+
+              <p className="mt-3 max-w-60 text-sm leading-relaxed text-muted">
                 {s.body}
               </p>
-
-              <div className="mt-6 pt-2">
-                <Link
-                  href={s.href}
-                  className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-brand hover:text-blue-brand-dark transition-colors"
-                >
-                  Learn more
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transform group-hover:translate-x-1 transition-transform">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       </Container>
