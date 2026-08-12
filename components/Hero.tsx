@@ -24,11 +24,12 @@ const STATS: Stat[] = [
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-white pb-16 pt-6">
-      {/* Navy photo banner — a duotone wash over a real interview photo reads
-          as far more purpose-built than a flat gradient, while the overlay
-          keeps the white headline text legible on top of it. */}
-      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-3xl md:rounded-[40px] shadow-2xl">
+    <section className="relative overflow-hidden">
+      {/* Navy photo banner — full-bleed, flush against the navbar above it.
+          A duotone wash over a real interview photo reads as far more
+          purpose-built than a flat gradient, while the overlay keeps the
+          white headline text legible on top of it. */}
+      <div className="relative">
         <div className="absolute inset-0">
           <Image
             src={photo.heroInterview.src}

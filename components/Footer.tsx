@@ -44,11 +44,11 @@ const columns = [
 
 export function Footer() {
   return (
-    <footer className="relative border-t border-gray-100 bg-gray-50/50 pt-16 pb-12 overflow-hidden">
-      
-      {/* Blue Wave Graphic at the Bottom Right corner */}
-      <div className="absolute -bottom-4 -right-16 h-36 w-64 pointer-events-none opacity-20 md:opacity-40">
-        <svg viewBox="0 0 200 100" fill="none" className="text-blue-brand fill-current w-full h-full">
+    <footer className="relative overflow-hidden border-t border-white/10 bg-ink pt-16 pb-10">
+
+      {/* Brand wave accent at the bottom-right corner */}
+      <div className="absolute -bottom-4 -right-16 h-36 w-64 pointer-events-none opacity-10">
+        <svg viewBox="0 0 200 100" fill="none" className="text-lime fill-current w-full h-full">
           <path d="M0,80 C50,100 120,40 200,80 L200,100 L0,100 Z" />
         </svg>
       </div>
@@ -56,8 +56,8 @@ export function Footer() {
       <Container className="relative z-10">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div>
-            <Logo />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
+            <Logo variant="onDark" />
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
               A crowdsourced recruiting agency. The reach of a network, the
               judgement of an agency — end to end.
             </p>
@@ -65,13 +65,13 @@ export function Footer() {
 
           {columns.map((col) => (
             <div key={col.heading}>
-              <h3 className="text-sm font-bold tracking-wider text-ink uppercase">{col.heading}</h3>
+              <h3 className="text-sm font-bold tracking-wider text-white uppercase">{col.heading}</h3>
               <ul className="mt-4 space-y-3">
                 {col.links.map((l) => (
                   <li key={l.label}>
                     <Link
                       href={l.href}
-                      className="text-sm text-muted transition-colors duration-200 hover:text-blue-brand"
+                      className="text-sm text-white/60 transition-colors duration-200 hover:text-lime"
                     >
                       {l.label}
                     </Link>
@@ -82,15 +82,15 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-8 sm:flex-row">
-          <p className="text-sm text-muted font-medium">
+        <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+          <p className="text-sm text-white/50 font-medium">
             © {new Date().getFullYear()} JobFolder. All rights reserved.
           </p>
           <div className="flex gap-3">
             {["in", "X", "f"].map((s) => (
               <span
                 key={s}
-                className="grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-gray-200 bg-white text-sm font-bold text-muted hover:border-blue-brand hover:text-blue-brand hover:bg-blue-brand-soft/20 transition-all"
+                className="grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-white/15 bg-white/5 text-sm font-bold text-white/70 hover:border-lime hover:text-lime hover:bg-lime/10 transition-all"
               >
                 {s}
               </span>
