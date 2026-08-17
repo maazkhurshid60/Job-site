@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { listAllUsers, type UserProfile } from "@/lib/users";
+import { listAllUsers, setRecruiterMetroTeamMember, type UserProfile } from "@/lib/users";
 import {
   listAllSubmissions,
   setSubmissionStatus,
@@ -36,6 +36,7 @@ export default function RecruiterDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [togglingMetro, setTogglingMetro] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,6 +84,23 @@ export default function RecruiterDetailPage() {
   }, [subs]);
 
   const open = subs.find((s) => s.id === openId) ?? null;
+
+  /* Optimistic, with rollback on failure — same pattern as changeStatus
+     above. This is the one field on a recruiter the console can write. */
+  async function toggleMetroTeam() {
+    if (!user) return;
+    const next = !user.metroTeamMember;
+    setUser({ ...user, metroTeamMember: next });
+    setTogglingMetro(true);
+    try {
+      await setRecruiterMetroTeamMember(user.uid, next);
+    } catch {
+      setUser((u) => (u ? { ...u, metroTeamMember: !next } : u));
+      alert("Could not update Metro Associates team status.");
+    } finally {
+      setTogglingMetro(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -133,13 +151,30 @@ export default function RecruiterDetailPage() {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-extrabold tracking-tight text-ink">
-              {user.name || "Unnamed recruiter"}
-            </h1>
-            <p className="mt-0.5 text-sm text-muted">
-              {user.headline || "Recruiter"}
-              {user.company ? ` · ${user.company}` : ""}
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+                  {user.name || "Unnamed recruiter"}
+                </h1>
+                <p className="mt-0.5 text-sm text-muted">
+                  {user.headline || "Recruiter"}
+                  {user.company ? ` · ${user.company}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleMetroTeam}
+                disabled={togglingMetro}
+                className={`shrink-0 rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                  user.metroTeamMember
+                    ? "bg-primary text-white hover:bg-primary-dark"
+                    : "border border-line text-muted hover:border-primary hover:text-primary"
+                }`}
+                title="Show or hide this recruiter on Metro Associates' public Meet Our Team page"
+              >
+                {user.metroTeamMember ? "✓ On Metro Associates team" : "Add to Metro Associates team"}
+              </button>
+            </div>
             <dl className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2">
               <Row label="Email" value={user.email} href={`mailto:${user.email}`} />
               <Row label="Phone" value={user.phone} href={`tel:${user.phone}`} />

@@ -23,6 +23,8 @@ export type UserProfile = {
   instagram: string;
   bio: string;
   photoURL: string;
+  /** Admin-set: shows this recruiter on Metro Associates' public team page. */
+  metroTeamMember: boolean;
   /** ISO-8601 string from MySQL, or null. */
   createdAt: string | null;
 };
@@ -108,6 +110,20 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 /** Admin action: list every recruiter, newest first. */
 export function listAllUsers(): Promise<UserProfile[]> {
   return apiFetch<UserProfile[]>("/api/admin/recruiters", { auth: true });
+}
+
+/** Admin action: add or remove a recruiter from Metro Associates' public team
+    page. Approving here is what the "Meet Our Team" page on the Metro site
+    fetches — see /api/team. */
+export async function setRecruiterMetroTeamMember(
+  uid: string,
+  metroTeamMember: boolean,
+): Promise<void> {
+  await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}`, {
+    method: "PATCH",
+    body: { metroTeamMember },
+    auth: true,
+  });
 }
 
 /** Bootstrap the first admin (used by the /setup page). */

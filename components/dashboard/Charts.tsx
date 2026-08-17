@@ -7,6 +7,7 @@ import {
   type SubmissionStatus,
 } from "@/lib/submissions";
 import { toDate } from "@/lib/dates";
+import { feeTierAmount } from "@/lib/feeTiers";
 
 /* Brand chart palette (validated via the dataviz skill's validator, light mode).
    Status/outcome colors are reserved for state and paired with labels. */
@@ -14,7 +15,6 @@ const GREEN = "#1e9e63";
 const GREEN_DARK = "#16814f";
 const GOLD = "#c2820a";
 const CORAL = "#ee5b3f";
-const INK = "#17130f";
 const MUTED = "#6f6a63";
 const LINE = "#ece5db";
 
@@ -28,10 +28,10 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-white p-6">
-      <div className="mb-4">
-        <h3 className="font-bold text-ink">{title}</h3>
-        {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
+    <div className="rounded-2xl border border-line bg-white p-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-bold text-ink">{title}</h3>
+        {subtitle && <p className="text-[11px] text-muted">{subtitle}</p>}
       </div>
       {children}
     </div>
@@ -40,8 +40,8 @@ function Card({
 
 function EmptyPlot({ label }: { label: string }) {
   return (
-    <div className="grid h-44 place-items-center rounded-xl bg-cream/40 text-center">
-      <p className="max-w-[16rem] text-sm text-muted">{label}</p>
+    <div className="grid h-40 place-items-center rounded-xl bg-cream/40 text-center">
+      <p className="max-w-64 text-xs text-muted">{label}</p>
     </div>
   );
 }
@@ -217,8 +217,8 @@ export function OutcomesDonut({ subs }: { subs: Submission[] }) {
       {total === 0 ? (
         <EmptyPlot label="No outcomes to show yet." />
       ) : (
-        <div className="flex items-center gap-6">
-          <svg viewBox="0 0 140 140" className="h-36 w-36 shrink-0" role="img" aria-label="Outcome breakdown">
+        <div className="flex flex-col items-center gap-6">
+          <svg viewBox="0 0 140 140" className="h-40 w-40 shrink-0" role="img" aria-label="Outcome breakdown">
             <g transform="translate(70 70) rotate(-90)">
               <circle r={R} fill="none" stroke={LINE} strokeWidth="16" />
               {segments.map((s) => {
@@ -245,23 +245,26 @@ export function OutcomesDonut({ subs }: { subs: Submission[] }) {
             <text x="70" y="66" textAnchor="middle" className="fill-ink" style={{ fontSize: 22, fontWeight: 800 }}>
               {total}
             </text>
-            <text x="70" y="84" textAnchor="middle" style={{ fontSize: 10, fill: MUTED }}>
-              total
+            <text x="70" y="84" textAnchor="middle" style={{ fontSize: 9, fill: MUTED, letterSpacing: 0.5 }}>
+              TOTAL
             </text>
           </svg>
 
-          <ul className="space-y-2 text-sm">
+          <ul className="grid w-full grid-cols-2 gap-x-3 gap-y-2">
             {segments.map((s) => (
               <li key={s.label} className="flex items-center gap-2">
                 <span
-                  className="inline-block h-3 w-3 rounded-sm"
+                  className="inline-block h-2 w-2 shrink-0 rounded-sm"
                   style={{ background: s.color }}
                   aria-hidden
                 />
-                <span className="text-ink">{s.label}</span>
-                <span className="ml-auto font-semibold text-ink">{s.value}</span>
-                <span className="w-10 text-right text-xs text-muted">
-                  {total ? Math.round((s.value / total) * 100) : 0}%
+                <span className="min-w-0">
+                  <span className="block text-sm font-extrabold leading-tight text-ink">
+                    {s.value}
+                  </span>
+                  <span className="block truncate text-[10px] uppercase tracking-wide text-muted">
+                    {s.label}
+                  </span>
                 </span>
               </li>
             ))}
@@ -272,7 +275,80 @@ export function OutcomesDonut({ subs }: { subs: Submission[] }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* 4. Earnings over time — bars, one series (hired fee amounts)       */
+/* ------------------------------------------------------------------ */
+export function EarningsOverTime({ subs }: { subs: Submission[] }) {
+  const data = useMemo(() => monthlyEarnings(subs, 6), [subs]);
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const max = Math.max(1, ...data.map((d) => d.value));
+  const [hover, setHover] = useState<number | null>(null);
+
+  return (
+    <Card title="Earnings over time" subtitle="Fee on candidates hired, last 6 months">
+      {total === 0 ? (
+        <EmptyPlot label="No placements yet — your monthly earnings will chart here." />
+      ) : (
+        <div>
+          <div className="flex h-40 items-end gap-3">
+            {data.map((d, i) => (
+              <div
+                key={d.label}
+                className="flex flex-1 flex-col items-center gap-2"
+                onMouseEnter={() => setHover(i)}
+                onMouseLeave={() => setHover(null)}
+              >
+                <span className="text-[11px] font-semibold text-ink">
+                  {d.value > 0 ? `$${d.value.toLocaleString()}` : ""}
+                </span>
+                <div className="flex w-full flex-1 items-end">
+                  <div
+                    className="w-full rounded-t-lg transition-opacity"
+                    style={{
+                      height: `${Math.max(4, (d.value / max) * 100)}%`,
+                      background: GREEN,
+                      opacity: hover !== null && hover !== i ? 0.55 : 1,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex justify-between px-1 text-[11px] text-muted">
+            {data.map((d) => (
+              <span key={d.label}>{d.label}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /* ---- helpers ---- */
+function monthlyEarnings(subs: Submission[], months: number) {
+  const now = new Date();
+  const buckets: { key: string; label: string; value: number }[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: d.toLocaleString("en", { month: "short" }),
+      value: 0,
+    });
+  }
+  const index = new Map(buckets.map((b, i) => [b.key, i]));
+  for (const s of subs) {
+    if (s.status !== "hired") continue;
+    const t = toDate(s.createdAt);
+    if (!t) continue;
+    const key = `${t.getFullYear()}-${t.getMonth()}`;
+    const i = index.get(key);
+    if (i !== undefined) buckets[i].value += feeTierAmount(s.feeTier) ?? 0;
+  }
+  return buckets;
+}
+
 function monthlyCounts(subs: Submission[], months: number) {
   const now = new Date();
   const buckets: { key: string; label: string; value: number }[] = [];

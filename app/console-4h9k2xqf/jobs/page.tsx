@@ -104,10 +104,10 @@ function JobsList() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-5 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Jobs</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="text-xl font-extrabold tracking-tight text-ink">Jobs</h1>
+          <p className="mt-0.5 text-xs text-muted">
             {loading
               ? "Loading…"
               : `${filtered.length} of ${jobs.length} role${jobs.length === 1 ? "" : "s"}`}
@@ -115,7 +115,7 @@ function JobsList() {
         </div>
         <Link
           href={adminRoutes.newJob}
-          className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+          className="rounded-pill bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-dark"
         >
           Post a job
         </Link>

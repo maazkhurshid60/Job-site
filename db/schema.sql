@@ -45,6 +45,11 @@ CREATE TABLE users (
   instagram   VARCHAR(512) NOT NULL DEFAULT '',
   bio         TEXT,
   photo_url   VARCHAR(1024) NOT NULL DEFAULT '',
+  -- Admin-set: shows this recruiter on the Metro Associates "Meet Our Team"
+  -- page via the public /api/team endpoint. Off by default — every recruiter
+  -- signs up self-serve, so this is what turns "has an account" into "admin
+  -- has vetted and wants them publicly representing Metro".
+  metro_team_member BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
                            ON UPDATE CURRENT_TIMESTAMP(3),

@@ -68,7 +68,7 @@ export default function SubmissionDetailPage() {
             href="/dashboard/submissions"
             className="mt-5 inline-block rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
           >
-            Back to my submissions
+            Back to candidates
           </Link>
         </div>
       </div>
@@ -86,7 +86,7 @@ export default function SubmissionDetailPage() {
           </h1>
           <p className="mt-1 text-sm text-muted">
             Submitted {formatDate(sub.createdAt)} for{" "}
-            <Link href={`/jobs/${sub.jobId}`} className="font-medium text-ink hover:text-primary">
+            <Link href={`/dashboard/jobs/${sub.jobId}`} className="font-medium text-ink hover:text-primary">
               {sub.jobTitle}
             </Link>
             {sub.company ? ` · ${sub.company}` : ""}
@@ -190,7 +190,7 @@ function BackLink() {
       href="/dashboard/submissions"
       className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
     >
-      <span aria-hidden>←</span> My submissions
+      <span aria-hidden>←</span> Candidates
     </Link>
   );
 }

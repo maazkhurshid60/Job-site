@@ -142,4 +142,18 @@ body {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-soft);
   }
+  /* Native <select> arrows render at wildly inconsistent sizes/positions
+     across browsers, and at the compact text-xs sizing used in the dashboard
+     the browser's own arrow can sit hard against the text with no padding to
+     spare. A single custom chevron replaces it everywhere .input is used on
+     a <select>, so it's never a per-page fix. */
+  select.input {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 8l5 5 5-5' stroke='%236f6a63' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 0.7rem;
+  }
 }

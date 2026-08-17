@@ -93,10 +93,10 @@ export default function BoardFiltersPage() {
         </span>
         <div>
           <p className="eyebrow uppercase">Job board</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-ink">
+          <h1 className="mt-1 text-xl font-extrabold tracking-tight text-ink">
             Board filters
           </h1>
-          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted">
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
             Everything candidates and recruiters can filter by on{" "}
             <span className="font-medium text-ink">/jobs</span> — changes go live
@@ -105,7 +105,7 @@ export default function BoardFiltersPage() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         <SettingCard
           title="Categories"
           description="The disciplines shown in the Category filter and offered when posting a role."

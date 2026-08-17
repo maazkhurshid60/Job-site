@@ -10,14 +10,10 @@ import {
 import { listOpenJobs, type Job } from "@/lib/jobs";
 import { feeTierAmount } from "@/lib/feeTiers";
 import {
-  StatCard, SubmissionBadge, ProfileMeter, money,
+  StatCard, ProfileMeter, money, HiringPipeline, RecentActivity, OpenRolesForYou,
 } from "@/components/dashboard/parts";
 import { profileCompletion } from "@/lib/profileCompletion";
-import {
-  SubmissionsOverTime,
-  PipelineByStage,
-  OutcomesDonut,
-} from "@/components/dashboard/Charts";
+import { OutcomesDonut } from "@/components/dashboard/Charts";
 import { Loader } from "@/components/Loader";
 
 export default function DashboardOverview() {
@@ -56,31 +52,35 @@ export default function DashboardOverview() {
     0,
   );
 
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+
   return (
     <div>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="eyebrow uppercase">Your workspace</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-ink">
+          <h1 className="text-xl font-extrabold tracking-tight text-ink">
             Welcome, {firstName}
           </h1>
+          <p className="mt-0.5 text-xs text-muted">Today is {today}</p>
         </div>
         <Link
-          href="/jobs"
-          className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
+          href="/dashboard/jobs"
+          className="rounded-pill bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-dark"
         >
           Browse jobs
         </Link>
       </div>
 
       {!completion.isComplete && (
-        <div className="mb-6 rounded-2xl border border-line bg-cream/50 p-5">
+        <div className="mb-5 rounded-2xl border border-line bg-cream/50 p-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-ink">
+              <p className="text-xs font-bold text-ink">
                 Your profile is {completion.percent}% complete
               </p>
-              <p className="mt-0.5 text-sm text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {completion.filled} of {completion.total} details added — it&apos;s
                 how our recruiters know who they&apos;re working with on your
                 referrals.
@@ -88,15 +88,15 @@ export default function DashboardOverview() {
             </div>
             <Link
               href="/dashboard/profile"
-              className="shrink-0 rounded-pill border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-primary hover:text-primary"
+              className="shrink-0 rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
             >
               Complete profile
             </Link>
           </div>
 
-          <ProfileMeter percent={completion.percent} className="mt-4" />
+          <ProfileMeter percent={completion.percent} className="mt-3" />
 
-          <p className="mt-3 text-xs text-muted">
+          <p className="mt-2.5 text-[11px] text-muted">
             <span className="font-semibold text-ink">Still to add:</span>{" "}
             {/* Only the first few — a list of eight reads as a chore, not a nudge. */}
             {completion.missing.slice(0, 4).map((f) => f.label).join(", ")}
@@ -112,9 +112,6 @@ export default function DashboardOverview() {
         </div>
       ) : (
         <>
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-muted">
-            My activity
-          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Open positions" value={openJobs.length} />
             <StatCard label="Candidates submitted" value={subs.length} />
@@ -122,7 +119,21 @@ export default function DashboardOverview() {
             <StatCard label="Placements" value={hired.length} />
           </div>
 
-          <h2 className="mb-3 mt-6 text-sm font-bold uppercase tracking-wide text-muted">
+          {/* pipeline + outcomes */}
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <HiringPipeline subs={subs} />
+            </div>
+            <OutcomesDonut subs={subs} />
+          </div>
+
+          {/* activity + open roles */}
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <RecentActivity subs={subs} />
+            <OpenRolesForYou jobs={openJobs} />
+          </div>
+
+          <h2 className="mb-2.5 mt-6 text-xs font-bold uppercase tracking-wide text-muted">
             Earnings
           </h2>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -143,75 +154,18 @@ export default function DashboardOverview() {
             />
           </div>
 
-          {/* charts */}
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <SubmissionsOverTime subs={subs} />
-            <OutcomesDonut subs={subs} />
-          </div>
-          <div className="mt-4">
-            <PipelineByStage subs={subs} />
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-line bg-white p-6">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="font-bold text-ink">Your candidates</h2>
-              {subs.length > 8 && (
-                <Link
-                  href="/dashboard/submissions"
-                  className="text-sm font-semibold text-primary hover:text-primary-dark"
-                >
-                  View all →
-                </Link>
-              )}
+          <Link
+            href="/dashboard/reports"
+            className="mt-5 flex items-center justify-between gap-4 rounded-2xl border border-line bg-white p-4 transition-colors hover:border-primary"
+          >
+            <div>
+              <p className="text-sm font-bold text-ink">Want the deeper breakdown?</p>
+              <p className="mt-0.5 text-xs text-muted">
+                Earnings over time, pipeline by stage, and full submission history.
+              </p>
             </div>
-            {subs.length === 0 ? (
-              <div>
-                <p className="text-sm text-muted">
-                  You haven&apos;t submitted any candidates yet.
-                </p>
-                <Link
-                  href="/jobs"
-                  className="mt-3 inline-block text-sm font-semibold text-primary hover:text-primary-dark"
-                >
-                  Browse open jobs →
-                </Link>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-sm">
-                  <thead className="border-b border-line text-xs uppercase tracking-wide text-muted">
-                    <tr>
-                      <th className="py-2 pr-4 font-semibold">Candidate</th>
-                      <th className="py-2 pr-4 font-semibold">Position</th>
-                      <th className="py-2 pr-4 font-semibold">Status</th>
-                      <th className="py-2 pr-4 font-semibold">Fee</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {subs.slice(0, 8).map((s) => (
-                      <tr key={s.id}>
-                        <td className="py-3 pr-4">
-                          <Link
-                            href={`/dashboard/submissions/${s.id}`}
-                            className="font-semibold text-ink hover:text-primary"
-                          >
-                            {s.candidateName}
-                          </Link>
-                        </td>
-                        <td className="py-3 pr-4 text-muted">{s.jobTitle}</td>
-                        <td className="py-3 pr-4">
-                          <SubmissionBadge status={s.status} />
-                        </td>
-                        <td className="py-3 pr-4 font-semibold text-ink">
-                          {money(feeTierAmount(s.feeTier))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+            <span className="shrink-0 text-xs font-semibold text-primary">View reports →</span>
+          </Link>
         </>
       )}
     </div>

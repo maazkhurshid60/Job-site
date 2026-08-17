@@ -72,11 +72,11 @@ export default function AdminSubmissionsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+      <div className="mb-5">
+        <h1 className="text-xl font-extrabold tracking-tight text-ink">
           Submissions
         </h1>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-xs text-muted">
           Screen recruiter submissions before they reach the client. Set a
           candidate to <span className="font-medium text-ink">Approved</span> or{" "}
           <span className="font-medium text-ink">With client</span> to surface
@@ -85,7 +85,7 @@ export default function AdminSubmissionsPage() {
       </div>
 
       {/* filter chips */}
-      <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-5 flex flex-wrap gap-2">
         {(["all", ...SUBMISSION_STATUSES] as const).map((f) => (
           <button
             key={f}

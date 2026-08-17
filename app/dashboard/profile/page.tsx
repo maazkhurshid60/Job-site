@@ -94,40 +94,40 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-8">
+      <div className="mb-6">
         <p className="eyebrow uppercase">Your workspace</p>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">
+        <h1 className="mt-1.5 text-xl font-extrabold tracking-tight text-ink">
           My profile
         </h1>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-xs text-muted">
           Add your details and a photo. Our team uses this to get to know the
           recruiters we work with.
         </p>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-line bg-cream/50 p-5">
+      <div className="mb-5 rounded-2xl border border-line bg-cream/50 p-4">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-sm font-bold text-ink">
+          <p className="text-xs font-bold text-ink">
             {completion.isComplete
               ? "Your profile is complete"
               : `Your profile is ${completion.percent}% complete`}
           </p>
-          <span className="shrink-0 text-sm font-semibold tabular-nums text-muted">
+          <span className="shrink-0 text-xs font-semibold tabular-nums text-muted">
             {completion.filled}/{completion.total}
           </span>
         </div>
-        <ProfileMeter percent={completion.percent} className="mt-3" />
+        <ProfileMeter percent={completion.percent} className="mt-2.5" />
         {completion.isComplete ? (
-          <p className="mt-3 text-xs text-muted">
+          <p className="mt-2.5 text-[11px] text-muted">
             Nothing left to add — remember to save if you&apos;ve just made
             changes.
           </p>
         ) : (
-          <ul className="mt-3 flex flex-wrap gap-2">
+          <ul className="mt-2.5 flex flex-wrap gap-1.5">
             {completion.missing.map((f) => (
               <li
                 key={f.key}
-                className="rounded-pill bg-white px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line"
+                className="rounded-pill bg-white px-2 py-1 text-[11px] font-medium text-muted ring-1 ring-line"
               >
                 {f.label}
               </li>
@@ -138,11 +138,11 @@ export default function ProfilePage() {
 
       <form
         onSubmit={onSubmit}
-        className="rounded-2xl border border-line bg-white p-6"
+        className="rounded-2xl border border-line bg-white p-5"
       >
         {/* photo */}
-        <div className="flex items-center gap-5">
-          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft text-2xl font-bold text-primary ring-4 ring-cream">
+        <div className="flex items-center gap-4">
+          <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft text-xl font-bold text-primary ring-4 ring-cream">
             {form.photoURL ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -159,11 +159,11 @@ export default function ProfilePage() {
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="rounded-pill border border-line px-4 py-2 text-sm font-semibold text-ink hover:bg-cream/60 disabled:opacity-60"
+              className="rounded-pill border border-line px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-cream/60 disabled:opacity-60"
             >
               {uploading ? "Uploading…" : form.photoURL ? "Change photo" : "Upload photo"}
             </button>
-            <p className="mt-1.5 text-xs text-muted">JPG, PNG, or WebP · max 5 MB</p>
+            <p className="mt-1.5 text-[11px] text-muted">JPG, PNG, or WebP · max 5 MB</p>
             <input
               ref={fileRef}
               type="file"
@@ -177,7 +177,7 @@ export default function ProfilePage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <Field label="Full name">
             <input
-              className="input"
+              className="input text-xs"
               required
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
@@ -185,11 +185,11 @@ export default function ProfilePage() {
             />
           </Field>
           <Field label="Email">
-            <input className="input bg-cream/50" value={profile?.email ?? ""} disabled readOnly />
+            <input className="input bg-cream/50 text-xs" value={profile?.email ?? ""} disabled readOnly />
           </Field>
           <Field label="Phone">
             <input
-              className="input"
+              className="input text-xs"
               value={form.phone}
               onChange={(e) => set("phone", e.target.value)}
               placeholder="+44 7700 900000"
@@ -197,7 +197,7 @@ export default function ProfilePage() {
           </Field>
           <Field label="Company / agency">
             <input
-              className="input"
+              className="input text-xs"
               value={form.company}
               onChange={(e) => set("company", e.target.value)}
               placeholder="Acme Talent"
@@ -205,7 +205,7 @@ export default function ProfilePage() {
           </Field>
           <Field label="Headline / role">
             <input
-              className="input"
+              className="input text-xs"
               value={form.headline}
               onChange={(e) => set("headline", e.target.value)}
               placeholder="Technical recruiter"
@@ -213,7 +213,7 @@ export default function ProfilePage() {
           </Field>
           <Field label="Location">
             <input
-              className="input"
+              className="input text-xs"
               value={form.location}
               onChange={(e) => set("location", e.target.value)}
               placeholder="London, UK"
@@ -221,14 +221,14 @@ export default function ProfilePage() {
           </Field>
         </div>
 
-        <div className="mt-8 border-t border-line pt-6">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">
+        <div className="mt-6 border-t border-line pt-5">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
             Social &amp; links
           </p>
-          <p className="mt-1 text-xs text-muted">
+          <p className="mt-1 text-[11px] text-muted">
             Optional — anything you add here shows up on your recruiter profile.
           </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
             {SOCIAL_FIELDS.map((f) => (
               <IconField
                 key={f.key}
@@ -245,7 +245,7 @@ export default function ProfilePage() {
         <div className="mt-6 grid gap-4">
           <Field label="About you">
             <textarea
-              className="input min-h-28 resize-y"
+              className="input min-h-28 resize-y text-xs"
               value={form.bio}
               onChange={(e) => set("bio", e.target.value)}
               placeholder="A short bio — your specialisms, sectors you place in, years of experience…"
@@ -254,12 +254,12 @@ export default function ProfilePage() {
         </div>
 
         {error && (
-          <p className="mt-4 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">
+          <p className="mt-3 rounded-lg bg-coral-soft px-3 py-2 text-xs text-coral">
             {error}
           </p>
         )}
         {saved && !error && (
-          <p className="mt-4 rounded-lg bg-primary-soft px-3 py-2 text-sm text-primary">
+          <p className="mt-3 rounded-lg bg-primary-soft px-3 py-2 text-xs text-primary">
             Profile saved.
           </p>
         )}
@@ -267,7 +267,7 @@ export default function ProfilePage() {
         <button
           type="submit"
           disabled={saving || uploading}
-          className="mt-6 w-full rounded-pill bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60 sm:w-auto"
+          className="mt-5 w-full rounded-pill bg-primary px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60 sm:w-auto"
         >
           {saving ? "Saving…" : "Save profile"}
         </button>
@@ -287,7 +287,7 @@ function Field({
 }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-ink">{label}</span>
       {children}
     </label>
   );
@@ -314,7 +314,7 @@ function IconField({
           className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
         />
         <input
-          className="input pl-10"
+          className="input pl-10 text-xs"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}

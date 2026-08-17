@@ -85,7 +85,16 @@ export default function LoginPage() {
             placeholder="you@company.com"
           />
         </AuthField>
-        <AuthField label="Password">
+        <div>
+          <div className="flex items-center justify-between">
+            <span className="mb-1.5 block text-sm font-medium text-ink">Password</span>
+            <Link
+              href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+              className="mb-1.5 text-sm font-semibold text-primary"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input
             type="password"
             required
@@ -95,7 +104,7 @@ export default function LoginPage() {
             className="input"
             placeholder="••••••••"
           />
-        </AuthField>
+        </div>
 
         {error && (
           <div className="rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">

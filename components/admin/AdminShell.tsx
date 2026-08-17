@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { adminRoutes } from "@/lib/routes";
 import { Logo } from "@/components/Logo";
+import { listJobs } from "@/lib/jobs";
+import { listAllSubmissions } from "@/lib/submissions";
 
 const groups = [
   {
@@ -30,6 +32,33 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const [q, setQ] = useState("");
 
+  /* Same reasoning as the recruiter sidebar's badges: null until known, so a
+     badge never reads "0" while still loading and implies there's nothing
+     to do when the count just hasn't arrived yet. */
+  const [openJobs, setOpenJobs] = useState<number | null>(null);
+  const [needsScreening, setNeedsScreening] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    listJobs()
+      .then((jobs) => active && setOpenJobs(jobs.filter((j) => j.status === "open").length))
+      .catch(() => {});
+    listAllSubmissions()
+      .then((subs) => active && setNeedsScreening(
+        subs.filter((s) => s.status === "submitted" || s.status === "screening").length,
+      ))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function badgeFor(href: string): string | null {
+    if (href === adminRoutes.jobs) return openJobs === null ? null : String(openJobs);
+    if (href === adminRoutes.submissions) return needsScreening ? String(needsScreening) : null;
+    return null;
+  }
+
   function isActive(href: string) {
     if (href === adminRoutes.base) return pathname === adminRoutes.base;
     if (href === adminRoutes.newJob) return pathname === adminRoutes.newJob;
@@ -53,19 +82,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-white">
       {/* top header */}
-      <header className="sticky top-0 z-40 flex h-16 items-center border-b border-line bg-white">
-        <div className="flex h-full w-60 shrink-0 items-center border-r border-line px-5">
-          <Logo />
+      <header className="sticky top-0 z-40 flex h-14 items-center border-b border-line bg-white">
+        <div className="flex h-full w-56 shrink-0 items-center border-r border-line px-4">
+          <Logo size="h-9" />
         </div>
         <div className="flex flex-1 items-center gap-4 px-4 lg:px-6">
           <form onSubmit={onSearch} className="relative hidden max-w-md flex-1 sm:block">
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="input h-10 pl-10"
+              className="input h-9 pl-9 text-xs"
               placeholder="Search jobs…"
             />
-            <svg className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden>
+            <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
               <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8" />
               <path d="M14 14l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
@@ -74,21 +103,26 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-3">
             <Link
               href={adminRoutes.submissions}
-              className="grid h-9 w-9 place-items-center rounded-full border border-line text-muted hover:text-ink"
+              className="relative grid h-8 w-8 place-items-center rounded-full border border-line text-muted hover:text-ink"
               aria-label="Submissions"
               title="Submissions"
             >
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
                 <path d="M3 5h14v10H3zM3 6l7 5 7-5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
               </svg>
+              {needsScreening ? (
+                <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-coral px-1 text-[10px] font-bold text-white">
+                  {needsScreening}
+                </span>
+              ) : null}
             </Link>
             <div className="flex items-center gap-2 border-l border-line pl-3">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-sm font-bold text-white">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-bold text-white">
                 {initial}
               </span>
               <div className="hidden leading-tight md:block">
-                <p className="text-sm font-semibold text-ink">Admin</p>
-                <p className="max-w-[160px] truncate text-xs text-muted">{user?.email}</p>
+                <p className="text-xs font-semibold text-ink">Admin</p>
+                <p className="max-w-40 truncate text-[11px] text-muted">{user?.email}</p>
               </div>
             </div>
           </div>
@@ -97,30 +131,44 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex">
         {/* sidebar */}
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-line px-3 py-5 md:flex">
-          <div className="flex-1 space-y-6">
+        <aside className="hidden w-56 shrink-0 flex-col border-r border-line px-3 py-4 md:flex">
+          <div className="flex-1 space-y-5">
             {groups.map((group) => (
               <div key={group.label}>
-                <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted">
+                <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">
                   {group.label}
                 </p>
-                <nav className="space-y-1">
-                  {group.items.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                        isActive(item.href)
-                          ? "bg-primary-soft text-primary"
-                          : "text-muted hover:bg-black/[0.03] hover:text-ink"
-                      }`}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                        <path d={item.icon} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      {item.label}
-                    </Link>
-                  ))}
+                <nav className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const badge = badgeFor(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                          isActive(item.href)
+                            ? "bg-primary-soft text-primary"
+                            : "text-muted hover:bg-black/3 hover:text-ink"
+                        }`}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
+                          <path d={item.icon} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        {item.label}
+                        {badge && (
+                          <span
+                            className={`ml-auto rounded-pill px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                              item.href === adminRoutes.submissions
+                                ? "bg-coral-soft text-coral"
+                                : "bg-primary-soft text-primary"
+                            }`}
+                          >
+                            {badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </nav>
               </div>
             ))}
@@ -129,9 +177,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={signOut}
-            className="mt-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-black/[0.03] hover:text-ink"
+            className="mt-3 flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted hover:bg-black/3 hover:text-ink"
           >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
               <path d="M8 4H4v12h4M13 13l3-3-3-3M16 10H8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Sign out
@@ -146,19 +194,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium ${
+                className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium ${
                   isActive(item.href) ? "bg-primary-soft text-primary" : "text-muted"
                 }`}
               >
                 {item.label}
               </Link>
             ))}
-            <button onClick={signOut} className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-muted">
+            <button onClick={signOut} className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-muted">
               Sign out
             </button>
           </div>
 
-          <main className="p-6 lg:p-10">{children}</main>
+          <main className="p-5 lg:p-8">{children}</main>
         </div>
       </div>
     </div>

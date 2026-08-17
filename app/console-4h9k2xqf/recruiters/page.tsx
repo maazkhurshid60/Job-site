@@ -52,20 +52,20 @@ export default function AdminRecruitersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow uppercase">People</p>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">
+          <h1 className="mt-1.5 text-xl font-extrabold tracking-tight text-ink">
             Recruiters
           </h1>
-          <p className="mt-1 text-sm text-muted">
+          <p className="mt-1 text-xs text-muted">
             Everyone who has signed up to refer candidates. {users.length} total.
           </p>
         </div>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="input h-10 w-full max-w-xs"
+          className="input h-9 w-full max-w-xs text-xs"
           placeholder="Search name, company, location…"
         />
       </div>

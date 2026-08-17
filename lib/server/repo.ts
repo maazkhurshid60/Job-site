@@ -468,6 +468,7 @@ type UserRow = {
   instagram: string;
   bio: string | null;
   photo_url: string;
+  metro_team_member: number;
   created_at: string | null;
 };
 
@@ -487,13 +488,14 @@ function toUserProfile(r: UserRow): UserProfile {
     instagram: r.instagram,
     bio: r.bio ?? "",
     photoURL: r.photo_url,
+    metroTeamMember: Boolean(r.metro_team_member),
     createdAt: r.created_at,
   };
 }
 
 const USER_COLUMNS = `
   uid, name, email, phone, company, headline, location, linkedin, website,
-  twitter, facebook, instagram, bio, photo_url, created_at`;
+  twitter, facebook, instagram, bio, photo_url, metro_team_member, created_at`;
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const row = await queryOne<UserRow>(
@@ -582,6 +584,26 @@ export async function updateUserProfile(
       input.bio, input.photoURL, uid,
     ],
   );
+}
+
+/** Admin action: put a recruiter on, or take them off, the public Metro
+    Associates team roster. */
+export async function setMetroTeamMember(uid: string, value: boolean): Promise<boolean> {
+  const result = await execute(
+    "UPDATE users SET metro_team_member = ? WHERE uid = ?",
+    [value, uid],
+  );
+  return result.affectedRows > 0;
+}
+
+/** Public: recruiters an admin has approved to appear on Metro Associates'
+    "Meet Our Team" page. Alphabetical — there is no other natural order for a
+    public roster, and it keeps the listing stable as people are added. */
+export async function listMetroTeamMembers(): Promise<UserProfile[]> {
+  const rows = await query<UserRow>(
+    `SELECT ${USER_COLUMNS} FROM users WHERE metro_team_member = TRUE ORDER BY name ASC`,
+  );
+  return rows.map(toUserProfile);
 }
 
 /* -------------------------------------------------------------- messages */

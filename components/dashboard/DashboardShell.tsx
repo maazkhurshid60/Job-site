@@ -8,20 +8,48 @@ import { Logo } from "@/components/Logo";
 import { listOpenJobs } from "@/lib/jobs";
 import { profileCompletion } from "@/lib/profileCompletion";
 
-const nav = [
-  { label: "Overview", href: "/dashboard", icon: "M4 9l6-5 6 5v7H4z" },
-  { label: "Browse jobs", href: "/jobs", icon: "M3 5h14M3 10h14M3 15h9" },
+const topNav = { label: "Overview", href: "/dashboard", icon: "M4 9l6-5 6 5v7H4z" };
+
+const navGroups = [
   {
-    label: "My submissions",
-    href: "/dashboard/submissions",
-    icon: "M6 3h6l4 4v10H6zM12 3v4h4",
+    label: "Recruiting",
+    items: [
+      { label: "Browse jobs", href: "/dashboard/jobs", icon: "M3 5h14M3 10h14M3 15h9" },
+      {
+        label: "Candidates",
+        href: "/dashboard/submissions",
+        icon: "M6 3h6l4 4v10H6zM12 3v4h4",
+      },
+      {
+        label: "Career site",
+        href: "/dashboard/career-site",
+        icon: "M10 2a8 8 0 100 16 8 8 0 000-16zM2 10h16M10 2c2 2.2 3 5 3 8s-1 5.8-3 8c-2-2.2-3-5-3-8s1-5.8 3-8z",
+      },
+    ],
   },
   {
-    label: "My profile",
-    href: "/dashboard/profile",
-    icon: "M10 10a3 3 0 100-6 3 3 0 000 6zM4 17a6 6 0 0112 0z",
+    label: "Account",
+    items: [
+      {
+        label: "Reports",
+        href: "/dashboard/reports",
+        icon: "M4 15V9M10 15V5M16 15v-3",
+      },
+      {
+        label: "My profile",
+        href: "/dashboard/profile",
+        icon: "M10 10a3 3 0 100-6 3 3 0 000 6zM4 17a6 6 0 0112 0z",
+      },
+      {
+        label: "Settings",
+        href: "/dashboard/settings",
+        icon: "M10 13a3 3 0 100-6 3 3 0 000 6zM10 2v2M10 16v2M4.9 4.9l1.4 1.4M13.7 13.7l1.4 1.4M2 10h2M16 10h2M4.9 15.1l1.4-1.4M13.7 6.3l1.4-1.4",
+      },
+    ],
   },
 ];
+
+const nav = navGroups.flatMap((g) => g.items);
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -46,7 +74,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const completion = profileCompletion(profile);
 
   function badgeFor(href: string): string | null {
-    if (href === "/jobs") return openJobs === null ? null : String(openJobs);
+    if (href === "/dashboard/jobs") return openJobs === null ? null : String(openJobs);
     if (href === "/dashboard/profile" && !completion.isComplete)
       return `${completion.percent}%`;
     return null;
@@ -62,60 +90,71 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     router.replace("/");
   }
 
+  const initial = (profile?.name || user?.email || "R").charAt(0).toUpperCase();
+  const allNavItems = [topNav, ...nav];
+
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-cream/40">
       {/* sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-white px-4 py-6 md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col bg-blue-brand-dark px-4 py-6 md:flex">
         <div className="px-2">
-          <Logo />
+          <Logo variant="onDark" />
         </div>
+
         <nav className="mt-8 space-y-1">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive(item.href)
-                  ? "bg-primary-soft text-primary"
-                  : "text-muted hover:bg-black/[0.03] hover:text-ink"
-              }`}
-            >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                <path
-                  d={item.icon}
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {item.label}
-              {badgeFor(item.href) && (
-                <span
-                  className={`ml-auto rounded-pill px-2 py-0.5 text-xs font-bold tabular-nums ${
-                    item.href === "/dashboard/profile"
-                      ? "bg-coral-soft text-coral"
-                      : "bg-primary-soft text-primary"
-                  }`}
-                >
-                  {badgeFor(item.href)}
-                </span>
-              )}
-            </Link>
-          ))}
+          <SidebarLink item={topNav} active={isActive(topNav.href)} badge={badgeFor(topNav.href)} />
         </nav>
 
-        <div className="mt-auto border-t border-line pt-4">
-          <p className="truncate px-3 text-xs text-muted">{user?.email}</p>
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-2 mt-6 px-3 text-[10px] font-bold uppercase tracking-wider text-white/40">
+              {group.label}
+            </p>
+            <nav className="space-y-1">
+              {group.items.map((item) => (
+                <SidebarLink key={item.href} item={item} active={isActive(item.href)} badge={badgeFor(item.href)} />
+              ))}
+            </nav>
+          </div>
+        ))}
+
+        <div className="mt-6 rounded-2xl bg-white/6 p-3.5">
+          <p className="text-xs font-bold text-white">Need help?</p>
+          <p className="mt-1 text-[11px] leading-5 text-white/60">
+            Questions about a referral or your fee? We&apos;re here.
+          </p>
+          <Link
+            href="/contact"
+            className="mt-2.5 block rounded-pill bg-lime px-3 py-1.5 text-center text-[11px] font-bold text-blue-brand-dark hover:bg-white"
+          >
+            Contact us
+          </Link>
+        </div>
+
+        <div className="mt-auto flex items-center gap-2 border-t border-white/10 pt-4">
+          {profile?.photoURL ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.photoURL}
+              alt=""
+              className="h-8 w-8 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-lime text-xs font-bold text-blue-brand-dark">
+              {initial}
+            </span>
+          )}
+          <p className="min-w-0 flex-1 truncate text-[11px] text-white/60">{user?.email}</p>
           <button
             type="button"
             onClick={signOut}
-            className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-black/[0.03] hover:text-ink"
+            aria-label="Sign out"
+            title="Sign out"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
           >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
               <path d="M8 4H4v12h4M13 13l3-3-3-3M16 10H8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Sign out
           </button>
         </div>
       </aside>
@@ -128,18 +167,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={signOut}
-            className="text-sm font-semibold text-muted"
+            className="text-xs font-semibold text-muted"
           >
             Sign out
           </button>
         </header>
         {/* mobile nav */}
-        <div className="flex gap-1 overflow-x-auto border-b border-line px-4 py-2 md:hidden">
-          {nav.map((item) => (
+        <div className="flex gap-1 overflow-x-auto border-b border-line bg-white px-4 py-2 md:hidden">
+          {allNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
                 isActive(item.href)
                   ? "bg-primary-soft text-primary"
                   : "text-muted"
@@ -161,8 +200,89 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           ))}
         </div>
 
+        {/* desktop search bar */}
+        <header className="hidden h-16 shrink-0 items-center gap-4 border-b border-line bg-white px-6 md:flex lg:px-10">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = new FormData(e.currentTarget).get("q");
+              router.push(`/dashboard/jobs${q ? `?q=${encodeURIComponent(String(q))}` : ""}`);
+            }}
+            className="relative max-w-sm flex-1"
+          >
+            <input
+              name="q"
+              className="input h-9 pl-9 text-xs"
+              placeholder="Search open jobs…"
+            />
+            <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M14 14l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </form>
+          <Link
+            href="/dashboard/profile"
+            className="ml-auto flex items-center gap-2 rounded-full hover:opacity-80"
+            title="My profile"
+          >
+            {profile?.photoURL ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.photoURL}
+                alt=""
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary">
+                {initial}
+              </span>
+            )}
+          </Link>
+        </header>
+
         <main className="flex-1 p-6 lg:p-10">{children}</main>
       </div>
     </div>
+  );
+}
+
+function SidebarLink({
+  item,
+  active,
+  badge,
+}: {
+  item: { label: string; href: string; icon: string };
+  active: boolean;
+  badge: string | null;
+}) {
+  return (
+    <Link
+      href={item.href}
+      className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
+        active
+          ? "bg-white text-blue-brand-dark"
+          : "text-white/70 hover:bg-white/8 hover:text-white"
+      }`}
+    >
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
+        <path
+          d={item.icon}
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {item.label}
+      {badge && (
+        <span
+          className={`ml-auto rounded-pill px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+            active ? "bg-blue-brand-soft text-primary" : "bg-lime text-blue-brand-dark"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
+    </Link>
   );
 }

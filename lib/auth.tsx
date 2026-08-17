@@ -12,6 +12,7 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -46,6 +47,8 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, data: SignupData) => Promise<void>;
   logout: () => Promise<void>;
+  /** Sends a password-reset link to the given email, if an account exists. */
+  resetPassword: (email: string) => Promise<void>;
   /** Re-sends the verification email to the signed-in user. */
   resendVerificationEmail: () => Promise<void>;
   /** Reloads the signed-in user from Firebase and returns the fresh
@@ -136,6 +139,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     logout: async () => {
       await signOut(auth);
+    },
+    resetPassword: async (email) => {
+      await sendPasswordResetEmail(auth, email);
     },
     resendVerificationEmail: async () => {
       if (!auth.currentUser) throw new Error("Not signed in.");
