@@ -39,7 +39,10 @@ type SubmitOutcome = { name: string; ok: boolean; error?: string; id?: string };
 
 export function SubmitCandidateForm({ job }: { job: Job }) {
   const router = useRouter();
-  const { user, profile, loading, isAdmin } = useAuth();
+  const {
+    user, profile, loading, isAdmin,
+    emailVerified, resendVerificationEmail, checkEmailVerified,
+  } = useAuth();
 
   const [drafts, setDrafts] = useState<CandidateDraft[]>([emptyDraft()]);
   const [hp, setHp] = useState(""); // honeypot — real users leave this empty
@@ -47,6 +50,10 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
   const [submitting, setSubmitting] = useState(false);
   const [outcomes, setOutcomes] = useState<SubmitOutcome[] | null>(null);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [checkingVerified, setCheckingVerified] = useState(false);
+  const [stillUnverified, setStillUnverified] = useState(false);
 
   /* This recruiter's own prior submissions for THIS job — so re-visiting a
      role they've already referred candidates for shows that, instead of
@@ -215,6 +222,75 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
             Create an account
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  /* Signed in but hasn't clicked the link in their verification email.
+     Presentation only, same as the gates above — POST /api/submissions
+     enforces this server-side via requireVerifiedUid(). */
+  if (!emailVerified) {
+    async function handleResend() {
+      setResendState("sending");
+      try {
+        await resendVerificationEmail();
+        setResendState("sent");
+      } catch {
+        setResendState("error");
+      }
+    }
+    async function handleRecheck() {
+      setCheckingVerified(true);
+      setStillUnverified(false);
+      try {
+        const verified = await checkEmailVerified();
+        if (!verified) setStillUnverified(true);
+      } finally {
+        setCheckingVerified(false);
+      }
+    }
+    return (
+      <div className="rounded-2xl border border-line bg-white p-8 text-center">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary-soft text-primary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+        </div>
+        <h3 className="mt-4 text-lg font-bold text-ink">Verify your email to submit</h3>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
+          We sent a verification link to{" "}
+          <span className="font-medium text-ink">{user.email}</span>. Click
+          it, then continue here.
+        </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            onClick={handleRecheck}
+            disabled={checkingVerified}
+            className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-60"
+          >
+            {checkingVerified ? "Checking…" : "I've verified — continue"}
+          </button>
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendState === "sending"}
+            className="rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-60"
+          >
+            {resendState === "sending" ? "Sending…" : "Resend email"}
+          </button>
+        </div>
+        {stillUnverified && (
+          <p className="mx-auto mt-3 max-w-sm rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">
+            Still not verified. Check your inbox (and spam folder) for the link.
+          </p>
+        )}
+        {resendState === "sent" && (
+          <p className="mx-auto mt-3 max-w-sm rounded-lg bg-sage-soft px-3 py-2 text-sm text-ink">
+            Verification email sent — check your inbox.
+          </p>
+        )}
       </div>
     );
   }

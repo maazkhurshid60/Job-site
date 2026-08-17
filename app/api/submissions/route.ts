@@ -5,7 +5,7 @@ import {
   createSubmission, getOpenJob, listSubmissionsByRecruiter, getUserProfile,
   cvFileIsAvailable,
 } from "@/lib/server/repo";
-import { requireUid, isAdmin, AuthError } from "@/lib/server/auth";
+import { requireUid, requireVerifiedUid, isAdmin, AuthError } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export function GET(req: Request) {
    a submission claiming a $50,000 commission. */
 export function POST(req: Request) {
   return handle(async () => {
-    const uid = await requireUid(req);
+    const uid = await requireVerifiedUid(req);
     if (await isAdmin(uid)) {
       throw new AuthError("Admin accounts can't submit candidates.", 403);
     }

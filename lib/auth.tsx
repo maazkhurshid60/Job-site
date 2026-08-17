@@ -11,6 +11,7 @@ import {
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -36,10 +37,20 @@ type AuthContextValue = {
      database as "you have no account" bounces a signed-in admin out of the
      console and makes them log in again for no reason. */
   profileError: boolean;
+  /* Firebase's own record, mirrored into state (not just read off `user`) so
+     that re-checking it after the visitor clicks the email link can trigger a
+     re-render — reloading a Firebase User mutates the same object in place,
+     which React's Object.is check would otherwise treat as no change. */
+  emailVerified: boolean;
   refreshProfile: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, data: SignupData) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-sends the verification email to the signed-in user. */
+  resendVerificationEmail: () => Promise<void>;
+  /** Reloads the signed-in user from Firebase and returns the fresh
+   *  emailVerified value — call after they say they've clicked the link. */
+  checkEmailVerified: () => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -51,10 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileLoading, setProfileLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [profileError, setProfileError] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
+      setEmailVerified(u?.emailVerified ?? false);
       setLoading(false);
     });
   }, []);
@@ -99,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profileLoading,
     isAdmin,
     profileError,
+    emailVerified,
     refreshProfile: () => loadProfile(user),
     login: async (email, password) => {
       await signInWithEmailAndPassword(auth, email, password);
@@ -113,10 +127,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await createUserProfile(cred.user.uid, { name: data.name, email }).catch(
         () => {},
       );
+      /* Best-effort: a bounced/rate-limited verification email shouldn't block
+         account creation. The dashboard gate's "Resend" button covers a real
+         send failure, and DashboardGate.tsx blocks real use until this lands
+         and is clicked either way. */
+      await sendEmailVerification(cred.user).catch(() => {});
       await loadProfile(cred.user);
     },
     logout: async () => {
       await signOut(auth);
+    },
+    resendVerificationEmail: async () => {
+      if (!auth.currentUser) throw new Error("Not signed in.");
+      await sendEmailVerification(auth.currentUser);
+    },
+    checkEmailVerified: async () => {
+      if (!auth.currentUser) return false;
+      await auth.currentUser.reload();
+      const verified = auth.currentUser.emailVerified;
+      setEmailVerified(verified);
+      return verified;
     },
   };
 

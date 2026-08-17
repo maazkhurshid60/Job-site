@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
@@ -13,8 +13,10 @@ export default function DashboardGate({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, loading, profile, profileLoading, profileError, refreshProfile, logout } =
-    useAuth();
+  const {
+    user, loading, profile, profileLoading, profileError, refreshProfile,
+    logout, emailVerified, resendVerificationEmail, checkEmailVerified,
+  } = useAuth();
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -31,6 +33,20 @@ export default function DashboardGate({
   const switchAccount = () => goSignedOut("/login");
 
   if (loading || !user || profileLoading) return <PageLoader />;
+
+  /* Signed in, but hasn't clicked the link in their verification email yet.
+     Enforced here for the dashboard UI; POST /api/submissions enforces the
+     same rule server-side, since a client-only gate is just presentation. */
+  if (!emailVerified) {
+    return (
+      <VerifyEmailScreen
+        email={user.email}
+        onResend={resendVerificationEmail}
+        onRecheck={checkEmailVerified}
+        onSwitchAccount={switchAccount}
+      />
+    );
+  }
 
   /* The profile load failed rather than came back empty. Say so, and offer a
      retry — telling someone their account doesn't exist because the server
@@ -113,4 +129,103 @@ export default function DashboardGate({
   }
 
   return <DashboardShell>{children}</DashboardShell>;
+}
+
+function VerifyEmailScreen({
+  email,
+  onResend,
+  onRecheck,
+  onSwitchAccount,
+}: {
+  email: string | null;
+  onResend: () => Promise<void>;
+  onRecheck: () => Promise<boolean>;
+  onSwitchAccount: () => void;
+}) {
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [checking, setChecking] = useState(false);
+  const [notYet, setNotYet] = useState(false);
+
+  async function handleResend() {
+    setResendState("sending");
+    try {
+      await onResend();
+      setResendState("sent");
+    } catch {
+      setResendState("error");
+    }
+  }
+
+  async function handleRecheck() {
+    setChecking(true);
+    setNotYet(false);
+    try {
+      const verified = await onRecheck();
+      if (!verified) setNotYet(true);
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="grid min-h-screen place-items-center bg-white px-6">
+      <div className="w-full max-w-sm rounded-2xl border border-line bg-white p-8 text-center">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary-soft text-primary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+        </div>
+        <h1 className="mt-4 font-bold text-ink">Verify your email</h1>
+        <p className="mt-1 text-sm text-muted">
+          We sent a verification link to{" "}
+          <span className="font-semibold text-ink">{email ?? "your email"}</span>.
+          Click it, then come back here and continue.
+        </p>
+
+        <div className="mt-5 space-y-2">
+          <button
+            type="button"
+            onClick={handleRecheck}
+            disabled={checking}
+            className="block w-full rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-60"
+          >
+            {checking ? "Checking…" : "I've verified — continue"}
+          </button>
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendState === "sending"}
+            className="block w-full rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-60"
+          >
+            {resendState === "sending" ? "Sending…" : "Resend verification email"}
+          </button>
+        </div>
+
+        {notYet && (
+          <p className="mt-3 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">
+            Still not verified. Check your inbox (and spam folder) for the link.
+          </p>
+        )}
+        {resendState === "sent" && (
+          <p className="mt-3 rounded-lg bg-sage-soft px-3 py-2 text-sm text-ink">
+            Verification email sent — check your inbox.
+          </p>
+        )}
+        {resendState === "error" && (
+          <p className="mt-3 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">
+            Couldn&apos;t send that right now. Try again shortly.
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={onSwitchAccount}
+          className="mt-4 block w-full text-sm font-semibold text-muted hover:text-ink"
+        >
+          Sign in with a different account
+        </button>
+      </div>
+    </div>
+  );
 }

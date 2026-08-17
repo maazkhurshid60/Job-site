@@ -45,8 +45,14 @@ function bearerToken(req: Request): string | null {
 /* Who the caller is, straight from the verified token. `email` and `name` are
    Firebase Auth's own record of the account — they are signed by Google, so
    unlike anything in a request body they can be trusted to create a row with.
-   `name` is empty when the account has no displayName. */
-export type Identity = { uid: string; email: string; name: string };
+   `name` is empty when the account has no displayName. `emailVerified` is
+   Firebase's own `email_verified` claim, present on every ID token. */
+export type Identity = {
+  uid: string;
+  email: string;
+  name: string;
+  emailVerified: boolean;
+};
 
 /**
  * Verify the caller's ID token and return their identity.
@@ -78,6 +84,7 @@ export async function getIdentity(req: Request): Promise<Identity | null> {
       uid,
       email: typeof payload.email === "string" ? payload.email : "",
       name: typeof payload.name === "string" ? payload.name : "",
+      emailVerified: payload.email_verified === true,
     };
   } catch (err) {
     if (err instanceof AuthError) throw err;
@@ -100,6 +107,20 @@ export async function requireIdentity(req: Request): Promise<Identity> {
   const identity = await getIdentity(req);
   if (!identity) throw new AuthError("Sign in required.", 401);
   return identity;
+}
+
+/* Require a signed-in user with a verified email. This is the actual
+   enforcement point for "recruiters must verify their email" — the dashboard
+   UI gate is only presentation, and a request straight to a protected
+   endpoint has to be refused here or the rule doesn't exist. Throws 403
+   (not 401): the caller IS authenticated, they just haven't cleared this
+   extra bar yet, which is a different condition than not being signed in. */
+export async function requireVerifiedUid(req: Request): Promise<string> {
+  const identity = await requireIdentity(req);
+  if (!identity.emailVerified) {
+    throw new AuthError("Please verify your email before continuing.", 403);
+  }
+  return identity.uid;
 }
 
 /** True when the UID is in the admins table — the old isAdmin() rule. */
