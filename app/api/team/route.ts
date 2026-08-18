@@ -51,9 +51,13 @@ export function GET(req: Request) {
       headers: {
         "Access-Control-Allow-Origin": "*",
         // Public roster, changes rarely — a short shared cache saves a
-        // round trip to MySQL on every Metro page view without serving
-        // stale data for long after an admin change.
-        "Cache-Control": "public, max-age=60, s-maxage=300",
+        // round trip to MySQL on every Metro page view. Kept in step with
+        // the revalidate window on Metro's own fetch (jobfolderTeam.ts) and
+        // its page-level `revalidate`, or the two caches stack: a longer
+        // s-maxage here was observed leaking into Next's page-level
+        // stale-while-revalidate window on the consuming site, holding a
+        // toggled-off recruiter visible for minutes after the change.
+        "Cache-Control": "public, max-age=30, s-maxage=30",
       },
     });
   });
