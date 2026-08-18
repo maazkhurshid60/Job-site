@@ -50,6 +50,12 @@ CREATE TABLE users (
   -- signs up self-serve, so this is what turns "has an account" into "admin
   -- has vetted and wants them publicly representing Metro".
   metro_team_member BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Admin-set: whether this recruiter has been vetted. Off by default — a
+  -- fresh signup can browse and see everything, but POST /api/submissions
+  -- refuses to create a submission for an unverified recruiter, so a bad
+  -- actor can sign up but not actually refer (or CV-spam) candidates until
+  -- an admin has looked at the account.
+  verified    BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
                            ON UPDATE CURRENT_TIMESTAMP(3),
@@ -60,10 +66,44 @@ CREATE TABLE users (
 -- Admin allow-list. Membership alone grants console access, so writes to this
 -- table must only ever happen from a trusted server context.
 CREATE TABLE admins (
-  uid        VARCHAR(128) NOT NULL,
-  note       VARCHAR(255) NOT NULL DEFAULT '',
-  created_at DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  uid            VARCHAR(128) NOT NULL,
+  note           VARCHAR(255) NOT NULL DEFAULT '',
+  -- Stamped from GET /api/me on every authenticated request from this admin —
+  -- not a login event, just "was this account used recently". Lets the
+  -- Admins page distinguish access that's actually in use from access nobody
+  -- has touched in months.
+  last_active_at DATETIME(3)  NULL,
+  created_at     DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Admin access granted to an email that hasn't signed up yet. Consumed the
+-- moment a matching account authenticates (see claimAdminInvite, called from
+-- GET /api/me) — turned into a real `admins` row and deleted from here.
+CREATE TABLE admin_invites (
+  email           VARCHAR(320) NOT NULL,
+  invited_by_name  VARCHAR(255) NOT NULL DEFAULT '',
+  invited_by_email VARCHAR(320) NOT NULL DEFAULT '',
+  created_at      DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- History of every grant/revoke/invite against the admin allow-list. Actor
+-- and target are snapshotted (name/email as text, not a FK) because either
+-- account can later be removed and the log entry must still read sensibly —
+-- same reasoning as submissions.recruiter_name.
+CREATE TABLE admin_audit_log (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  action       ENUM('grant','revoke','invite','invite_claimed','invite_cancelled') NOT NULL,
+  actor_uid    VARCHAR(128) NULL,
+  actor_name   VARCHAR(255) NOT NULL DEFAULT '',
+  actor_email  VARCHAR(320) NOT NULL DEFAULT '',
+  target_uid   VARCHAR(128) NULL,
+  target_name  VARCHAR(255) NOT NULL DEFAULT '',
+  target_email VARCHAR(320) NOT NULL DEFAULT '',
+  created_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_admin_audit_created (created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ---------------------------------------------------------------- files

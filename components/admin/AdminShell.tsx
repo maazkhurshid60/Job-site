@@ -8,6 +8,7 @@ import { adminRoutes } from "@/lib/routes";
 import { Logo } from "@/components/Logo";
 import { listJobs } from "@/lib/jobs";
 import { listAllSubmissions } from "@/lib/submissions";
+import { listAllUsers } from "@/lib/users";
 
 const groups = [
   {
@@ -24,6 +25,13 @@ const groups = [
       { label: "Board filters", href: adminRoutes.categories, icon: "M3 5h6v6H3zM11 5h6v6h-6zM3 13h6v4H3zM11 13h6v4h-6z" },
     ],
   },
+  {
+    label: "Access",
+    items: [
+      { label: "Admins", href: adminRoutes.admins, icon: "M10 10a3 3 0 100-6 3 3 0 000 6zM4 17a6 6 0 0112 0zM16 8l1.5 1.5L20 7" },
+      { label: "Audit log", href: adminRoutes.auditLog, icon: "M5 3h7l3 3v11H5zM12 3v3h3M7 10h6M7 13h6M7 16h4" },
+    ],
+  },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -37,6 +45,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
      to do when the count just hasn't arrived yet. */
   const [openJobs, setOpenJobs] = useState<number | null>(null);
   const [needsScreening, setNeedsScreening] = useState<number | null>(null);
+  const [pendingVerification, setPendingVerification] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -48,6 +57,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         subs.filter((s) => s.status === "submitted" || s.status === "screening").length,
       ))
       .catch(() => {});
+    listAllUsers()
+      .then((users) => active && setPendingVerification(users.filter((u) => !u.verified).length))
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -56,6 +68,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   function badgeFor(href: string): string | null {
     if (href === adminRoutes.jobs) return openJobs === null ? null : String(openJobs);
     if (href === adminRoutes.submissions) return needsScreening ? String(needsScreening) : null;
+    if (href === adminRoutes.recruiters) return pendingVerification ? String(pendingVerification) : null;
     return null;
   }
 
@@ -80,11 +93,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const initial = (user?.email ?? "A").charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="flex min-h-screen flex-col bg-white">
       {/* top header */}
-      <header className="sticky top-0 z-40 flex h-14 items-center border-b border-line bg-white">
-        <div className="flex h-full w-56 shrink-0 items-center border-r border-line px-4">
-          <Logo size="h-9" />
+      <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center border-b border-white/10 bg-blue-brand-dark">
+        <div className="flex h-full w-56 shrink-0 items-center border-r border-white/10 px-4">
+          <Logo variant="onDark" size="h-9" />
         </div>
         <div className="flex flex-1 items-center gap-4 px-4 lg:px-6">
           <form onSubmit={onSearch} className="relative hidden max-w-md flex-1 sm:block">
@@ -103,7 +116,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-3">
             <Link
               href={adminRoutes.submissions}
-              className="relative grid h-8 w-8 place-items-center rounded-full border border-line text-muted hover:text-ink"
+              className="relative grid h-8 w-8 place-items-center rounded-full border border-white/20 text-white/70 hover:border-white/40 hover:text-white"
               aria-label="Submissions"
               title="Submissions"
             >
@@ -116,39 +129,40 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </span>
               ) : null}
             </Link>
-            <div className="flex items-center gap-2 border-l border-line pl-3">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-bold text-white">
+            <div className="flex items-center gap-2 border-l border-white/15 pl-3">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-lime text-xs font-bold text-blue-brand-dark">
                 {initial}
               </span>
               <div className="hidden leading-tight md:block">
-                <p className="text-xs font-semibold text-ink">Admin</p>
-                <p className="max-w-40 truncate text-[11px] text-muted">{user?.email}</p>
+                <p className="text-xs font-semibold text-white">Admin</p>
+                <p className="max-w-40 truncate text-[11px] text-white/60">{user?.email}</p>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex flex-1">
         {/* sidebar */}
-        <aside className="hidden w-56 shrink-0 flex-col border-r border-line px-3 py-4 md:flex">
+        <aside className="hidden w-56 shrink-0 flex-col bg-blue-brand-dark px-3 py-4 md:flex">
           <div className="flex-1 space-y-5">
             {groups.map((group) => (
               <div key={group.label}>
-                <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">
+                <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40">
                   {group.label}
                 </p>
                 <nav className="space-y-0.5">
                   {group.items.map((item) => {
                     const badge = badgeFor(item.href);
+                    const active = isActive(item.href);
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
                         className={`flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          isActive(item.href)
-                            ? "bg-primary-soft text-primary"
-                            : "text-muted hover:bg-black/3 hover:text-ink"
+                          active
+                            ? "bg-white text-blue-brand-dark"
+                            : "text-white/70 hover:bg-white/8 hover:text-white"
                         }`}
                       >
                         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -158,9 +172,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                         {badge && (
                           <span
                             className={`ml-auto rounded-pill px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
-                              item.href === adminRoutes.submissions
-                                ? "bg-coral-soft text-coral"
-                                : "bg-primary-soft text-primary"
+                              item.href === adminRoutes.submissions || item.href === adminRoutes.recruiters
+                                ? active ? "bg-coral-soft text-coral" : "bg-coral text-white"
+                                : active ? "bg-blue-brand-soft text-primary" : "bg-white/15 text-white"
                             }`}
                           >
                             {badge}
@@ -177,7 +191,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={signOut}
-            className="mt-3 flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted hover:bg-black/3 hover:text-ink"
+            className="mt-3 flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white/70 hover:bg-white/8 hover:text-white"
           >
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
               <path d="M8 4H4v12h4M13 13l3-3-3-3M16 10H8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

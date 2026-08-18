@@ -140,3 +140,13 @@ export async function requireAdmin(req: Request): Promise<string> {
   }
   return uid;
 }
+
+/** Same as requireAdmin, but returns the full identity — for routes that need
+    the caller's name/email to write an audit trail, not just their uid. */
+export async function requireAdminIdentity(req: Request): Promise<Identity> {
+  const identity = await requireIdentity(req);
+  if (!(await isAdmin(identity.uid))) {
+    throw new AuthError("Admin access required.", 403);
+  }
+  return identity;
+}

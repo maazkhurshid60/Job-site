@@ -25,9 +25,59 @@ export type UserProfile = {
   photoURL: string;
   /** Admin-set: shows this recruiter on Metro Associates' public team page. */
   metroTeamMember: boolean;
+  /** Admin-set: whether this recruiter has been vetted. An unverified
+      recruiter can browse and use the dashboard, but POST /api/submissions
+      refuses to create a submission on their behalf until this is true. */
+  verified: boolean;
   /** ISO-8601 string from MySQL, or null. */
   createdAt: string | null;
 };
+
+/** One row on the console's admin allow-list. name/email come from a matching
+    recruiter profile when one exists — an admin doesn't have to also be a
+    recruiter, so both can be empty. */
+export type AdminAccount = {
+  uid: string;
+  note: string;
+  name: string;
+  email: string;
+  createdAt: string | null;
+  /** Stamped whenever this admin loads the console — null if never. */
+  lastActiveAt: string | null;
+};
+
+/** Admin access granted to an email with no account yet. Turns into a real
+    AdminAccount automatically the moment that email signs in. */
+export type AdminInvite = {
+  email: string;
+  invitedByName: string;
+  invitedByEmail: string;
+  createdAt: string | null;
+};
+
+export type AdminAuditAction =
+  | "grant"
+  | "revoke"
+  | "invite"
+  | "invite_claimed"
+  | "invite_cancelled";
+
+/** One entry in the admin allow-list's history. */
+export type AdminAuditEntry = {
+  id: number;
+  action: AdminAuditAction;
+  actorName: string;
+  actorEmail: string;
+  targetName: string;
+  targetEmail: string;
+  createdAt: string | null;
+};
+
+/** What POST /api/admin/admins returns: either the account was granted
+    immediately (it already existed), or an invite is now pending. */
+export type AdminAccessGrant =
+  | { kind: "admin"; admin: AdminAccount }
+  | { kind: "invite"; invite: AdminInvite };
 
 /* The fields a recruiter can edit on their profile (everything except the
    identity/audit fields, which the server refuses to update). */
@@ -126,6 +176,19 @@ export async function setRecruiterMetroTeamMember(
   });
 }
 
+/** Admin action: vet a recruiter, or reverse that. Until this is true, they
+    can't submit a candidate — see POST /api/submissions. */
+export async function setRecruiterVerified(
+  uid: string,
+  verified: boolean,
+): Promise<void> {
+  await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}`, {
+    method: "PATCH",
+    body: { verified },
+    auth: true,
+  });
+}
+
 /** Bootstrap the first admin (used by the /setup page). */
 export async function bootstrapAdmin(): Promise<void> {
   await apiFetch("/api/admin/bootstrap", { method: "POST", auth: true });
@@ -137,4 +200,46 @@ export async function bootstrapAvailable(): Promise<boolean> {
     "/api/admin/bootstrap",
   );
   return available;
+}
+
+/** Admin action: the console's admin allow-list, plus any pending invites. */
+export function listAdminAccess(): Promise<{ admins: AdminAccount[]; invites: AdminInvite[] }> {
+  return apiFetch<{ admins: AdminAccount[]; invites: AdminInvite[] }>(
+    "/api/admin/admins",
+    { auth: true },
+  );
+}
+
+/** Admin action: grant admin access to whoever holds this email. If an
+    account with that email already exists, access is granted immediately.
+    Otherwise an invite is created — it auto-activates the moment that email
+    signs in. */
+export async function addAdmin(email: string): Promise<AdminAccessGrant> {
+  return apiFetch<AdminAccessGrant>("/api/admin/admins", {
+    method: "POST",
+    body: { email },
+    auth: true,
+  });
+}
+
+/** Admin action: revoke admin access. The server refuses to remove the last
+    remaining admin — see DELETE /api/admin/admins/[uid]. */
+export async function removeAdmin(uid: string): Promise<void> {
+  await apiFetch(`/api/admin/admins/${encodeURIComponent(uid)}`, {
+    method: "DELETE",
+    auth: true,
+  });
+}
+
+/** Admin action: cancel a pending invite before it's claimed. */
+export async function cancelAdminInvite(email: string): Promise<void> {
+  await apiFetch(`/api/admin/invites/${encodeURIComponent(email)}`, {
+    method: "DELETE",
+    auth: true,
+  });
+}
+
+/** Admin action: history of every grant/revoke/invite against the allow-list. */
+export function listAdminAuditLog(): Promise<AdminAuditEntry[]> {
+  return apiFetch<AdminAuditEntry[]>("/api/admin/audit-log", { auth: true });
 }

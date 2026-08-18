@@ -311,6 +311,29 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     );
   }
 
+  /* Signed in, email verified, has a profile — but an admin hasn't vetted the
+     account yet. Presentation only, same as every gate above: the real block
+     is profile.verified in POST /api/submissions. */
+  if (!profile?.verified) {
+    return (
+      <div className="rounded-2xl border border-line bg-white p-8 text-center">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary-soft text-primary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
+            <path d="M9 15.5l2 2 4-4" />
+          </svg>
+        </div>
+        <h3 className="mt-4 text-lg font-bold text-ink">Your account is pending verification</h3>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
+          Our team reviews every new recruiter before they can refer
+          candidates. Once you&apos;re verified, you&apos;ll be able to submit
+          for {job.title} and any other open role.
+        </p>
+      </div>
+    );
+  }
+
   if (outcomes) {
     const succeeded = outcomes.filter((o) => o.ok);
     const failed = outcomes.filter((o) => !o.ok);

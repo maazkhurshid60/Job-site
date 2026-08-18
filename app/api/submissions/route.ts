@@ -40,6 +40,22 @@ export function POST(req: Request) {
     if (await isAdmin(uid)) {
       throw new AuthError("Admin accounts can't submit candidates.", 403);
     }
+
+    /* An admin-vetted gate, distinct from requireVerifiedUid() above (that's
+       Firebase's own "clicked the email link" check). A profile that hasn't
+       been reviewed and approved from the console yet can't refer anyone —
+       this is what stops a signed-up-but-unvetted account from CV-spamming
+       every open role the moment it's created. A missing profile fails the
+       same way (falsy), which is the right default: nothing to vet yet. */
+    const profile = await getUserProfile(uid);
+    if (!profile?.verified) {
+      throw new AuthError(
+        "Your account is pending verification by our team. Check back soon, or contact us if it's been a while.",
+        403,
+      );
+    }
+    const recruiterName = profile.name || "Recruiter";
+
     const body = await jsonBody(req);
 
     const jobId = str(body.jobId, "jobId", { max: 64, required: true });
@@ -54,9 +70,6 @@ export function POST(req: Request) {
     if (!(await cvFileIsAvailable(cvFileId))) {
       throw new BadRequest("That CV upload is missing or already used.");
     }
-
-    const profile = await getUserProfile(uid);
-    const recruiterName = profile?.name || "Recruiter";
 
     const id = await createSubmission({
       jobId: job.id,

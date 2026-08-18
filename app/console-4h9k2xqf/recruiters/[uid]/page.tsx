@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { listAllUsers, setRecruiterMetroTeamMember, type UserProfile } from "@/lib/users";
+import {
+  listAllUsers, setRecruiterMetroTeamMember, setRecruiterVerified, type UserProfile,
+} from "@/lib/users";
 import {
   listAllSubmissions,
   setSubmissionStatus,
@@ -37,6 +39,7 @@ export default function RecruiterDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [togglingMetro, setTogglingMetro] = useState(false);
+  const [togglingVerified, setTogglingVerified] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,6 +105,26 @@ export default function RecruiterDetailPage() {
     }
   }
 
+  async function toggleVerified() {
+    if (!user) return;
+    const next = !user.verified;
+    if (!next && !confirm(
+      `Un-verify ${user.name || "this recruiter"}? They won't be able to submit new candidates until re-verified.`,
+    )) {
+      return;
+    }
+    setUser({ ...user, verified: next });
+    setTogglingVerified(true);
+    try {
+      await setRecruiterVerified(user.uid, next);
+    } catch {
+      setUser((u) => (u ? { ...u, verified: !next } : u));
+      alert("Could not update verification status.");
+    } finally {
+      setTogglingVerified(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">
@@ -153,27 +176,51 @@ export default function RecruiterDetailPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-ink">
-                  {user.name || "Unnamed recruiter"}
-                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-extrabold tracking-tight text-ink">
+                    {user.name || "Unnamed recruiter"}
+                  </h1>
+                  <span
+                    className={`inline-flex rounded-pill px-2 py-0.5 text-[11px] font-semibold ${
+                      user.verified ? "bg-sage-soft text-ink" : "bg-coral-soft text-coral"
+                    }`}
+                  >
+                    {user.verified ? "Verified" : "Pending verification"}
+                  </span>
+                </div>
                 <p className="mt-0.5 text-sm text-muted">
                   {user.headline || "Recruiter"}
                   {user.company ? ` · ${user.company}` : ""}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={toggleMetroTeam}
-                disabled={togglingMetro}
-                className={`shrink-0 rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
-                  user.metroTeamMember
-                    ? "bg-primary text-white hover:bg-primary-dark"
-                    : "border border-line text-muted hover:border-primary hover:text-primary"
-                }`}
-                title="Show or hide this recruiter on Metro Associates' public Meet Our Team page"
-              >
-                {user.metroTeamMember ? "✓ On Metro Associates team" : "Add to Metro Associates team"}
-              </button>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={toggleVerified}
+                  disabled={togglingVerified}
+                  className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                    user.verified
+                      ? "border border-line text-muted hover:border-coral hover:text-coral"
+                      : "bg-primary text-white hover:bg-primary-dark"
+                  }`}
+                  title="Vetting this recruiter lets them submit candidates"
+                >
+                  {user.verified ? "Un-verify" : "Verify recruiter"}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleMetroTeam}
+                  disabled={togglingMetro}
+                  className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                    user.metroTeamMember
+                      ? "bg-primary text-white hover:bg-primary-dark"
+                      : "border border-line text-muted hover:border-primary hover:text-primary"
+                  }`}
+                  title="Show or hide this recruiter on Metro Associates' public Meet Our Team page"
+                >
+                  {user.metroTeamMember ? "✓ On Metro Associates team" : "Add to Metro Associates team"}
+                </button>
+              </div>
             </div>
             <dl className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2">
               <Row label="Email" value={user.email} href={`mailto:${user.email}`} />

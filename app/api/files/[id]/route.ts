@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { handle, NotFound } from "@/lib/server/respond";
+import WordExtractor from "word-extractor";
+import { handle, BadRequest, NotFound } from "@/lib/server/respond";
 import { AuthError } from "@/lib/server/auth";
 import { queryOne } from "@/lib/db";
 import { verifyFileUrl, safeFilename } from "@/lib/server/files";
@@ -36,8 +37,9 @@ export function GET(
     );
     if (!row) throw new NotFound("File not found.");
 
+    const url = new URL(req.url);
+
     if (row.kind === "cv") {
-      const url = new URL(req.url);
       const valid = verifyFileUrl(
         id,
         url.searchParams.get("exp"),
@@ -46,6 +48,33 @@ export function GET(
       if (!valid) {
         throw new AuthError("This download link is invalid or has expired.", 403);
       }
+    }
+
+    /* `?extract=1` — plain-text extraction for a legacy .doc CV, which
+       otherwise has no in-browser preview: unlike .docx (a zip of XML,
+       convertible client-side by mammoth) or PDF (rendered by the browser
+       itself), pre-2007 .doc is an OLE compound-file binary format with no
+       browser-side parser. Extracting it here, in the same trust boundary
+       that already holds the raw bytes, keeps the CV from ever being handed
+       to a third-party viewer just to render it — same reasoning as why the
+       .docx conversion happens client-side rather than via Google/Office. */
+    if (row.kind === "cv" && url.searchParams.get("extract") === "1") {
+      if (row.content_type !== "application/msword") {
+        throw new BadRequest("Text extraction is only available for .doc files.");
+      }
+      let text: string;
+      try {
+        const document = await new WordExtractor().extract(row.data);
+        text = document.getBody();
+      } catch {
+        throw new BadRequest(
+          "Could not read this document. It may be corrupted or password-protected.",
+        );
+      }
+      return NextResponse.json(
+        { text },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
     }
 
     /* CVs download by default. `?inline=1` asks for in-browser preview, and is
@@ -62,7 +91,7 @@ export function GET(
        puts it in an opaque origin with scripts disabled. That answers the
        original objection to inline rendering: a PDF served this way cannot
        touch this origin's cookies or storage. */
-    const wantsInline = new URL(req.url).searchParams.get("inline") === "1";
+    const wantsInline = url.searchParams.get("inline") === "1";
     const isRealPdf =
       row.content_type === "application/pdf" &&
       row.data.subarray(0, 5).toString("latin1") === "%PDF-";

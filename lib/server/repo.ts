@@ -4,7 +4,9 @@ import { query, queryOne, execute } from "@/lib/db";
 import { signedFileUrl } from "./files";
 import type { Job, JobStatus, EmploymentType, FAQ } from "@/lib/jobs";
 import type { Submission, SubmissionStatus } from "@/lib/submissions";
-import type { UserProfile } from "@/lib/users";
+import type {
+  UserProfile, AdminAccount, AdminInvite, AdminAuditEntry, AdminAuditAction,
+} from "@/lib/users";
 
 /* Data access for every table. Routes call these; nothing else touches SQL.
 
@@ -469,6 +471,7 @@ type UserRow = {
   bio: string | null;
   photo_url: string;
   metro_team_member: number;
+  verified: number;
   created_at: string | null;
 };
 
@@ -489,13 +492,15 @@ function toUserProfile(r: UserRow): UserProfile {
     bio: r.bio ?? "",
     photoURL: r.photo_url,
     metroTeamMember: Boolean(r.metro_team_member),
+    verified: Boolean(r.verified),
     createdAt: r.created_at,
   };
 }
 
 const USER_COLUMNS = `
   uid, name, email, phone, company, headline, location, linkedin, website,
-  twitter, facebook, instagram, bio, photo_url, metro_team_member, created_at`;
+  twitter, facebook, instagram, bio, photo_url, metro_team_member, verified,
+  created_at`;
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const row = await queryOne<UserRow>(
@@ -510,6 +515,17 @@ export async function listUsers(): Promise<UserProfile[]> {
     `SELECT ${USER_COLUMNS} FROM users ORDER BY created_at DESC`,
   );
   return rows.map(toUserProfile);
+}
+
+/** Admin action: look up a recruiter by email, to grant them admin without
+    needing to know their raw Firebase UID. Case-insensitive — the column
+    collation (utf8mb4_0900_ai_ci) already does that at the SQL level. */
+export async function getUserByEmail(email: string): Promise<UserProfile | null> {
+  const row = await queryOne<UserRow>(
+    `SELECT ${USER_COLUMNS} FROM users WHERE email = ? LIMIT 1`,
+    [email],
+  );
+  return row ? toUserProfile(row) : null;
 }
 
 /** Signup. Idempotent so a retried request can't fail on a duplicate key. */
@@ -584,6 +600,17 @@ export async function updateUserProfile(
       input.bio, input.photoURL, uid,
     ],
   );
+}
+
+/** Admin action: mark a recruiter as vetted, or reverse that. An unverified
+    recruiter can browse and use everything except actually submitting a
+    candidate — see the check in POST /api/submissions. */
+export async function setRecruiterVerified(uid: string, value: boolean): Promise<boolean> {
+  const result = await execute(
+    "UPDATE users SET verified = ? WHERE uid = ?",
+    [value, uid],
+  );
+  return result.affectedRows > 0;
 }
 
 /** Admin action: put a recruiter on, or take them off, the public Metro
@@ -685,4 +712,169 @@ export async function createAdmin(uid: string, note = ""): Promise<void> {
        ON DUPLICATE KEY UPDATE note = VALUES(note)`,
     [uid, note],
   );
+}
+
+/** Every admin, oldest first — the order they were granted access, which for
+    a short allow-list like this one reads more naturally than newest-first. */
+export async function listAdmins(): Promise<AdminAccount[]> {
+  const rows = await query<{
+    uid: string;
+    note: string;
+    created_at: string | null;
+    last_active_at: string | null;
+    name: string | null;
+    email: string | null;
+  }>(
+    `SELECT a.uid, a.note, a.created_at, a.last_active_at, u.name, u.email
+       FROM admins a LEFT JOIN users u ON u.uid = a.uid
+      ORDER BY a.created_at ASC`,
+  );
+  return rows.map((r) => ({
+    uid: r.uid,
+    note: r.note,
+    createdAt: r.created_at,
+    lastActiveAt: r.last_active_at,
+    // LEFT JOIN: an admin isn't required to also be a recruiter with a
+    // profile row, so these fall back to empty rather than null.
+    name: r.name ?? "",
+    email: r.email ?? "",
+  }));
+}
+
+export async function removeAdmin(uid: string): Promise<boolean> {
+  const result = await execute("DELETE FROM admins WHERE uid = ?", [uid]);
+  return result.affectedRows > 0;
+}
+
+/** Stamped from GET /api/me on every request from a signed-in admin — not a
+    login event, just "this access is actually being used". Fire-and-forget
+    from the caller's point of view: a failed stamp should never fail the
+    request that triggered it. */
+export async function touchAdminActivity(uid: string): Promise<void> {
+  await execute(
+    "UPDATE admins SET last_active_at = CURRENT_TIMESTAMP(3) WHERE uid = ?",
+    [uid],
+  );
+}
+
+/* --------------------------------------------------------- admin invites */
+
+/** Admin access granted to an email with no account yet. Consumed by
+    claimAdminInvite the moment that email signs in. */
+export async function listAdminInvites(): Promise<AdminInvite[]> {
+  const rows = await query<{
+    email: string;
+    invited_by_name: string;
+    invited_by_email: string;
+    created_at: string | null;
+  }>(
+    `SELECT email, invited_by_name, invited_by_email, created_at
+       FROM admin_invites ORDER BY created_at ASC`,
+  );
+  return rows.map((r) => ({
+    email: r.email,
+    invitedByName: r.invited_by_name,
+    invitedByEmail: r.invited_by_email,
+    createdAt: r.created_at,
+  }));
+}
+
+export async function createAdminInvite(
+  email: string,
+  invitedByName: string,
+  invitedByEmail: string,
+): Promise<void> {
+  await execute(
+    `INSERT INTO admin_invites (email, invited_by_name, invited_by_email) VALUES (?,?,?)
+       ON DUPLICATE KEY UPDATE invited_by_name = VALUES(invited_by_name),
+                                invited_by_email = VALUES(invited_by_email)`,
+    [email, invitedByName, invitedByEmail],
+  );
+}
+
+export async function cancelAdminInvite(email: string): Promise<boolean> {
+  const result = await execute("DELETE FROM admin_invites WHERE email = ?", [email]);
+  return result.affectedRows > 0;
+}
+
+/** Called from GET /api/me for a signed-in, not-yet-admin account: if their
+    email matches a pending invite, grant admin now and consume the invite.
+    Returns whether it did. */
+export async function claimAdminInvite(
+  uid: string,
+  email: string,
+  name: string,
+): Promise<boolean> {
+  const invite = await queryOne<{
+    invited_by_name: string;
+    invited_by_email: string;
+  }>(
+    "SELECT invited_by_name, invited_by_email FROM admin_invites WHERE email = ? LIMIT 1",
+    [email],
+  );
+  if (!invite) return false;
+
+  await createAdmin(uid);
+  await execute("DELETE FROM admin_invites WHERE email = ?", [email]);
+  await logAdminAction({
+    action: "invite_claimed",
+    actorUid: null,
+    actorName: invite.invited_by_name,
+    actorEmail: invite.invited_by_email,
+    targetUid: uid,
+    targetName: name,
+    targetEmail: email,
+  });
+  return true;
+}
+
+/* ------------------------------------------------------- admin audit log */
+
+/** History of every grant/revoke/invite against the admin allow-list. Actor
+    and target are snapshotted as text, not joined live — either account can
+    later be removed and the entry must still read sensibly. */
+export async function logAdminAction(input: {
+  action: AdminAuditAction;
+  actorUid: string | null;
+  actorName: string;
+  actorEmail: string;
+  targetUid: string | null;
+  targetName: string;
+  targetEmail: string;
+}): Promise<void> {
+  await execute(
+    `INSERT INTO admin_audit_log
+       (action, actor_uid, actor_name, actor_email, target_uid, target_name, target_email)
+     VALUES (?,?,?,?,?,?,?)`,
+    [
+      input.action, input.actorUid, input.actorName, input.actorEmail,
+      input.targetUid, input.targetName, input.targetEmail,
+    ],
+  );
+}
+
+/** Most recent 200 entries — plenty for a console this size, and avoids an
+    unbounded scan as the log grows. */
+export async function listAdminAuditLog(): Promise<AdminAuditEntry[]> {
+  const rows = await query<{
+    id: number;
+    action: AdminAuditAction;
+    actor_name: string;
+    actor_email: string;
+    target_name: string;
+    target_email: string;
+    created_at: string | null;
+  }>(
+    `SELECT id, action, actor_name, actor_email, target_name, target_email, created_at
+       FROM admin_audit_log ORDER BY created_at DESC LIMIT 200`,
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    action: r.action,
+    actorName: r.actor_name,
+    actorEmail: r.actor_email,
+    targetName: r.target_name,
+    targetEmail: r.target_email,
+    createdAt: r.created_at,
+  }));
 }

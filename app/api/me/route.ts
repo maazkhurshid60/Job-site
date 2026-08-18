@@ -1,6 +1,7 @@
 import { handle, ok, jsonBody, str } from "@/lib/server/respond";
 import {
   getUserProfile, createUserProfile, ensureUserProfile, updateUserProfile,
+  claimAdminInvite, touchAdminActivity,
 } from "@/lib/server/repo";
 import { requireUid, requireIdentity, isAdmin } from "@/lib/server/auth";
 
@@ -24,10 +25,16 @@ function displayName(name: string, email: string): string {
 export function GET(req: Request) {
   return handle(async () => {
     const { uid, email, name } = await requireIdentity(req);
-    const [existing, admin] = await Promise.all([
+    const [existing, alreadyAdmin] = await Promise.all([
       getUserProfile(uid),
       isAdmin(uid),
     ]);
+
+    // A signed-in account that isn't yet an admin might be exactly who a
+    // pending invite was for — claim it now rather than making them wait for
+    // some other trigger. Cheap: one indexed lookup by email when it misses.
+    const admin = alreadyAdmin || (await claimAdminInvite(uid, email, displayName(name, email)));
+    if (admin) await touchAdminActivity(uid);
 
     const profile =
       existing ?? (admin ? null : await ensureUserProfile(uid, displayName(name, email), email));
