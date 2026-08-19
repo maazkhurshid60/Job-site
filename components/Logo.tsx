@@ -2,10 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 
 const VARIANTS = {
-  // Original lockup — dark wordmark, reads on the white/light backgrounds
-  // used everywhere except the site navbar (auth cards, footer, admin
-  // console, dashboard sidebar).
-  onLight: { src: "/jobfolder-logo.png", width: 839, height: 263 },
+  // Same mark as onDark — gold folder, navy wordmark — recolored for the
+  // white/light backgrounds used in auth cards, the mobile dashboard header,
+  // and the press kit download.
+  onLight: { src: "/jobfolder-logo.png", width: 815, height: 194 },
   // Companion mark drawn for dark backgrounds — gold folder, white wordmark,
   // its own tagline. Reads correctly on navy; it only looks broken previewed
   // against white, which is a checker backdrop artifact, not the asset.

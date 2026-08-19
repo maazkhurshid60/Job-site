@@ -3,7 +3,7 @@ import {
 } from "@/lib/server/respond";
 import {
   createSubmission, getOpenJob, listSubmissionsByRecruiter, getUserProfile,
-  cvFileIsAvailable,
+  cvFileIsAvailable, getCandidate, cloneFile,
 } from "@/lib/server/repo";
 import { requireUid, requireVerifiedUid, isAdmin, AuthError } from "@/lib/server/auth";
 
@@ -62,13 +62,48 @@ export function POST(req: Request) {
     const job = await getOpenJob(jobId);
     if (!job) throw new NotFound("Role not available.");
 
-    /* The CV was uploaded to POST /api/files first and its bytes are already
-       in the database. Verify the id names a real, unattached CV rather than
-       trusting it: otherwise a caller could point a new submission at someone
-       else's CV row, or at an avatar. */
-    const cvFileId = str(body.cvFileId, "cvFileId", { max: 36, required: true });
-    if (!(await cvFileIsAvailable(cvFileId))) {
-      throw new BadRequest("That CV upload is missing or already used.");
+    /* Two ways a submission's candidate fields arrive: typed directly into
+       the form (candidateName/Email/Phone + a fresh cvFileId), or quick-
+       applied from the saved pool (candidateId only) — see
+       lib/candidates.ts. Both end up calling createSubmission the same way. */
+    const candidateIdRaw = body.candidateId;
+    let candidateName: string;
+    let candidateEmail: string;
+    let candidatePhone: string;
+    let cvFileId: string;
+
+    if (candidateIdRaw !== undefined) {
+      const candidateId = str(candidateIdRaw, "candidateId", { max: 64, required: true });
+      const candidate = await getCandidate(candidateId);
+      if (!candidate || candidate.recruiterId !== uid) {
+        throw new NotFound("Saved candidate not found.");
+      }
+      if (!candidate.cvFileId) {
+        throw new BadRequest(
+          "This saved candidate has no CV attached — add one before applying.",
+        );
+      }
+      // Clone rather than reuse: a pool CV must stay attachable to any
+      // number of future applications, but cvFileIsAvailable() below only
+      // ever allows a given file id to belong to ONE submission.
+      const cloned = await cloneFile(candidate.cvFileId, uid);
+      if (!cloned) throw new BadRequest("That saved candidate's CV could not be found.");
+      candidateName = candidate.name;
+      candidateEmail = candidate.email;
+      candidatePhone = candidate.phone;
+      cvFileId = cloned;
+    } else {
+      /* The CV was uploaded to POST /api/files first and its bytes are
+         already in the database. Verify the id names a real, unattached CV
+         rather than trusting it: otherwise a caller could point a new
+         submission at someone else's CV row, or at an avatar. */
+      cvFileId = str(body.cvFileId, "cvFileId", { max: 36, required: true });
+      if (!(await cvFileIsAvailable(cvFileId))) {
+        throw new BadRequest("That CV upload is missing or already used.");
+      }
+      candidateName = str(body.candidateName, "candidateName", { max: 255, required: true });
+      candidateEmail = str(body.candidateEmail, "candidateEmail", { max: 320, required: true });
+      candidatePhone = str(body.candidatePhone, "candidatePhone", { max: 64, required: true });
     }
 
     const id = await createSubmission({
@@ -77,9 +112,9 @@ export function POST(req: Request) {
       company: job.company,
       recruiterId: uid,
       recruiterName,
-      candidateName: str(body.candidateName, "candidateName", { max: 255, required: true }),
-      candidateEmail: str(body.candidateEmail, "candidateEmail", { max: 320, required: true }),
-      candidatePhone: str(body.candidatePhone, "candidatePhone", { max: 64, required: true }),
+      candidateName,
+      candidateEmail,
+      candidatePhone,
       notes: str(body.notes, "notes"),
       cvFileId,
       bounty: job.bounty,

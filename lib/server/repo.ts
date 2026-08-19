@@ -375,6 +375,33 @@ export async function cvFileIsAvailable(fileId: string): Promise<boolean> {
   return (row?.n ?? 0) > 0;
 }
 
+/** Copy a file's bytes into a brand-new row. Used when quick-applying a saved
+    candidate: their pool CV must stay reusable across any number of
+    submissions, but cvFileIsAvailable() only allows a CV to be attached to
+    ONE submission — so each application gets its own independent copy rather
+    than fighting over the same file id. Returns null if the source is gone. */
+export async function cloneFile(fileId: string, ownerUid: string): Promise<string | null> {
+  const row = await queryOne<{
+    kind: "cv" | "avatar";
+    filename: string;
+    content_type: string;
+    byte_size: number;
+    data: Buffer;
+  }>(
+    "SELECT kind, filename, content_type, byte_size, data FROM files WHERE id = ?",
+    [fileId],
+  );
+  if (!row) return null;
+
+  const id = newId();
+  await execute(
+    `INSERT INTO files (id, kind, filename, content_type, byte_size, data, owner_uid)
+     VALUES (?,?,?,?,?,?,?)`,
+    [id, row.kind, row.filename, row.content_type, row.byte_size, row.data, ownerUid],
+  );
+  return id;
+}
+
 export async function setSubmissionStatus(
   id: string,
   status: SubmissionStatus,
@@ -451,6 +478,131 @@ export async function createSubmissionMessage(input: {
     ],
   );
   return id;
+}
+
+/* ------------------------------------------------------------ candidates */
+
+/* A recruiter's own saved candidate pool — distinct from `submissions`,
+   which is a referral already sent to a specific job. Saved here, a
+   candidate can be quick-applied to any open role without retyping their
+   details or re-uploading their CV each time (see cloneFile above and
+   POST /api/submissions' candidateId branch). */
+
+type CandidateRow = {
+  id: string;
+  recruiter_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  notes: string | null;
+  cv_file_id: string | null;
+  cv_name: string | null;
+  cv_type: string | null;
+  cv_size: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type SavedCandidate = {
+  id: string;
+  recruiterId: string;
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  cvFileId: string | null;
+  cvUrl: string;
+  cvName: string;
+  cvType: string;
+  cvSize: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+function toCandidate(r: CandidateRow): SavedCandidate {
+  return {
+    id: r.id,
+    recruiterId: r.recruiter_id,
+    name: r.name,
+    email: r.email,
+    phone: r.phone,
+    notes: r.notes ?? "",
+    cvFileId: r.cv_file_id,
+    cvUrl: r.cv_file_id ? signedFileUrl(r.cv_file_id) : "",
+    cvName: r.cv_name ?? "",
+    cvType: r.cv_type ?? "",
+    cvSize: r.cv_size,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+const CANDIDATE_COLUMNS = `
+  c.id, c.recruiter_id, c.name, c.email, c.phone, c.notes, c.cv_file_id,
+  f.filename AS cv_name, f.content_type AS cv_type, f.byte_size AS cv_size,
+  c.created_at, c.updated_at`;
+
+// LEFT JOIN: a saved candidate is allowed to have no CV yet.
+const CANDIDATE_FROM = `FROM candidates c LEFT JOIN files f ON f.id = c.cv_file_id`;
+
+export async function listCandidatesByRecruiter(recruiterId: string): Promise<SavedCandidate[]> {
+  const rows = await query<CandidateRow>(
+    `SELECT ${CANDIDATE_COLUMNS} ${CANDIDATE_FROM}
+      WHERE c.recruiter_id = ? ORDER BY c.created_at DESC`,
+    [recruiterId],
+  );
+  return rows.map(toCandidate);
+}
+
+/** One saved candidate, any owner — routes check recruiterId against the
+    caller's uid before allowing a read, update, or quick-apply. */
+export async function getCandidate(id: string): Promise<SavedCandidate | null> {
+  const row = await queryOne<CandidateRow>(
+    `SELECT ${CANDIDATE_COLUMNS} ${CANDIDATE_FROM} WHERE c.id = ?`,
+    [id],
+  );
+  return row ? toCandidate(row) : null;
+}
+
+export type CandidateWrite = {
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  /** undefined = leave whatever CV is already saved untouched (an edit that
+      didn't attach a new file); null would mean "clear it", which the UI
+      never offers — there's no way to remove a saved CV without replacing it. */
+  cvFileId?: string;
+};
+
+export async function createCandidate(
+  recruiterId: string,
+  input: CandidateWrite,
+): Promise<string> {
+  const id = newId();
+  await execute(
+    `INSERT INTO candidates (id, recruiter_id, name, email, phone, notes, cv_file_id)
+     VALUES (?,?,?,?,?,?,?)`,
+    [id, recruiterId, input.name, input.email, input.phone, input.notes, input.cvFileId ?? null],
+  );
+  return id;
+}
+
+export async function updateCandidate(id: string, input: CandidateWrite): Promise<boolean> {
+  const result = await execute(
+    input.cvFileId === undefined
+      ? `UPDATE candidates SET name = ?, email = ?, phone = ?, notes = ? WHERE id = ?`
+      : `UPDATE candidates SET name = ?, email = ?, phone = ?, notes = ?, cv_file_id = ? WHERE id = ?`,
+    input.cvFileId === undefined
+      ? [input.name, input.email, input.phone, input.notes, id]
+      : [input.name, input.email, input.phone, input.notes, input.cvFileId, id],
+  );
+  return result.affectedRows > 0;
+}
+
+export async function deleteCandidate(id: string): Promise<boolean> {
+  const result = await execute("DELETE FROM candidates WHERE id = ?", [id]);
+  return result.affectedRows > 0;
 }
 
 /* ----------------------------------------------------------------- users */

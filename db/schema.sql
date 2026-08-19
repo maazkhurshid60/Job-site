@@ -231,6 +231,42 @@ CREATE TABLE submissions (
     REFERENCES files (id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- ----------------------------------------------------------- candidates
+
+-- A recruiter's own pipeline: candidates saved ahead of any specific role, so
+-- applying to a job later is a pick from this list rather than retyping name/
+-- email/phone/CV every time. Distinct from `submissions`, which is a referral
+-- already sent to a job — a candidate can be saved here without ever being
+-- submitted anywhere, and can be quick-applied to any number of open roles.
+CREATE TABLE candidates (
+  id           VARCHAR(64)  NOT NULL,
+  recruiter_id VARCHAR(128) NOT NULL,
+  name         VARCHAR(255) NOT NULL DEFAULT '',
+  email        VARCHAR(320) NOT NULL DEFAULT '',
+  phone        VARCHAR(64)  NOT NULL DEFAULT '',
+  notes        MEDIUMTEXT,
+  -- Optional: a candidate can be saved before a CV is on hand. Required only
+  -- at the point of actually applying — POST /api/submissions with a
+  -- candidateId refuses to quick-apply one that has none. RESTRICT, same
+  -- reasoning as fk_subs_cv: never silently destroy the only copy on file.
+  cv_file_id   CHAR(36)     NULL,
+  created_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+                            ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_candidates_recruiter (recruiter_id, created_at DESC),
+  -- One pool entry per email per recruiter — re-saving the same candidate
+  -- updates them instead of silently forking into a duplicate row.
+  UNIQUE KEY uq_candidates_recruiter_email (recruiter_id, email),
+  -- CASCADE, unlike fk_subs_recruiter's SET NULL: this pool has no standalone
+  -- meaning once its owner is gone — nothing is settled against it the way a
+  -- submission's commission is.
+  CONSTRAINT fk_candidates_recruiter FOREIGN KEY (recruiter_id)
+    REFERENCES users (uid) ON DELETE CASCADE,
+  CONSTRAINT fk_candidates_cv FOREIGN KEY (cv_file_id)
+    REFERENCES files (id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- ------------------------------------------------------------- messages
 
 -- Public contact-form enquiries. No FK: senders are anonymous visitors.
