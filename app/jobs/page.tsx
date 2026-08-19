@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
@@ -14,14 +13,17 @@ import {
   getBoardFilters, statesFor, DEFAULT_FILTERS, type BoardFilters,
 } from "@/lib/boardFilters";
 import { formatPay } from "@/components/jobFormat";
-import { photo } from "@/components/images";
 import { timeAgo } from "@/lib/dates";
-import { FEE_TIERS, feeTierMeta } from "@/lib/feeTiers";
+import { FEE_TIERS, feeTierMeta, feeTierAmount } from "@/lib/feeTiers";
 import { useSavedJobs } from "@/lib/savedJobs";
 
 /* The state list and the pay ceiling used to be hardcoded here. They now come
    from lib/boardFilters (defaults) and the console (overrides), so the board
    and the admin screen can't disagree about them. */
+
+const SORTS = ["newest", "fee"] as const;
+type Sort = (typeof SORTS)[number];
+const SORT_LABEL: Record<Sort, string> = { newest: "Newest post", fee: "Highest fee" };
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -46,6 +48,7 @@ export default function JobsPage() {
   const { saved, toggle: toggleSaved } = useSavedJobs();
   const [view, setView] = useState<"board" | "list">("board");
   const [onlySaved, setOnlySaved] = useState(false);
+  const [sort, setSort] = useState<Sort>("newest");
 
   useEffect(() => {
     listOpenJobs()
@@ -63,7 +66,7 @@ export default function JobsPage() {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const st = stateFilter !== "All" ? stateFilter.toLowerCase() : null;
-    return jobs.filter((j) => {
+    const rows = jobs.filter((j) => {
       if (onlySaved && !saved.has(j.id)) return false;
       if (remote && !onsite && !j.remote) return false;
       if (onsite && !remote && j.remote) return false;
@@ -78,7 +81,11 @@ export default function JobsPage() {
       }
       return true;
     });
-  }, [jobs, q, cats, types, feeTiers, stateFilter, remote, onsite, minSalary, onlySaved, saved]);
+    if (sort === "fee") {
+      return [...rows].sort((a, b) => (feeTierAmount(b.feeTier) ?? 0) - (feeTierAmount(a.feeTier) ?? 0));
+    }
+    return rows; // API already orders newest-first
+  }, [jobs, q, cats, types, feeTiers, stateFilter, remote, onsite, minSalary, onlySaved, saved, sort]);
 
   const activeCount =
     cats.size + types.size + feeTiers.size + (stateFilter !== "All" ? 1 : 0) +
@@ -95,223 +102,200 @@ export default function JobsPage() {
     setStateFilter("All"); setRemote(false); setOnsite(false); setMinSalary(0);
   }
 
-  // honest sidebar data
-  const topCategories = useMemo(() => countTop(jobs.map((j) => j.category), 6), [jobs]);
-  const topLocations = useMemo(
-    () => countTop(jobs.map((j) => j.location).filter(Boolean), 5),
+  // Per-option counts for the sidebar checkboxes — honest, computed from what
+  // actually loaded, same idea as the old "honest sidebar" this replaces.
+  const countByCategory = useMemo(() => countOf(jobs.map((j) => j.category)), [jobs]);
+  const countByType = useMemo(() => countOf(jobs.map((j) => j.employmentType)), [jobs]);
+  const countByFeeTier = useMemo(
+    () => countOf(jobs.map((j) => j.feeTier).filter((t): t is string => Boolean(t))),
     [jobs],
   );
+  const remoteCount = useMemo(() => jobs.filter((j) => j.remote).length, [jobs]);
+  const onsiteCount = jobs.length - remoteCount;
 
   return (
     <>
       <Navbar />
       <main className="flex-1 bg-white">
-        {/* Board banner. The count comes from the loaded jobs, so it can't
-            disagree with the list underneath it. */}
-        <Container className="pt-6">
-          <div className="relative overflow-hidden rounded-3xl">
-            <div className="relative aspect-[16/7] w-full sm:aspect-[21/6]">
-              <Image
-                src={photo.highwayInterchange.src}
-                alt={photo.highwayInterchange.alt}
-                fill
-                priority
-                sizes="(max-width: 1152px) 100vw, 1152px"
-                className="object-cover"
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-ink/85 via-ink/60 to-ink/10" />
-            <div className="absolute inset-0 flex flex-col justify-center px-6 py-6 sm:px-10">
-              <span className="text-xs font-bold uppercase tracking-wider text-white/70">
-                Open roles
-              </span>
-              <h1 className="mt-1.5 max-w-xl text-2xl font-extrabold tracking-tight text-white sm:text-4xl">
-                Engineering &amp; DOT jobs
-              </h1>
-              <p className="mt-2 hidden max-w-md text-sm text-white/80 sm:block">
-                Civil, structural, transportation and technical roles — each one
-                showing the recruiter fee you earn on a successful hire.
-              </p>
-            </div>
-          </div>
-        </Container>
-
         <Container className="py-8 lg:py-10">
-          {/* search */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <label className="relative w-full max-w-xs">
+          <div className="mb-6">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted">
+              Open roles
+            </span>
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+              Engineering &amp; DOT jobs
+            </h1>
+            <p className="mt-1.5 max-w-xl text-sm text-muted">
+              Civil, structural, transportation and technical roles — each one
+              showing the recruiter fee you earn on a successful hire.
+            </p>
+          </div>
+
+          {/* search + sort */}
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-2 shadow-[0_20px_50px_-35px_rgba(23,19,15,0.4)]">
+            <label className="relative min-w-0 flex-1">
               <span className="sr-only">Search</span>
               <input
-                className="input h-11 pl-10"
+                className="h-11 w-full rounded-xl border-0 bg-transparent pl-10 text-sm text-ink outline-none placeholder:text-muted"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search…"
+                placeholder="Search title, company, location…"
               />
               <svg className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
                 <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8" />
                 <path d="M14 14l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
             </label>
+            <div className="hidden h-8 w-px bg-line sm:block" />
+            <label className="flex shrink-0 items-center gap-2 pr-2 text-sm">
+              <span className="text-muted">Sort</span>
+              <select
+                className="rounded-lg border-0 bg-transparent py-2 pr-6 text-sm font-semibold text-ink outline-none"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as Sort)}
+              >
+                {SORTS.map((s) => <option key={s} value={s}>{SORT_LABEL[s]}</option>)}
+              </select>
+            </label>
           </div>
 
-          {/* filter chips row */}
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <Dropdown label="Category" count={cats.size}>
-              <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
-                {categories.map((c) => (
-                  <Check key={c} label={c} checked={cats.has(c)} onChange={() => toggleIn(cats, c, setCats)} />
-                ))}
-              </div>
-            </Dropdown>
+          {/* body: left filter sidebar + listing */}
+          <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
+            <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+              {activeCount > 0 && (
+                <button
+                  onClick={clearAll}
+                  className="text-sm font-semibold text-coral hover:opacity-80"
+                >
+                  Clear all filters
+                </button>
+              )}
 
-            <Dropdown label="Job type" count={types.size}>
-              <div className="space-y-1.5">
+              <FilterGroup title="Job type">
                 {filters.employmentTypes.map((t) => (
-                  <Check key={t} label={t} checked={types.has(t)} onChange={() => toggleIn(types, t, setTypes)} />
+                  <FilterCheck
+                    key={t}
+                    label={t}
+                    count={countByType.get(t) ?? 0}
+                    checked={types.has(t)}
+                    onChange={() => toggleIn(types, t, setTypes)}
+                  />
                 ))}
-              </div>
-            </Dropdown>
+              </FilterGroup>
 
-            <Dropdown label="Location" count={(stateFilter !== "All" ? 1 : 0) + (remote ? 1 : 0) + (onsite ? 1 : 0)}>
-              <div className="space-y-3">
-                <div className="flex gap-4">
-                  <Check label="Remote" checked={remote} onChange={() => setRemote((v) => !v)} />
-                  <Check label="Onsite" checked={onsite} onChange={() => setOnsite((v) => !v)} />
-                </div>
-                <select className="input" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+              <FilterGroup title="Location">
+                <FilterCheck label="Remote" count={remoteCount} checked={remote} onChange={() => setRemote((v) => !v)} />
+                <FilterCheck label="Onsite" count={onsiteCount} checked={onsite} onChange={() => setOnsite((v) => !v)} />
+                <select
+                  className="input mt-2 h-9 text-sm"
+                  value={stateFilter}
+                  onChange={(e) => setStateFilter(e.target.value)}
+                >
                   <option value="All">All US locations</option>
                   {statesFor(filters).map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
-              </div>
-            </Dropdown>
+              </FilterGroup>
 
-            <Dropdown label="Recruiter Fee" count={feeTiers.size}>
-              <div className="space-y-1.5">
+              <FilterGroup title="Category">
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                  {categories.map((c) => (
+                    <FilterCheck
+                      key={c}
+                      label={c}
+                      count={countByCategory.get(c) ?? 0}
+                      checked={cats.has(c)}
+                      onChange={() => toggleIn(cats, c, setCats)}
+                    />
+                  ))}
+                </div>
+              </FilterGroup>
+
+              <FilterGroup title="Recruiter fee">
                 {FEE_TIERS.map((t) => (
-                  <Check
+                  <FilterCheck
                     key={t.value}
                     label={`$${t.amount.toLocaleString()} — ${t.label}`}
+                    count={countByFeeTier.get(t.value) ?? 0}
                     checked={feeTiers.has(t.value)}
                     onChange={() => toggleIn(feeTiers, t.value, setFeeTiers)}
                   />
                 ))}
-              </div>
-            </Dropdown>
+              </FilterGroup>
 
-            <Dropdown label="Pay" count={minSalary > 0 ? 1 : 0}>
-              <div>
-                <p className="text-center text-sm font-semibold text-ink">
+              <FilterGroup title="Pay">
+                <p className="text-sm font-semibold text-ink">
                   {minSalary === 0 ? "Any salary" : `$${minSalary.toLocaleString()}+`}
                 </p>
-                <input type="range" min={0} max={filters.salaryMax} step={5000} value={minSalary}
+                <input
+                  type="range"
+                  min={0}
+                  max={filters.salaryMax}
+                  step={5000}
+                  value={minSalary}
                   onChange={(e) => setMinSalary(Number(e.target.value))}
-                  className="mt-2 w-full accent-primary" />
+                  className="mt-2 w-full accent-ink"
+                />
                 <div className="mt-1 flex justify-between text-[11px] text-muted">
-                  <span>Any</span><span>${filters.salaryMax.toLocaleString()}+</span>
+                  <span>$0</span>
+                  <span>${filters.salaryMax.toLocaleString()}+</span>
                 </div>
-              </div>
-            </Dropdown>
-
-            {activeCount > 0 && (
-              <button onClick={clearAll} className="rounded-full px-3 py-1.5 text-sm font-semibold text-coral hover:opacity-80">
-                Clear all
-              </button>
-            )}
-          </div>
-
-          {/* results header + view toggle */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-ink">
-              {loading ? "…" : filtered.length} job{filtered.length === 1 ? "" : "s"} found
-            </h2>
-            <div className="flex items-center gap-2">
-              <div className="flex rounded-full border border-line p-1">
-                <ViewBtn active={view === "list"} onClick={() => setView("list")} label="List" />
-                <ViewBtn active={view === "board"} onClick={() => setView("board")} label="Board" />
-              </div>
-              <button
-                onClick={() => setOnlySaved((v) => !v)}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold ${
-                  onlySaved ? "border-primary bg-primary-soft text-primary" : "border-line text-ink hover:bg-black/[0.03]"
-                }`}
-              >
-                <svg width="14" height="14" viewBox="0 0 20 20" fill={onlySaved ? "currentColor" : "none"} aria-hidden>
-                  <path d="M5 3h10v14l-5-3.5L5 17V3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                </svg>
-                Saved ({saved.size})
-              </button>
-            </div>
-          </div>
-
-          {/* body: listing + honest sidebar */}
-          <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_320px]">
-            <div>
-              {error ? (
-                <p className="rounded-lg bg-coral-soft px-4 py-3 text-sm text-coral">{error}</p>
-              ) : loading ? (
-                <div className="grid h-64 place-items-center rounded-2xl border border-line"><Loader /></div>
-              ) : filtered.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-line p-12 text-center">
-                  <h3 className="font-bold text-ink">
-                    {onlySaved ? "No saved jobs yet" : jobs.length === 0 ? "No open roles right now" : "No roles match your filters"}
-                  </h3>
-                  <p className="mt-1 text-sm text-muted">
-                    {onlySaved ? "Bookmark roles to see them here." : "Try clearing some filters."}
-                  </p>
-                </div>
-              ) : view === "board" ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {filtered.map((job) => (
-                    <JobCard key={job.id} job={job} saved={saved.has(job.id)} onSave={() => toggleSaved(job.id)} />
-                  ))}
-                </div>
-              ) : (
-                <div className="divide-y divide-line rounded-2xl border border-line bg-white">
-                  {filtered.map((job) => (
-                    <JobListRow key={job.id} job={job} saved={saved.has(job.id)} onSave={() => toggleSaved(job.id)} />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* sidebar — honest, no fake metrics */}
-            <aside className="space-y-4">
-              <div className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary-soft px-4 py-3 text-sm text-primary">
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path d="M10 2l2.4 5 5.6.5-4.2 3.7 1.3 5.6L10 14l-5.1 2.8L6.2 11 2 7.3l5.6-.5L10 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                </svg>
-                <span><strong>{jobs.length}</strong> open role{jobs.length === 1 ? "" : "s"} from JobFolder</span>
-              </div>
-
-              <SidebarCard title="Browse by category">
-                <div className="flex flex-wrap gap-2">
-                  {topCategories.map(([c, n]) => (
-                    <button key={c} onClick={() => toggleIn(cats, c, setCats)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                        cats.has(c) ? "border-primary bg-primary-soft text-primary" : "border-line text-muted hover:text-ink"
-                      }`}>
-                      {c} <span className="text-muted">· {n}</span>
-                    </button>
-                  ))}
-                  {topCategories.length === 0 && <p className="text-sm text-muted">No roles yet.</p>}
-                </div>
-              </SidebarCard>
-
-              <SidebarCard title="Popular locations">
-                <ul className="space-y-2 text-sm">
-                  {topLocations.map(([loc, n]) => (
-                    <li key={loc}>
-                      <button onClick={() => setQ(loc)} className="flex w-full items-center justify-between text-left text-ink hover:text-primary">
-                        <span>{loc}</span>
-                        <span className="text-xs text-muted">{n}</span>
-                      </button>
-                    </li>
-                  ))}
-                  {topLocations.length === 0 && <li className="text-muted">No locations yet.</li>}
-                </ul>
-              </SidebarCard>
-
+              </FilterGroup>
             </aside>
+
+            {/* listing */}
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-ink">
+                  {loading ? "…" : filtered.length} job{filtered.length === 1 ? "" : "s"} found
+                </h2>
+                <div className="flex items-center gap-2">
+                  <div className="flex rounded-full border border-line p-1">
+                    <ViewBtn active={view === "list"} onClick={() => setView("list")} label="List" />
+                    <ViewBtn active={view === "board"} onClick={() => setView("board")} label="Board" />
+                  </div>
+                  <button
+                    onClick={() => setOnlySaved((v) => !v)}
+                    className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold ${
+                      onlySaved ? "border-primary bg-primary-soft text-primary" : "border-line text-ink hover:bg-black/[0.03]"
+                    }`}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill={onlySaved ? "currentColor" : "none"} aria-hidden>
+                      <path d="M5 3h10v14l-5-3.5L5 17V3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                    </svg>
+                    Saved ({saved.size})
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                {error ? (
+                  <p className="rounded-lg bg-coral-soft px-4 py-3 text-sm text-coral">{error}</p>
+                ) : loading ? (
+                  <div className="grid h-64 place-items-center rounded-2xl border border-line"><Loader /></div>
+                ) : filtered.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-line p-12 text-center">
+                    <h3 className="font-bold text-ink">
+                      {onlySaved ? "No saved jobs yet" : jobs.length === 0 ? "No open roles right now" : "No roles match your filters"}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {onlySaved ? "Bookmark roles to see them here." : "Try clearing some filters."}
+                    </p>
+                  </div>
+                ) : view === "board" ? (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {filtered.map((job) => (
+                      <JobCard key={job.id} job={job} saved={saved.has(job.id)} onSave={() => toggleSaved(job.id)} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-line rounded-2xl border border-line bg-white">
+                    {filtered.map((job) => (
+                      <JobListRow key={job.id} job={job} saved={saved.has(job.id)} onSave={() => toggleSaved(job.id)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </Container>
       </main>
@@ -380,11 +364,11 @@ function JobCard({ job, saved, onSave }: { job: Job; saved: boolean; onSave: () 
         <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted">{job.description}</p>
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
-        <p className="text-sm font-semibold text-muted">{formatPay(job)}</p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+        <p className="shrink-0 text-sm font-semibold text-muted">{formatPay(job)}</p>
         <Link
           href={`/jobs/${job.id}`}
-          className="inline-flex items-center gap-1 rounded-pill bg-cream px-3.5 py-1.5 text-sm font-semibold text-ink transition-colors group-hover:bg-primary group-hover:text-white"
+          className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-pill bg-cream px-3.5 py-1.5 text-sm font-semibold text-ink transition-colors group-hover:bg-primary group-hover:text-white"
         >
           View &amp; work position
           <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden>
@@ -465,46 +449,35 @@ function Tag({ children }: { children: React.ReactNode }) {
   return <span className="inline-flex rounded-lg bg-cream px-2.5 py-1 text-xs font-medium text-muted">{children}</span>;
 }
 
-/* ---- filter dropdown chip ---- */
-function Dropdown({ label, count, children }: { label: string; count: number; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+/* ---- left filter sidebar ---- */
+function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-          count > 0 ? "border-primary bg-primary-soft text-primary" : "border-line text-ink hover:bg-black/[0.03]"
-        }`}
-      >
-        {label}
-        {count > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-bold text-white">{count}</span>}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden className={open ? "rotate-180" : ""}>
-          <path d="M3 4.5L6 7.5l3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {open && (
-        <div className="absolute left-0 z-20 mt-2 w-64 rounded-xl border border-line bg-white p-4 shadow-[0_20px_50px_-20px_rgba(23,19,15,0.3)]">
-          {children}
-        </div>
-      )}
+    <div className="rounded-2xl border border-line p-4">
+      <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted">{title}</h3>
+      <div className="space-y-2">{children}</div>
     </div>
   );
 }
 
-function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+function FilterCheck({
+  label, count, checked, onChange,
+}: {
+  label: string;
+  count: number;
+  checked: boolean;
+  onChange: () => void;
+}) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
-      <input type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 accent-primary" />
-      {label}
+    <label className="flex cursor-pointer items-center justify-between gap-2 text-sm">
+      <span className="flex items-center gap-2 text-ink">
+        <input type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 shrink-0 accent-ink" />
+        {label}
+      </span>
+      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
+        checked ? "bg-primary-soft text-primary" : "bg-cream text-muted"
+      }`}>
+        {count}
+      </span>
     </label>
   );
 }
@@ -518,19 +491,9 @@ function ViewBtn({ active, onClick, label }: { active: boolean; onClick: () => v
   );
 }
 
-function SidebarCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-line p-5">
-      <h3 className="mb-3 text-sm font-bold text-ink">{title}</h3>
-      {children}
-    </div>
-  );
-}
-
 /* ---- helpers ---- */
-function countTop(values: string[], n: number): [string, number][] {
+function countOf(values: string[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const v of values) map.set(v, (map.get(v) ?? 0) + 1);
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
+  return map;
 }
-

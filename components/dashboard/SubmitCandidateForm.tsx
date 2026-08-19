@@ -14,10 +14,7 @@ import { feeTierMeta } from "@/lib/feeTiers";
 import { formatDate } from "@/lib/dates";
 import type { Job } from "@/lib/jobs";
 
-const MAX_CANDIDATES = 10;
-
 type CandidateDraft = {
-  key: string;
   candidateName: string;
   candidateEmail: string;
   candidatePhone: string;
@@ -26,17 +23,17 @@ type CandidateDraft = {
 };
 
 function emptyDraft(): CandidateDraft {
-  return {
-    key: crypto.randomUUID(),
-    candidateName: "",
-    candidateEmail: "",
-    candidatePhone: "",
-    notes: "",
-    cv: null,
-  };
+  return { candidateName: "", candidateEmail: "", candidatePhone: "", notes: "", cv: null };
 }
 
-type SubmitOutcome = { name: string; ok: boolean; error?: string; id?: string };
+type Step = 1 | 2 | 3;
+const STEPS: { n: Step; label: string }[] = [
+  { n: 1, label: "Candidate" },
+  { n: 2, label: "Additional" },
+  { n: 3, label: "Review" },
+];
+
+type SubmitOutcome = { ok: boolean; error?: string; id?: string };
 
 export function SubmitCandidateForm({ job }: { job: Job }) {
   const router = useRouter();
@@ -45,11 +42,12 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     emailVerified, resendVerificationEmail, checkEmailVerified,
   } = useAuth();
 
-  const [drafts, setDrafts] = useState<CandidateDraft[]>([emptyDraft()]);
+  const [step, setStep] = useState<Step>(1);
+  const [draft, setDraft] = useState<CandidateDraft>(emptyDraft());
   const [hp, setHp] = useState(""); // honeypot — real users leave this empty
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [outcomes, setOutcomes] = useState<SubmitOutcome[] | null>(null);
+  const [outcome, setOutcome] = useState<SubmitOutcome | null>(null);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
 
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -80,7 +78,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
   /* The recruiter's saved candidate pool — applying one to a role happens
      here, on the job itself, not from the pool's own list (that list is
      save/edit/delete only). One click reuses their saved name/email/phone
-     and clones their CV, no retyping. */
+     and clones their CV, no retyping — an alternative to the step form below. */
   const [savedCandidates, setSavedCandidates] = useState<SavedCandidate[]>([]);
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
@@ -113,46 +111,60 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     }
   }
 
-  function updateDraft(key: string, patch: Partial<CandidateDraft>) {
-    setDrafts((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  function updateDraft(patch: Partial<CandidateDraft>) {
+    setDraft((d) => ({ ...d, ...patch }));
   }
 
-  function addDraft() {
-    setDrafts((rows) =>
-      rows.length >= MAX_CANDIDATES ? rows : [...rows, emptyDraft()],
-    );
-  }
-
-  function removeDraft(key: string) {
-    setDrafts((rows) => (rows.length <= 1 ? rows : rows.filter((r) => r.key !== key)));
-  }
-
-  function submitMore() {
-    setDrafts([emptyDraft()]);
-    setError(null);
-    setOutcomes(null);
-    setSubmittedAt(null);
-  }
-
-  /** One row's problem, or null if it's ready to send. Checked before any
-      network call so an obviously incomplete row never starts an upload. */
-  function draftProblem(d: CandidateDraft): string | null {
+  function step1Problem(d: CandidateDraft): string | null {
     if (!d.candidateName.trim()) return "Candidate name is required.";
     if (!d.candidateEmail.trim()) return "Candidate email is required.";
     if (!d.candidatePhone.trim()) return "Candidate phone is required.";
+    return null;
+  }
+
+  function step2Problem(d: CandidateDraft): string | null {
     if (!d.cv) return "Please attach the candidate's CV.";
     if (!ACCEPTED_CV_TYPES.includes(d.cv.type)) return "CV must be a PDF or Word document.";
     if (d.cv.size > MAX_CV_BYTES) return "CV is larger than 10 MB.";
     return null;
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  function goToStep2(e: React.FormEvent) {
     e.preventDefault();
+    const problem = step1Problem(draft);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setError(null);
+    setStep(2);
+  }
+
+  function goToStep3(e: React.FormEvent) {
+    e.preventDefault();
+    const problem = step2Problem(draft);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setError(null);
+    setStep(3);
+  }
+
+  function startOver() {
+    setDraft(emptyDraft());
+    setStep(1);
+    setError(null);
+    setOutcome(null);
+    setSubmittedAt(null);
+  }
+
+  async function onSubmit() {
     setError(null);
 
     // Bot filled the hidden field — pretend success, write nothing.
     if (hp) {
-      setOutcomes(drafts.map((d) => ({ name: d.candidateName || "Candidate", ok: true })));
+      setOutcome({ ok: true });
       setSubmittedAt(new Date().toISOString());
       return;
     }
@@ -164,53 +176,33 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
       return;
     }
 
-    for (const d of drafts) {
-      const problem = draftProblem(d);
-      if (problem) {
-        setError(
-          drafts.length > 1
-            ? `${d.candidateName || "One candidate"}: ${problem}`
-            : problem,
-        );
-        return;
-      }
-    }
-
     setSubmitting(true);
-    // Sequential, not Promise.all: each row uploads a CV then creates a row,
-    // and running ten of those at once against a three-connection MySQL pool
-    // would starve every other request the site is serving.
-    const results: SubmitOutcome[] = [];
-    for (const d of drafts) {
-      try {
-        const { id } = await createSubmission(
-          job,
-          { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" },
-          d,
-          d.cv as File,
-        );
-        results.push({ name: d.candidateName, ok: true, id });
-      } catch (err) {
-        /* Show what actually failed. The API returns readable messages —
-           "This candidate has already been submitted for this role.",
-           "CV must be a PDF or Word document." — and apiFetch passes them
-           through, so the recruiter can act on it instead of guessing. */
-        results.push({
-          name: d.candidateName,
-          ok: false,
-          error: err instanceof Error && err.message ? err.message : "Could not save this submission.",
-        });
-      }
+    try {
+      const { id } = await createSubmission(
+        job,
+        { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" },
+        draft,
+        draft.cv as File,
+      );
+      setOutcome({ ok: true, id });
+      setSubmittedAt(new Date().toISOString());
+      // Refresh so the "already submitted" banner includes what just landed.
+      listSubmissionsByRecruiter()
+        .then((all) => setPriorSubmissions(all.filter((s) => s.jobId === job.id)))
+        .catch(() => {});
+    } catch (err) {
+      /* Show what actually failed, on the review step rather than navigating
+         away from it. The API returns readable messages — "This candidate
+         has already been submitted for this role.", "CV must be a PDF or
+         Word document." — and apiFetch passes them through, so the recruiter
+         can act on it instead of guessing. */
+      setError(
+        err instanceof Error && err.message ? err.message : "Could not save this submission.",
+      );
+    } finally {
+      // finally, not catch: a stuck "Submitting…" is the worst outcome here.
+      setSubmitting(false);
     }
-    setOutcomes(results);
-    setSubmittedAt(new Date().toISOString());
-    // Refresh so the "already submitted" banner includes what just landed —
-    // best-effort, the confirmation screen already shows the same names.
-    listSubmissionsByRecruiter()
-      .then((all) => setPriorSubmissions(all.filter((s) => s.jobId === job.id)))
-      .catch(() => {});
-    // finally, not catch: a stuck "Submitting…" is the worst outcome here.
-    setSubmitting(false);
   }
 
   // Wait for auth to resolve before deciding what to show, so a signed-in
@@ -371,12 +363,8 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     );
   }
 
-  if (outcomes) {
-    const succeeded = outcomes.filter((o) => o.ok);
-    const failed = outcomes.filter((o) => !o.ok);
+  if (outcome?.ok) {
     const fee = feeTierMeta(job.feeTier);
-    const single = succeeded.length === 1 ? succeeded[0] : null;
-
     return (
       <div className="rounded-2xl border border-line bg-white p-8 text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-primary-soft text-primary">
@@ -384,65 +372,34 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
             <path d="M5 13l4 4 10-11" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h3 className="mt-4 text-lg font-bold text-ink">
-          {failed.length === 0
-            ? succeeded.length > 1
-              ? `${succeeded.length} candidates submitted`
-              : "Candidate submitted"
-            : "Submission complete"}
-        </h3>
+        <h3 className="mt-4 text-lg font-bold text-ink">Candidate submitted</h3>
         <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-          Our team will screen {succeeded.length === 1 ? succeeded[0].name || "your candidate" : "each candidate"} for{" "}
+          Our team will screen {draft.candidateName || "your candidate"} for{" "}
           <span className="font-medium text-ink">{job.title}</span> and update
           the status in your submissions.
         </p>
 
-        {single && (
-          <dl className="mx-auto mt-5 max-w-sm space-y-2 rounded-xl border border-line bg-cream/40 p-4 text-left text-sm">
-            <ConfirmRow label="Candidate" value={single.name || "Candidate"} />
-            <ConfirmRow label="Position" value={job.title} />
-            <ConfirmRow
-              label="Recruiter fee"
-              value={fee ? `$${fee.amount.toLocaleString()}` : "No fee tier set"}
-            />
-            <ConfirmRow label="Submitted" value={formatDate(submittedAt)} />
-            <ConfirmRow label="Status" value={SUBMISSION_STATUS_LABEL.submitted} />
-            {single.id && (
-              <ConfirmRow label="Submission ID" value={submissionRef(single.id)} mono />
-            )}
-          </dl>
-        )}
-
-        {outcomes.length > 1 && (
-          <ul className="mx-auto mt-4 max-w-sm space-y-1.5 text-left text-sm">
-            {outcomes.map((o, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <span className={o.ok ? "text-primary" : "text-coral"}>
-                  {o.ok ? "✓" : "✕"}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-2 text-ink">
-                    <span>{o.name || "Candidate"}</span>
-                    {o.ok && o.id && (
-                      <span className="shrink-0 font-mono text-xs text-muted">
-                        {submissionRef(o.id)}
-                      </span>
-                    )}
-                  </span>
-                  {!o.ok && <span className="block text-xs text-coral">{o.error}</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <dl className="mx-auto mt-5 max-w-sm space-y-2 rounded-xl border border-line bg-cream/40 p-4 text-left text-sm">
+          <ConfirmRow label="Candidate" value={draft.candidateName || "Candidate"} />
+          <ConfirmRow label="Position" value={job.title} />
+          <ConfirmRow
+            label="Recruiter fee"
+            value={fee ? `$${fee.amount.toLocaleString()}` : "No fee tier set"}
+          />
+          <ConfirmRow label="Submitted" value={formatDate(submittedAt)} />
+          <ConfirmRow label="Status" value={SUBMISSION_STATUS_LABEL.submitted} />
+          {outcome.id && (
+            <ConfirmRow label="Submission ID" value={submissionRef(outcome.id)} mono />
+          )}
+        </dl>
 
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <button
             type="button"
-            onClick={submitMore}
+            onClick={startOver}
             className="rounded-pill bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
           >
-            Submit more candidates
+            Submit another candidate
           </button>
           <button
             type="button"
@@ -524,48 +481,36 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         </div>
       )}
 
-    <form onSubmit={onSubmit} className="rounded-2xl border border-line bg-white p-6">
-      {/* honeypot — hidden from real users; bots that fill it are dropped */}
-      <input
-        type="text"
-        name="website"
-        tabIndex={-1}
-        autoComplete="off"
-        aria-hidden="true"
-        value={hp}
-        onChange={(e) => setHp(e.target.value)}
-        className="absolute left-[-9999px] h-0 w-0 opacity-0"
-      />
-      <h3 className="text-lg font-bold text-ink">Submit a candidate</h3>
-      <p className="mt-1 text-sm text-muted">
-        Your candidate goes to our screening team, not the client directly.
-      </p>
+      <div className="rounded-2xl border border-line bg-white p-6">
+        {/* honeypot — hidden from real users; bots that fill it are dropped */}
+        <input
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          value={hp}
+          onChange={(e) => setHp(e.target.value)}
+          className="absolute left-[-9999px] h-0 w-0 opacity-0"
+        />
 
-      <div className="mt-5 space-y-6">
-        {drafts.map((d, i) => (
-          <div key={d.key} className={drafts.length > 1 ? "rounded-xl border border-line p-4" : ""}>
-            {drafts.length > 1 && (
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-muted">
-                  Candidate {i + 1}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeDraft(d.key)}
-                  className="text-xs font-semibold text-muted hover:text-coral"
-                >
-                  Remove
-                </button>
-              </div>
-            )}
-            <div className="grid gap-4 sm:grid-cols-2">
+        <Stepper current={step} />
+
+        {step === 1 && (
+          <form onSubmit={goToStep2} className="mt-5">
+            <h3 className="text-lg font-bold text-ink">Candidate information</h3>
+            <p className="mt-1 text-sm text-muted">
+              Let us know who you&apos;re referring for {job.title}.
+            </p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <Field label="Candidate name">
                 <input
                   className="input"
                   required
-                  value={d.candidateName}
-                  onChange={(e) => updateDraft(d.key, { candidateName: e.target.value })}
+                  value={draft.candidateName}
+                  onChange={(e) => updateDraft({ candidateName: e.target.value })}
                   placeholder="Jordan Lee"
+                  autoFocus
                 />
               </Field>
               <Field label="Candidate email">
@@ -573,8 +518,8 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
                   className="input"
                   type="email"
                   required
-                  value={d.candidateEmail}
-                  onChange={(e) => updateDraft(d.key, { candidateEmail: e.target.value })}
+                  value={draft.candidateEmail}
+                  onChange={(e) => updateDraft({ candidateEmail: e.target.value })}
                   placeholder="jordan@email.com"
                 />
               </Field>
@@ -583,62 +528,195 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
                   className="input"
                   type="tel"
                   required
-                  value={d.candidatePhone}
-                  onChange={(e) => updateDraft(d.key, { candidatePhone: e.target.value })}
+                  value={draft.candidatePhone}
+                  onChange={(e) => updateDraft({ candidatePhone: e.target.value })}
                   placeholder="+44 7700 900000"
                 />
               </Field>
-              <Field label="Why they're a fit (optional)" className="sm:col-span-2">
+            </div>
+
+            {error && (
+              <p className="mt-4 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              className="mt-6 w-full rounded-pill bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark sm:w-auto"
+            >
+              Continue
+            </button>
+          </form>
+        )}
+
+        {step === 2 && (
+          <form onSubmit={goToStep3} className="mt-5">
+            <h3 className="text-lg font-bold text-ink">Additional information</h3>
+            <p className="mt-1 text-sm text-muted">
+              A CV is required before this candidate can be submitted.
+            </p>
+            <div className="mt-5 space-y-4">
+              <Field label="Why they're a fit (optional)">
                 <textarea
                   className="input min-h-28 resize-y"
-                  value={d.notes}
-                  onChange={(e) => updateDraft(d.key, { notes: e.target.value })}
+                  value={draft.notes}
+                  onChange={(e) => updateDraft({ notes: e.target.value })}
                   placeholder="A short pitch for this candidate…"
                 />
               </Field>
-              <Field label="CV (PDF or Word, max 10 MB)" className="sm:col-span-2">
+              <Field label="CV (PDF or Word, max 10 MB)">
                 <input
                   className="block w-full text-sm text-muted file:mr-4 file:rounded-pill file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
                   type="file"
                   required
                   accept=".pdf,.doc,.docx"
-                  onChange={(e) => updateDraft(d.key, { cv: e.target.files?.[0] ?? null })}
+                  onChange={(e) => updateDraft({ cv: e.target.files?.[0] ?? null })}
                 />
+                {draft.cv && (
+                  <span className="mt-1.5 block text-xs text-muted">
+                    {draft.cv.name} · {(draft.cv.size / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                )}
               </Field>
             </div>
+
+            {error && (
+              <p className="mt-4 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">{error}</p>
+            )}
+
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => { setError(null); setStep(1); }}
+                className="rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:bg-cream"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                className="rounded-pill bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+              >
+                Continue
+              </button>
+            </div>
+          </form>
+        )}
+
+        {step === 3 && (
+          <div className="mt-5">
+            <h3 className="text-lg font-bold text-ink">Review your application</h3>
+            <p className="mt-1 text-sm text-muted">
+              Is the information below correct?
+            </p>
+
+            <div className="mt-5 divide-y divide-line rounded-xl border border-line">
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-ink">Candidate information</h4>
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="rounded-pill bg-ink px-3 py-1 text-xs font-semibold text-white hover:opacity-85"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <dl className="mt-3 space-y-2.5 text-sm">
+                  <ReviewRow label="Full name" value={draft.candidateName} />
+                  <ReviewRow label="Email address" value={draft.candidateEmail} />
+                  <ReviewRow label="Phone number" value={draft.candidatePhone} />
+                </dl>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-ink">Additional information</h4>
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="rounded-pill bg-ink px-3 py-1 text-xs font-semibold text-white hover:opacity-85"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <dl className="mt-3 space-y-2.5 text-sm">
+                  <ReviewRow label="Why they're a fit" value={draft.notes || "No answer"} />
+                  <ReviewRow label="CV" value={draft.cv?.name ?? "No answer"} />
+                </dl>
+              </div>
+            </div>
+
+            {error && (
+              <p className="mt-4 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">{error}</p>
+            )}
+
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => { setError(null); setStep(2); }}
+                disabled={submitting}
+                className="rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:bg-cream disabled:opacity-60"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={submitting}
+                className="rounded-pill bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
+              >
+                {submitting ? "Submitting…" : "Submit"}
+              </button>
+            </div>
           </div>
-        ))}
+        )}
       </div>
+    </div>
+  );
+}
 
-      <button
-        type="button"
-        onClick={addDraft}
-        disabled={drafts.length >= MAX_CANDIDATES}
-        className="mt-4 w-full rounded-xl border border-dashed border-line py-2.5 text-sm font-semibold text-primary hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {drafts.length >= MAX_CANDIDATES
-          ? `Up to ${MAX_CANDIDATES} candidates per submission`
-          : "+ Add another candidate"}
-      </button>
+function Stepper({ current }: { current: Step }) {
+  return (
+    <div className="flex items-center border-b border-line pb-4">
+      {STEPS.map((s, i) => (
+        <div key={s.n} className="flex items-center">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                current > s.n
+                  ? "bg-sage text-white"
+                  : current === s.n
+                    ? "bg-primary text-white"
+                    : "border border-line text-muted"
+              }`}
+            >
+              {current > s.n ? (
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+                  <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                s.n
+              )}
+            </span>
+            <span className={`text-sm font-semibold ${current >= s.n ? "text-ink" : "text-muted"}`}>
+              {s.label}
+            </span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <span
+              className={`mx-2.5 h-px w-6 sm:w-10 ${current > s.n ? "bg-sage" : "bg-line"}`}
+              aria-hidden
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
-      {error && (
-        <p className="mt-4 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">
-          {error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={submitting}
-        className="mt-6 w-full rounded-pill bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60 sm:w-auto"
-      >
-        {submitting
-          ? "Submitting…"
-          : drafts.length > 1
-            ? `Submit ${drafts.length} candidates`
-            : "Submit candidate"}
-      </button>
-    </form>
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className="mt-0.5 font-semibold text-ink">{value}</dd>
     </div>
   );
 }
