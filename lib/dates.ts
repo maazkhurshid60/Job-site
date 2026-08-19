@@ -23,6 +23,13 @@ export function toMillis(value: string | null | undefined): number {
   return toDate(value)?.getTime() ?? 0;
 }
 
+/** True when a timestamp falls within the last N days. */
+export function isWithinDays(value: string | null | undefined, days: number): boolean {
+  const date = toDate(value);
+  if (!date) return false;
+  return Date.now() - date.getTime() < days * 24 * 60 * 60 * 1000;
+}
+
 /** Short absolute date, e.g. "30 Jul 2026". Falls back to an em dash. */
 export function formatDate(value: string | null | undefined): string {
   const date = toDate(value);

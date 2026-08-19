@@ -8,6 +8,7 @@ import {
   createSubmission, listSubmissionsByRecruiter, submissionRef,
   SUBMISSION_STATUS_LABEL, type Submission,
 } from "@/lib/submissions";
+import { listCandidates, quickApply, type SavedCandidate } from "@/lib/candidates";
 import { ACCEPTED_CV_TYPES, MAX_CV_BYTES } from "@/lib/cv";
 import { feeTierMeta } from "@/lib/feeTiers";
 import { formatDate } from "@/lib/dates";
@@ -75,6 +76,42 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
       active = false;
     };
   }, [user, isAdmin, job.id]);
+
+  /* The recruiter's saved candidate pool — applying one to a role happens
+     here, on the job itself, not from the pool's own list (that list is
+     save/edit/delete only). One click reuses their saved name/email/phone
+     and clones their CV, no retyping. */
+  const [savedCandidates, setSavedCandidates] = useState<SavedCandidate[]>([]);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [applyError, setApplyError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user || isAdmin || !profile?.verified) return;
+    let active = true;
+    listCandidates()
+      .then((all) => active && setSavedCandidates(all))
+      .catch(() => {}); // non-critical — the form still works without it
+    return () => {
+      active = false;
+    };
+  }, [user, isAdmin, profile?.verified]);
+
+  async function applySaved(candidate: SavedCandidate) {
+    setApplyingId(candidate.id);
+    setApplyError(null);
+    try {
+      await quickApply(job.id, candidate.id, "");
+      setAppliedIds((ids) => new Set(ids).add(candidate.id));
+      listSubmissionsByRecruiter()
+        .then((all) => setPriorSubmissions(all.filter((s) => s.jobId === job.id)))
+        .catch(() => {});
+    } catch (err) {
+      setApplyError(err instanceof Error && err.message ? err.message : "Could not apply this candidate.");
+    } finally {
+      setApplyingId(null);
+    }
+  }
 
   function updateDraft(key: string, patch: Partial<CandidateDraft>) {
     setDrafts((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -440,6 +477,50 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
           <p className="mt-2 text-xs text-primary/80">
             You can still submit more candidates for this role below.
           </p>
+        </div>
+      )}
+
+      {savedCandidates.length > 0 && (
+        <div className="rounded-2xl border border-line bg-white p-5">
+          <h3 className="text-sm font-bold text-ink">Apply a saved candidate</h3>
+          <p className="mt-1 text-xs text-muted">
+            Already in your candidate pool? Apply them to {job.title} in one
+            click — no retyping their details or re-uploading their CV.
+          </p>
+          <ul className="mt-3 divide-y divide-line">
+            {savedCandidates.map((c) => {
+              const already =
+                appliedIds.has(c.id) ||
+                priorSubmissions.some(
+                  (s) => s.candidateEmail.toLowerCase() === c.email.toLowerCase(),
+                );
+              return (
+                <li key={c.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">{c.name || "Unnamed"}</p>
+                    <p className="truncate text-xs text-muted">
+                      {c.email}
+                      {!c.cvFileId ? " · No CV saved" : ""}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => applySaved(c)}
+                    disabled={!c.cvFileId || applyingId === c.id || already}
+                    title={!c.cvFileId ? "Add a CV to this saved candidate before applying" : undefined}
+                    className="shrink-0 rounded-pill border border-line px-3.5 py-1.5 text-xs font-semibold text-primary hover:border-primary disabled:cursor-not-allowed disabled:border-line disabled:text-muted disabled:opacity-60"
+                  >
+                    {already ? "Applied ✓" : applyingId === c.id ? "Applying…" : "Apply"}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {applyError && (
+            <p className="mt-3 rounded-lg bg-coral-soft px-3 py-2 text-xs text-coral">
+              {applyError}
+            </p>
+          )}
         </div>
       )}
 

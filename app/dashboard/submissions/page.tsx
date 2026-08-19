@@ -17,7 +17,6 @@ import { feeTierAmount } from "@/lib/feeTiers";
 import { SubmissionBadge, money } from "@/components/dashboard/parts";
 import { AddCandidateModal } from "@/components/dashboard/AddCandidateModal";
 import { SavedCandidateModal } from "@/components/dashboard/SavedCandidateModal";
-import { QuickApplyModal } from "@/components/dashboard/QuickApplyModal";
 import { Loader } from "@/components/Loader";
 import { formatDate } from "@/lib/dates";
 
@@ -31,7 +30,9 @@ type Tab = "submitted" | "saved";
 
 export default function CandidatesPage() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>("submitted");
+  // Saved candidates is the primary experience here — a repository recruiters
+  // build up over time — with Submitted as the secondary, history view.
+  const [tab, setTab] = useState<Tab>("saved");
 
   const [subs, setSubs] = useState<Submission[]>([]);
   const [subsLoading, setSubsLoading] = useState(true);
@@ -45,7 +46,6 @@ export default function CandidatesPage() {
   const [poolError, setPoolError] = useState<string | null>(null);
   const [poolQ, setPoolQ] = useState("");
   const [editingCandidate, setEditingCandidate] = useState<SavedCandidate | "new" | null>(null);
-  const [applyingCandidate, setApplyingCandidate] = useState<SavedCandidate | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const loadSubs = useCallback(() => {
@@ -180,16 +180,6 @@ export default function CandidatesPage() {
           onClose={onCandidateSaved}
         />
       )}
-      {applyingCandidate && (
-        <QuickApplyModal
-          candidate={applyingCandidate}
-          onClose={() => {
-            setApplyingCandidate(null);
-            loadSubs();
-          }}
-        />
-      )}
-
       {tab === "submitted" ? (
         <>
           {subsError && (
@@ -355,8 +345,9 @@ export default function CandidatesPage() {
             <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">
               <h2 className="font-bold text-ink">Your candidate pool is empty</h2>
               <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-                Save candidates here ahead of a role — when you&apos;re ready,
-                apply them to any open job in two clicks, no retyping.
+                Save candidates here ahead of a role. When you&apos;re browsing
+                open jobs, apply anyone from this pool in two clicks — no
+                retyping their details or re-uploading a CV.
               </p>
               <div className="mt-5">
                 <button
@@ -412,13 +403,6 @@ export default function CandidatesPage() {
                       <td className="px-4 py-3 text-muted">{formatDate(c.createdAt)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-3 whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => setApplyingCandidate(c)}
-                            className="text-xs font-semibold text-primary hover:underline"
-                          >
-                            Quick apply
-                          </button>
                           <button
                             type="button"
                             onClick={() => setEditingCandidate(c)}

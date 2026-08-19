@@ -14,6 +14,8 @@ import { getBoardFilters, DEFAULT_FILTERS, type BoardFilters } from "@/lib/board
 import { adminRoutes } from "@/lib/routes";
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
+import { StatCard } from "@/components/dashboard/parts";
+import { isWithinDays } from "@/lib/dates";
 
 const statusStyle: Record<JobStatus, string> = {
   open: "bg-primary-soft text-primary",
@@ -22,6 +24,26 @@ const statusStyle: Record<JobStatus, string> = {
 };
 
 const STATUS_TABS: (JobStatus | "all")[] = ["all", "open", "draft", "closed"];
+
+/* Deterministic pastel tone per job, purely cosmetic — same idea as the
+   recruiter dashboard's job avatars: stable per id, not meant as a secret,
+   just gives each row a visual anchor instead of a wall of identical text. */
+const AVATAR_TONES = [
+  { bg: "bg-blue-brand-soft", text: "text-primary" },
+  { bg: "bg-coral-soft", text: "text-coral" },
+  { bg: "bg-sage-soft", text: "text-ink" },
+  { bg: "bg-cream-deep", text: "text-ink" },
+];
+
+function toneFor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_TONES[hash % AVATAR_TONES.length];
+}
+
+function jobInitials(job: Job): string {
+  return (job.company || job.title).slice(0, 2).toUpperCase();
+}
 
 export default function AdminJobsPage() {
   return (
@@ -102,11 +124,18 @@ function JobsList() {
   const hasActiveFilters =
     q.trim() !== "" || status !== "all" || category !== "all" || type !== "all";
 
+  const openBountyPool = jobs
+    .filter((j) => j.status === "open")
+    .reduce((sum, j) => sum + (j.bounty ?? 0), 0);
+  const postedThisWeek = jobs.filter((j) => isWithinDays(j.createdAt, 7)).length;
+  const categoryCount = new Set(jobs.map((j) => j.category)).size;
+
   return (
     <div>
       <div className="mb-5 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight text-ink">Jobs</h1>
+          <p className="eyebrow uppercase">Recruitment</p>
+          <h1 className="mt-1.5 text-xl font-extrabold tracking-tight text-ink">Jobs</h1>
           <p className="mt-0.5 text-xs text-muted">
             {loading
               ? "Loading…"
@@ -117,9 +146,17 @@ function JobsList() {
           href={adminRoutes.newJob}
           className="rounded-pill bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-dark"
         >
-          Post a job
+          + Post a job
         </Link>
       </div>
+
+      {!loading && jobs.length > 0 && (
+        <div className="mb-5 grid gap-3 sm:grid-cols-3">
+          <StatCard label="Open bounty pool" value={`$${openBountyPool.toLocaleString()}`} hint={`${statusCounts.open ?? 0} open roles`} />
+          <StatCard label="Posted this week" value={postedThisWeek} />
+          <StatCard label="Categories covered" value={categoryCount} />
+        </div>
+      )}
 
       {/* filters */}
       {jobs.length > 0 && (
@@ -230,62 +267,83 @@ function JobsList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {filtered.map((job) => (
-                <tr key={job.id} className="hover:bg-cream/40">
-                  <td className="px-5 py-4">
-                    <Link
-                      href={`${adminRoutes.jobs}/${encodeURIComponent(job.id)}`}
-                      className="font-semibold text-ink hover:text-primary"
-                    >
-                      {job.title}
-                    </Link>
-                    <p className="text-xs text-muted">
-                      {job.company}
-                      {job.remote ? " · Remote" : ""} · {job.employmentType}
-                    </p>
-                  </td>
-                  <td className="hidden px-5 py-4 text-muted lg:table-cell">
-                    {job.category}
-                  </td>
-                  <td className="hidden px-5 py-4 text-muted sm:table-cell">
-                    {job.location || "—"}
-                  </td>
-                  <td className="hidden px-5 py-4 text-muted md:table-cell">
-                    {job.bounty != null ? `$${job.bounty.toLocaleString()}` : "—"}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex rounded-pill px-2.5 py-0.5 text-xs font-semibold capitalize ${statusStyle[job.status]}`}
-                    >
-                      {job.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-3">
-                      <Link
-                        href={`${adminRoutes.jobs}/${encodeURIComponent(job.id)}`}
-                        className="text-sm font-semibold text-ink hover:text-primary"
+              {filtered.map((job) => {
+                const tone = toneFor(job.id);
+                return (
+                  <tr key={job.id} className="group transition-colors hover:bg-cream/40">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold ${tone.bg} ${tone.text}`}
+                          aria-hidden
+                        >
+                          {jobInitials(job)}
+                        </span>
+                        <div className="min-w-0">
+                          <Link
+                            href={`${adminRoutes.jobs}/${encodeURIComponent(job.id)}`}
+                            className="font-semibold text-ink group-hover:text-primary"
+                          >
+                            {job.title}
+                          </Link>
+                          <p className="truncate text-xs text-muted">
+                            {job.company}
+                            {job.remote ? " · Remote" : ""} · {job.employmentType}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden px-5 py-4 lg:table-cell">
+                      <span className="inline-flex rounded-pill bg-cream px-2.5 py-0.5 text-xs font-medium text-ink">
+                        {job.category}
+                      </span>
+                    </td>
+                    <td className="hidden px-5 py-4 text-muted sm:table-cell">
+                      {job.location || "—"}
+                    </td>
+                    <td className="hidden px-5 py-4 md:table-cell">
+                      {job.bounty != null ? (
+                        <span className="inline-flex rounded-pill bg-primary-soft px-2.5 py-0.5 text-xs font-bold text-primary">
+                          ${job.bounty.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-pill px-2.5 py-0.5 text-xs font-semibold capitalize ${statusStyle[job.status]}`}
                       >
-                        View
-                      </Link>
-                      <Link
-                        href={adminRoutes.editJob(job.id)}
-                        className="text-sm font-semibold text-primary hover:text-primary-dark"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => onDelete(job)}
-                        disabled={deleting === job.id}
-                        className="text-sm font-semibold text-coral hover:opacity-80 disabled:opacity-50"
-                      >
-                        {deleting === job.id ? "…" : "Delete"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {job.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`${adminRoutes.jobs}/${encodeURIComponent(job.id)}`}
+                          className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          href={adminRoutes.editJob(job.id)}
+                          className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(job)}
+                          disabled={deleting === job.id}
+                          className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-coral hover:border-coral disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {deleting === job.id ? "…" : "Delete"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
