@@ -26,19 +26,8 @@ export const metadata: Metadata = {
    date, funding, headcount or press coverage is claimed, because none of that
    is verified. */
 const assets = [
-  {
-    label: "Horizontal logo — 1024px PNG",
-    href: "/jobfolder_horizontal_1024.png",
-  },
-  {
-    label: "Horizontal logo — 512px PNG",
-    href: "/jobfolder_horizontal_512.png",
-  },
-  {
-    label: "Horizontal logo — 256px PNG",
-    href: "/jobfolder_horizontal_256.png",
-  },
-  { label: "Logo mark — PNG", href: "/jobfolder-logo.png" },
+  { label: "Logo — for light backgrounds (PNG)", href: "/jobfolder-logo.png" },
+  { label: "Logo — for dark backgrounds (PNG)", href: "/jobfolder-logo-dark.png" },
 ];
 
 const topics = [

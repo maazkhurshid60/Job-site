@@ -30,6 +30,7 @@ export const metadata: Metadata = {
   keywords: SITE_KEYWORDS,
   applicationName: SITE_NAME,
   alternates: { canonical: "/" },
+  icons: { apple: "/icon-192.png" },
   openGraph: {
     type: "website",
     siteName: SITE_NAME,

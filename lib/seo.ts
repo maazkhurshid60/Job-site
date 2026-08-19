@@ -44,7 +44,7 @@ export const organizationSchema = {
   "@id": absoluteUrl("/#organization"),
   name: SITE_NAME,
   url: SITE_URL,
-  logo: absoluteUrl("/jobfolder_horizontal_512.png"),
+  logo: absoluteUrl("/jobfolder-logo.png"),
   description: SITE_DESCRIPTION,
   email: CONTACT_EMAIL,
   areaServed: { "@type": "Country", name: "United States" },
