@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { adminRoutes } from "@/lib/routes";
 import { Logo } from "@/components/Logo";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,13 +60,10 @@ export default function LoginPage() {
               />
             </Field>
             <Field label="Password">
-              <input
-                type="password"
-                required
+              <PasswordInput
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input"
+                onChange={setPassword}
                 placeholder="••••••••"
               />
             </Field>

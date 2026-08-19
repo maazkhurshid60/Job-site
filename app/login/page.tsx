@@ -7,6 +7,7 @@ import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/auth";
 import { useNextPath } from "@/lib/useNextPath";
 import { AuthCard, AuthField, RecruiterAside } from "@/components/auth/AuthCard";
+import { PasswordInput } from "@/components/PasswordInput";
 
 /* Firebase deliberately returns the same `auth/invalid-credential` for a wrong
    password and an email with no account — that's its email-enumeration
@@ -95,13 +96,10 @@ export default function LoginPage() {
               Forgot password?
             </Link>
           </div>
-          <input
-            type="password"
-            required
+          <PasswordInput
             autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input"
+            onChange={setPassword}
             placeholder="••••••••"
           />
         </div>

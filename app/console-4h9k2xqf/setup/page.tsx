@@ -11,6 +11,7 @@ import { auth } from "@/lib/firebase";
 import { bootstrapAdmin } from "@/lib/users";
 import { adminRoutes } from "@/lib/routes";
 import { Logo } from "@/components/Logo";
+import { PasswordInput } from "@/components/PasswordInput";
 
 /* TEMPORARY bootstrap page — creates the first admin account and grants it
    admin rights, then signs in. Delete this route once your admin exists. */
@@ -94,12 +95,10 @@ export default function AdminSetupPage() {
               <span className="mb-1.5 block text-sm font-medium text-ink">
                 Password
               </span>
-              <input
-                type="password"
-                required
+              <PasswordInput
+                autoComplete="new-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input"
+                onChange={setPassword}
                 placeholder="At least 6 characters"
               />
             </label>

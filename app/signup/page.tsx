@@ -7,6 +7,7 @@ import { FirebaseError } from "firebase/app";
 import { useAuth } from "@/lib/auth";
 import { useNextPath } from "@/lib/useNextPath";
 import { AuthCard, AuthField, RecruiterAside } from "@/components/auth/AuthCard";
+import { PasswordInput } from "@/components/PasswordInput";
 
 function signupErrorMessage(err: unknown): string {
   if (err instanceof FirebaseError) {
@@ -89,13 +90,10 @@ export default function SignupPage() {
           />
         </AuthField>
         <AuthField label="Password">
-          <input
-            type="password"
-            required
+          <PasswordInput
             autoComplete="new-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input"
+            onChange={setPassword}
             placeholder="At least 6 characters"
           />
         </AuthField>
