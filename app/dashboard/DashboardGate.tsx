@@ -128,6 +128,47 @@ export default function DashboardGate({
     );
   }
 
+  /* Admin-suspended account. Enforced here for the dashboard UI; every write
+     route (submissions, saved candidates, messages, file uploads) enforces
+     the same rule server-side via requireActiveUid()/requireVerifiedUid() in
+     lib/server/auth.ts, since a client-only gate is just presentation. They
+     can still see their dashboard read-only rather than being logged out —
+     less confusing than a dead end, and lets them read any admin message
+     already on a submission thread. */
+  if (profile.suspended) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-white px-6">
+        <div className="w-full max-w-sm rounded-2xl border border-line bg-white p-8 text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-coral-soft text-coral">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="12" r="10" />
+              <path d="M4.9 4.9l14.2 14.2" />
+            </svg>
+          </div>
+          <h1 className="mt-4 font-bold text-ink">Account suspended</h1>
+          <p className="mt-1 text-sm text-muted">
+            Your account has been suspended. You can&apos;t submit candidates,
+            save candidates, send messages, or upload files right now. Contact
+            us if you believe this is a mistake.
+          </p>
+          <button
+            type="button"
+            onClick={switchAccount}
+            className="mt-5 block w-full rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:border-primary hover:text-primary"
+          >
+            Sign in with a different account
+          </button>
+          <Link
+            href="/"
+            className="mt-4 inline-block text-sm font-semibold text-muted hover:text-ink"
+          >
+            ← Back to home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return <DashboardShell>{children}</DashboardShell>;
 }
 

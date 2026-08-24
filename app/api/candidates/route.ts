@@ -1,6 +1,6 @@
 import { handle, ok, jsonBody, str, BadRequest } from "@/lib/server/respond";
 import { listCandidatesByRecruiter, createCandidate, getCandidate } from "@/lib/server/repo";
-import { requireUid } from "@/lib/server/auth";
+import { requireUid, requireActiveUid } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export function GET(req: Request) {
 /** Save a candidate to the pool. CV is optional — see lib/candidates.ts. */
 export function POST(req: Request) {
   return handle(async () => {
-    const uid = await requireUid(req);
+    const uid = await requireActiveUid(req);
     const body = await jsonBody(req);
 
     const id = await createCandidate(uid, {

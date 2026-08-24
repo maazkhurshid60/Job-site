@@ -56,6 +56,13 @@ CREATE TABLE users (
   -- actor can sign up but not actually refer (or CV-spam) candidates until
   -- an admin has looked at the account.
   verified    BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Admin-set: a hard stop for a bad-actor account. Unlike `verified` (which
+  -- only blocks submitting candidates), a suspended recruiter is blocked from
+  -- every write action — submissions, saved candidates, messages, file
+  -- uploads — see requireActiveUid()/requireVerifiedUid() in
+  -- lib/server/auth.ts. They can still sign in and see their own dashboard,
+  -- which is what surfaces the suspension notice to them.
+  suspended   BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
                            ON UPDATE CURRENT_TIMESTAMP(3),

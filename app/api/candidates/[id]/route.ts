@@ -1,6 +1,6 @@
 import { handle, ok, jsonBody, str, BadRequest, NotFound } from "@/lib/server/respond";
 import { getCandidate, updateCandidate, deleteCandidate } from "@/lib/server/repo";
-import { requireUid, AuthError } from "@/lib/server/auth";
+import { requireActiveUid, AuthError } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   return handle(async () => {
-    const uid = await requireUid(req);
+    const uid = await requireActiveUid(req);
     const { id } = await params;
 
     const existing = await getCandidate(id);
@@ -50,7 +50,7 @@ export function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   return handle(async () => {
-    const uid = await requireUid(req);
+    const uid = await requireActiveUid(req);
     const { id } = await params;
 
     const existing = await getCandidate(id);

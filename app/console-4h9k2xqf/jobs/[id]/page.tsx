@@ -17,6 +17,7 @@ import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { SubmissionDetail } from "@/components/admin/SubmissionDetail";
 import { adminRoutes } from "@/lib/routes";
 import { formatDate } from "@/lib/dates";
+import { downloadCsv } from "@/lib/csv";
 
 /* One role, in full — everything on the posting plus every candidate referred
    for it. getJobAsAdmin is used rather than getJob: the public endpoint only
@@ -70,6 +71,23 @@ export default function AdminJobDetailPage() {
       setSubs((list) => list.map((s) => (s.id === sub.id ? { ...s, status: prev } : s)));
       alert("Could not update status.");
     }
+  }
+
+  function exportCsv() {
+    if (!job) return;
+    downloadCsv(
+      `${job.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-candidates.csv`,
+      subs.map((s) => ({
+        Candidate: s.candidateName,
+        Email: s.candidateEmail,
+        Phone: s.candidatePhone,
+        Status: SUBMISSION_STATUS_LABEL[s.status],
+        Recruiter: s.recruiter?.name || s.recruiterName || "Direct",
+        "Recruiter email": s.recruiter?.email || "",
+        Submitted: s.createdAt ?? "",
+        Notes: s.notes,
+      })),
+    );
   }
 
   async function onDelete() {
@@ -211,9 +229,20 @@ export default function AdminJobDetailPage() {
 
         {/* candidates */}
         <div className="rounded-2xl border border-line bg-white">
-          <div className="border-b border-line px-5 py-4">
-            <h2 className="font-bold text-ink">Candidates</h2>
-            <p className="mt-0.5 text-sm text-muted">Referred for this role.</p>
+          <div className="border-b border-line px-5 py-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-ink">Candidates</h2>
+              <p className="mt-0.5 text-sm text-muted">Referred for this role.</p>
+            </div>
+            {subs.length > 0 && (
+              <button
+                type="button"
+                onClick={exportCsv}
+                className="shrink-0 rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+              >
+                Export CSV
+              </button>
+            )}
           </div>
           {subs.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-muted">

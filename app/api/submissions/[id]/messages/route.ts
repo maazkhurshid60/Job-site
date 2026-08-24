@@ -4,7 +4,7 @@ import {
 import {
   getSubmission, listSubmissionMessages, createSubmissionMessage, getUserProfile,
 } from "@/lib/server/repo";
-import { requireUid } from "@/lib/server/auth";
+import { requireUid, requireActiveUid } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +40,7 @@ export function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   return handle(async () => {
-    const uid = await requireUid(req);
+    const uid = await requireActiveUid(req);
     const { id } = await params;
     await ownSubmissionOrNotFound(id, uid);
 

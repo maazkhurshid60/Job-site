@@ -109,18 +109,47 @@ export async function requireIdentity(req: Request): Promise<Identity> {
   return identity;
 }
 
+/* True when the recruiter's own `users` row has been suspended by an admin.
+   False (not suspended) for a uid with no row yet — nothing to suspend
+   mid-signup. Deliberately NOT folded into requireUid: that function also
+   backs requireAdmin below, and a suspended recruiter profile must never be
+   able to lock an admin account out of the console. */
+async function isSuspended(uid: string): Promise<boolean> {
+  const row = await queryOne<{ suspended: number }>(
+    "SELECT suspended FROM users WHERE uid = ?",
+    [uid],
+  );
+  return row !== null && Boolean(row.suspended);
+}
+
 /* Require a signed-in user with a verified email. This is the actual
    enforcement point for "recruiters must verify their email" — the dashboard
    UI gate is only presentation, and a request straight to a protected
    endpoint has to be refused here or the rule doesn't exist. Throws 403
    (not 401): the caller IS authenticated, they just haven't cleared this
-   extra bar yet, which is a different condition than not being signed in. */
+   extra bar yet, which is a different condition than not being signed in.
+   Also refuses a suspended account — see isSuspended() above. */
 export async function requireVerifiedUid(req: Request): Promise<string> {
   const identity = await requireIdentity(req);
   if (!identity.emailVerified) {
     throw new AuthError("Please verify your email before continuing.", 403);
   }
+  if (await isSuspended(identity.uid)) {
+    throw new AuthError("Your account has been suspended.", 403);
+  }
   return identity.uid;
+}
+
+/** Require a signed-in, non-suspended recruiter. Use this (not requireUid)
+    for anything a suspended account shouldn't be able to do: create/edit
+    saved candidates, send a submission message, upload a file. Not used by
+    requireAdmin — see isSuspended() above for why. */
+export async function requireActiveUid(req: Request): Promise<string> {
+  const uid = await requireUid(req);
+  if (await isSuspended(uid)) {
+    throw new AuthError("Your account has been suspended.", 403);
+  }
+  return uid;
 }
 
 /** True when the UID is in the admins table — the old isAdmin() rule. */

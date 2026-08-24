@@ -13,12 +13,13 @@ function fmtDate(u: UserProfile): string {
   return formatDate(u.createdAt);
 }
 
-const STATUS_TABS = ["all", "pending", "verified"] as const;
+const STATUS_TABS = ["all", "pending", "verified", "suspended"] as const;
 type StatusTab = (typeof STATUS_TABS)[number];
 const STATUS_TAB_LABEL: Record<StatusTab, string> = {
   all: "All",
   pending: "Pending verification",
   verified: "Verified",
+  suspended: "Suspended",
 };
 
 export default function AdminRecruitersPage() {
@@ -50,7 +51,8 @@ export default function AdminRecruitersPage() {
 
   const statusCounts = useMemo(() => {
     const pending = users.filter((u) => !u.verified).length;
-    return { all: users.length, pending, verified: users.length - pending };
+    const suspended = users.filter((u) => u.suspended).length;
+    return { all: users.length, pending, verified: users.length - pending, suspended };
   }, [users]);
 
   const shown = useMemo(() => {
@@ -58,6 +60,7 @@ export default function AdminRecruitersPage() {
     return users.filter((u) => {
       if (status === "pending" && u.verified) return false;
       if (status === "verified" && !u.verified) return false;
+      if (status === "suspended" && !u.suspended) return false;
       if (!term) return true;
       return [u.name, u.email, u.company, u.headline, u.location]
         .join(" ")
@@ -195,6 +198,11 @@ function RecruiterCard({
             >
               {user.verified ? "Verified" : "Pending"}
             </span>
+            {user.suspended && (
+              <span className="inline-flex rounded-pill bg-coral px-2.5 py-0.5 text-xs font-semibold text-white">
+                Suspended
+              </span>
+            )}
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  listAllUsers, setRecruiterMetroTeamMember, setRecruiterVerified, type UserProfile,
+  listAllUsers, setRecruiterMetroTeamMember, setRecruiterVerified, setRecruiterSuspended, type UserProfile,
 } from "@/lib/users";
 import {
   listAllSubmissions,
@@ -40,6 +40,7 @@ export default function RecruiterDetailPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [togglingMetro, setTogglingMetro] = useState(false);
   const [togglingVerified, setTogglingVerified] = useState(false);
+  const [togglingSuspended, setTogglingSuspended] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -125,6 +126,25 @@ export default function RecruiterDetailPage() {
     }
   }
 
+  async function toggleSuspended() {
+    if (!user) return;
+    const next = !user.suspended;
+    const warning = next
+      ? `Suspend ${user.name || "this recruiter"}? They'll be blocked from submitting candidates, saving candidates, sending messages, and uploading files — but can still sign in and see their dashboard.`
+      : `Reinstate ${user.name || "this recruiter"}? They'll be able to act on the platform again.`;
+    if (!confirm(warning)) return;
+    setUser({ ...user, suspended: next });
+    setTogglingSuspended(true);
+    try {
+      await setRecruiterSuspended(user.uid, next);
+    } catch {
+      setUser((u) => (u ? { ...u, suspended: !next } : u));
+      alert("Could not update suspension status.");
+    } finally {
+      setTogglingSuspended(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">
@@ -187,6 +207,11 @@ export default function RecruiterDetailPage() {
                   >
                     {user.verified ? "Verified" : "Pending verification"}
                   </span>
+                  {user.suspended && (
+                    <span className="inline-flex rounded-pill bg-coral px-2 py-0.5 text-[11px] font-semibold text-white">
+                      Suspended
+                    </span>
+                  )}
                 </div>
                 <p className="mt-0.5 text-sm text-muted">
                   {user.headline || "Recruiter"}
@@ -219,6 +244,19 @@ export default function RecruiterDetailPage() {
                   title="Show or hide this recruiter on Metro Associates' public Meet Our Team page"
                 >
                   {user.metroTeamMember ? "✓ On Metro Associates team" : "Add to Metro Associates team"}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleSuspended}
+                  disabled={togglingSuspended}
+                  className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                    user.suspended
+                      ? "bg-coral text-white hover:bg-coral/90"
+                      : "border border-coral/40 text-coral hover:bg-coral-soft"
+                  }`}
+                  title="Suspending blocks submissions, saved candidates, messages, and file uploads"
+                >
+                  {user.suspended ? "Reinstate" : "Suspend"}
                 </button>
               </div>
             </div>

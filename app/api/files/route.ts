@@ -1,5 +1,5 @@
 import { handle, ok, BadRequest } from "@/lib/server/respond";
-import { requireUid } from "@/lib/server/auth";
+import { requireActiveUid } from "@/lib/server/auth";
 import { execute } from "@/lib/db";
 import {
   newFileId, validateUpload, safeFilename, MAX_CV_BYTES,
@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
    the platform before this handler ever runs. */
 export function POST(req: Request) {
   return handle(async () => {
-    const uid = await requireUid(req);
+    const uid = await requireActiveUid(req);
 
     const form = await req.formData().catch(() => {
       throw new BadRequest("Expected a multipart form upload.");

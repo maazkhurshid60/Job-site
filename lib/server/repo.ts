@@ -624,6 +624,7 @@ type UserRow = {
   photo_url: string;
   metro_team_member: number;
   verified: number;
+  suspended: number;
   created_at: string | null;
 };
 
@@ -645,6 +646,7 @@ function toUserProfile(r: UserRow): UserProfile {
     photoURL: r.photo_url,
     metroTeamMember: Boolean(r.metro_team_member),
     verified: Boolean(r.verified),
+    suspended: Boolean(r.suspended),
     createdAt: r.created_at,
   };
 }
@@ -652,7 +654,7 @@ function toUserProfile(r: UserRow): UserProfile {
 const USER_COLUMNS = `
   uid, name, email, phone, company, headline, location, linkedin, website,
   twitter, facebook, instagram, bio, photo_url, metro_team_member, verified,
-  created_at`;
+  suspended, created_at`;
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const row = await queryOne<UserRow>(
@@ -760,6 +762,17 @@ export async function updateUserProfile(
 export async function setRecruiterVerified(uid: string, value: boolean): Promise<boolean> {
   const result = await execute(
     "UPDATE users SET verified = ? WHERE uid = ?",
+    [value, uid],
+  );
+  return result.affectedRows > 0;
+}
+
+/** Admin action: suspend a recruiter account, or reinstate it. See
+    requireActiveUid()/requireVerifiedUid() in lib/server/auth.ts for what
+    this actually blocks. */
+export async function setRecruiterSuspended(uid: string, value: boolean): Promise<boolean> {
+  const result = await execute(
+    "UPDATE users SET suspended = ? WHERE uid = ?",
     [value, uid],
   );
   return result.affectedRows > 0;

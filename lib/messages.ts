@@ -5,10 +5,15 @@ export type ContactInput = {
   email: string;
   subject: string;
   message: string;
+  recaptchaToken: string | null;
 };
 
-export type ContactMessage = ContactInput & {
+export type ContactMessage = {
   id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
   handled: boolean;
   /** ISO-8601 string from MySQL, or null. */
   createdAt: string | null;

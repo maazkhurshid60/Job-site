@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Recaptcha } from "@/components/Recaptcha";
 import { Container, Eyebrow } from "@/components/ui";
 import { photo } from "@/components/images";
 import { sendMessage } from "@/lib/messages";
@@ -22,6 +23,11 @@ export default function ContactPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  // Bumped on every failed attempt to remount <Recaptcha> — its tokens are
+  // single-use and the widget can't reset itself in place (see Recaptcha.tsx).
+  const [recaptchaAttempt, setRecaptchaAttempt] = useState(0);
+  const recaptchaRequired = Boolean(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY);
 
   function set(key: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -32,10 +38,12 @@ export default function ContactPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await sendMessage(form);
+      await sendMessage({ ...form, recaptchaToken });
       setDone(true);
-    } catch {
-      setError("Could not send your message. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send your message. Please try again.");
+      setRecaptchaToken(null);
+      setRecaptchaAttempt((n) => n + 1);
       setSubmitting(false);
     }
   }
@@ -126,6 +134,10 @@ export default function ContactPage() {
                   </Field>
                 </div>
 
+                <div className="mt-4">
+                  <Recaptcha key={recaptchaAttempt} onChange={setRecaptchaToken} />
+                </div>
+
                 {error && (
                   <p className="mt-4 rounded-lg bg-coral-soft px-3 py-2 text-sm text-coral">
                     {error}
@@ -134,7 +146,7 @@ export default function ContactPage() {
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || (recaptchaRequired && !recaptchaToken)}
                   className="mt-6 w-full rounded-pill bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60 sm:w-auto"
                 >
                   {submitting ? "Sending…" : "Send message"}

@@ -29,6 +29,10 @@ export type UserProfile = {
       recruiter can browse and use the dashboard, but POST /api/submissions
       refuses to create a submission on their behalf until this is true. */
   verified: boolean;
+  /** Admin-set: a hard stop for a bad-actor account. Blocks every write —
+      submissions, saved candidates, messages, file uploads. They can still
+      sign in and see the dashboard, which is what shows them the notice. */
+  suspended: boolean;
   /** ISO-8601 string from MySQL, or null. */
   createdAt: string | null;
 };
@@ -185,6 +189,20 @@ export async function setRecruiterVerified(
   await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}`, {
     method: "PATCH",
     body: { verified },
+    auth: true,
+  });
+}
+
+/** Admin action: suspend a recruiter account, or reinstate it. A suspended
+    account is blocked from every write action (submitting candidates, saved
+    candidates, messages, file uploads) — see lib/server/auth.ts. */
+export async function setRecruiterSuspended(
+  uid: string,
+  suspended: boolean,
+): Promise<void> {
+  await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}`, {
+    method: "PATCH",
+    body: { suspended },
     auth: true,
   });
 }

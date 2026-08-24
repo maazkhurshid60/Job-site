@@ -13,6 +13,7 @@ import { money } from "@/components/dashboard/parts";
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { SubmissionDetail } from "@/components/admin/SubmissionDetail";
+import { downloadCsv } from "@/lib/csv";
 
 const tone: Record<SubmissionStatus, string> = {
   submitted: "bg-line text-muted",
@@ -70,18 +71,47 @@ export default function AdminSubmissionsPage() {
     filter === "all" ? subs : subs.filter((s) => s.status === filter);
   const open = subs.find((s) => s.id === openId) ?? null;
 
+  function exportCsv() {
+    downloadCsv(
+      `submissions${filter === "all" ? "" : `-${filter}`}.csv`,
+      shown.map((s) => ({
+        Candidate: s.candidateName,
+        Email: s.candidateEmail,
+        Phone: s.candidatePhone,
+        Job: s.jobTitle,
+        Company: s.company,
+        Status: SUBMISSION_STATUS_LABEL[s.status],
+        Recruiter: s.recruiter?.name || s.recruiterName || "Direct",
+        "Recruiter email": s.recruiter?.email || "",
+        Submitted: s.createdAt ?? "",
+        Notes: s.notes,
+      })),
+    );
+  }
+
   return (
     <div>
-      <div className="mb-5">
-        <h1 className="text-xl font-extrabold tracking-tight text-ink">
-          Submissions
-        </h1>
-        <p className="mt-1 text-xs text-muted">
-          Screen recruiter submissions before they reach the client. Set a
-          candidate to <span className="font-medium text-ink">Approved</span> or{" "}
-          <span className="font-medium text-ink">With client</span> to surface
-          them on the company&apos;s shortlist.
-        </p>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight text-ink">
+            Submissions
+          </h1>
+          <p className="mt-1 text-xs text-muted">
+            Screen recruiter submissions before they reach the client. Set a
+            candidate to <span className="font-medium text-ink">Approved</span> or{" "}
+            <span className="font-medium text-ink">With client</span> to surface
+            them on the company&apos;s shortlist.
+          </p>
+        </div>
+        {shown.length > 0 && (
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="shrink-0 rounded-pill border border-line px-3.5 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+          >
+            Export CSV
+          </button>
+        )}
       </div>
 
       {/* filter chips */}
