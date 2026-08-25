@@ -307,18 +307,18 @@ export default function JobsPage() {
 /* ---- job card ---- */
 function JobCard({ job, saved, onSave }: { job: Job; saved: boolean; onSave: () => void }) {
   return (
-    <div className="group flex flex-col rounded-2xl border border-line bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_20px_50px_-30px_rgba(23,19,15,0.35)]">
+    <div className="group flex h-full flex-col rounded-2xl border border-line bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_20px_50px_-30px_rgba(23,19,15,0.35)]">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
           <span
             aria-hidden
             className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-sm font-bold text-primary"
           >
-            {initials(job.company)}
+            {initials(job.company || job.title)}
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-semibold text-ink">{job.company}</span>
+              <span className="truncate text-sm font-semibold text-ink">{job.company || "Confidential"}</span>
               <span title="JobFolder-vetted role" className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full bg-primary text-white">
                 <svg width="8" height="8" viewBox="0 0 12 12" fill="none" aria-hidden>
                   <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -364,7 +364,7 @@ function JobCard({ job, saved, onSave }: { job: Job; saved: boolean; onSave: () 
         <p className="mt-3 line-clamp-2 text-sm leading-6 text-muted">{job.description}</p>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
         <p className="shrink-0 text-sm font-semibold text-muted">{formatPay(job)}</p>
         <Link
           href={`/jobs/${job.id}`}
@@ -399,7 +399,7 @@ function JobListRow({ job, saved, onSave }: { job: Job; saved: boolean; onSave: 
       <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
         <p className="truncate text-base font-bold text-ink group-hover:text-primary">{job.title}</p>
         <p className="mt-0.5 truncate text-xs text-muted">
-          {job.company} · {job.remote ? "Remote" : job.location || "Onsite"} · {job.employmentType}
+          {job.company || "Confidential"} · {job.remote ? "Remote" : job.location || "Onsite"} · {job.employmentType}
         </p>
       </Link>
 

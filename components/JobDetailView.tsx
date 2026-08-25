@@ -37,7 +37,7 @@ export function JobDetailView({ job }: { job: Job }) {
           {job.title}
         </h1>
         <p className="mt-2 text-muted">
-          {job.company}
+          {job.company || "Confidential"}
           {job.location ? ` · ${job.location}` : ""}
         </p>
 
