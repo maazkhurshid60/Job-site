@@ -36,6 +36,9 @@ export type UserProfile = {
   /** Admin-set: unlocks the self-serve recruiter-website builder on
       /dashboard/career-site. */
   siteBuilderEnabled: boolean;
+  /** When an admin last sent the "complete your profile" reminder email, or
+      null if never. Informational only — nothing enforces a cooldown. */
+  profileReminderSentAt: string | null;
   /** ISO-8601 string from MySQL, or null. */
   createdAt: string | null;
 };
@@ -219,6 +222,15 @@ export async function setRecruiterSiteBuilderEnabled(
   await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}`, {
     method: "PATCH",
     body: { siteBuilderEnabled },
+    auth: true,
+  });
+}
+
+/** Admin action: email this recruiter a reminder to finish their profile.
+    Refused server-side if the profile is already complete. */
+export async function sendProfileReminder(uid: string): Promise<void> {
+  await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}/remind-profile`, {
+    method: "POST",
     auth: true,
   });
 }

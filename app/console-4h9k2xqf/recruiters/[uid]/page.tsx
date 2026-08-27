@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   listAllUsers, setRecruiterMetroTeamMember, setRecruiterVerified, setRecruiterSuspended,
-  setRecruiterSiteBuilderEnabled, type UserProfile,
+  setRecruiterSiteBuilderEnabled, sendProfileReminder, type UserProfile,
 } from "@/lib/users";
+import { profileCompletion } from "@/lib/profileCompletion";
 import {
   listAllSubmissions,
   setSubmissionStatus,
@@ -43,6 +44,8 @@ export default function RecruiterDetailPage() {
   const [togglingVerified, setTogglingVerified] = useState(false);
   const [togglingSuspended, setTogglingSuspended] = useState(false);
   const [togglingSiteBuilder, setTogglingSiteBuilder] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderNotice, setReminderNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -167,6 +170,24 @@ export default function RecruiterDetailPage() {
     }
   }
 
+  async function remindProfile() {
+    if (!user) return;
+    setReminderNotice(null);
+    setSendingReminder(true);
+    try {
+      await sendProfileReminder(user.uid);
+      const now = new Date().toISOString();
+      setUser({ ...user, profileReminderSentAt: now });
+      setReminderNotice(`Reminder emailed to ${user.email}.`);
+    } catch (err) {
+      setReminderNotice(
+        err instanceof Error && err.message ? err.message : "Could not send the reminder.",
+      );
+    } finally {
+      setSendingReminder(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="grid h-48 place-items-center rounded-2xl border border-line bg-white">
@@ -199,6 +220,7 @@ export default function RecruiterDetailPage() {
   }
 
   const initial = (user.name || user.email || "R").charAt(0).toUpperCase();
+  const completion = profileCompletion(user);
 
   return (
     <div>
@@ -316,6 +338,53 @@ export default function RecruiterDetailPage() {
             </p>
           </div>
         )}
+
+        <div className="mt-5 border-t border-line pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">
+                Profile completion
+              </p>
+              <div className="mt-2 flex items-center gap-2.5">
+                <div className="h-2 w-40 overflow-hidden rounded-pill bg-cream">
+                  <div
+                    className={`h-full rounded-pill ${completion.percent < 50 ? "bg-coral" : completion.isComplete ? "bg-sage" : "bg-lime"}`}
+                    style={{ width: `${completion.percent}%` }}
+                  />
+                </div>
+                <span className="text-sm font-semibold text-ink">{completion.percent}%</span>
+              </div>
+              {!completion.isComplete && (
+                <p className="mt-1.5 text-xs text-muted">
+                  Missing: {completion.missing.map((f) => f.label).join(", ")}
+                </p>
+              )}
+              {user.profileReminderSentAt && (
+                <p className="mt-1 text-[11px] text-muted">
+                  Last reminded {formatDate(user.profileReminderSentAt)}
+                </p>
+              )}
+            </div>
+            {!completion.isComplete && (
+              <button
+                type="button"
+                onClick={remindProfile}
+                disabled={sendingReminder}
+                className="shrink-0 rounded-pill border border-line px-3.5 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-60"
+                title="Emails this recruiter a reminder to finish their profile"
+              >
+                {sendingReminder
+                  ? "Sending…"
+                  : user.profileReminderSentAt
+                    ? "Send reminder again"
+                    : "Send profile reminder"}
+              </button>
+            )}
+          </div>
+          {reminderNotice && (
+            <p className="mt-2.5 text-xs text-muted">{reminderNotice}</p>
+          )}
+        </div>
       </div>
 
       {/* stats */}

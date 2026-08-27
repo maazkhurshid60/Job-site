@@ -67,6 +67,11 @@ CREATE TABLE users (
   -- /dashboard/career-site. Off by default — this is an earned perk (land a
   -- placement), not something every fresh signup gets. See recruiter_sites.
   site_builder_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Stamped when an admin sends the "please complete your profile" reminder
+  -- email — see POST /api/admin/recruiters/[uid]/remind-profile. NULL means
+  -- never reminded. Purely informational (shown in the console); nothing
+  -- enforces a cooldown before it can be sent again.
+  profile_reminder_sent_at DATETIME(3) NULL,
   created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
                            ON UPDATE CURRENT_TIMESTAMP(3),

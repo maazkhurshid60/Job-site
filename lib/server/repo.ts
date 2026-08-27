@@ -651,6 +651,7 @@ type UserRow = {
   verified: number;
   suspended: number;
   site_builder_enabled: number;
+  profile_reminder_sent_at: string | null;
   created_at: string | null;
 };
 
@@ -674,6 +675,7 @@ function toUserProfile(r: UserRow): UserProfile {
     verified: Boolean(r.verified),
     suspended: Boolean(r.suspended),
     siteBuilderEnabled: Boolean(r.site_builder_enabled),
+    profileReminderSentAt: r.profile_reminder_sent_at,
     createdAt: r.created_at,
   };
 }
@@ -681,7 +683,7 @@ function toUserProfile(r: UserRow): UserProfile {
 const USER_COLUMNS = `
   uid, name, email, phone, company, headline, location, linkedin, website,
   twitter, facebook, instagram, bio, photo_url, metro_team_member, verified,
-  suspended, site_builder_enabled, created_at`;
+  suspended, site_builder_enabled, profile_reminder_sent_at, created_at`;
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const row = await queryOne<UserRow>(
@@ -821,6 +823,16 @@ export async function setSiteBuilderEnabled(uid: string, value: boolean): Promis
   const result = await execute(
     "UPDATE users SET site_builder_enabled = ? WHERE uid = ?",
     [value, uid],
+  );
+  return result.affectedRows > 0;
+}
+
+/** Stamps that an admin just sent this recruiter the "complete your profile"
+    reminder email — see POST /api/admin/recruiters/[uid]/remind-profile. */
+export async function markProfileReminderSent(uid: string): Promise<boolean> {
+  const result = await execute(
+    "UPDATE users SET profile_reminder_sent_at = CURRENT_TIMESTAMP(3) WHERE uid = ?",
+    [uid],
   );
   return result.affectedRows > 0;
 }
