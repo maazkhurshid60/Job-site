@@ -196,6 +196,8 @@ type SubmissionRow = {
   candidate_name: string;
   candidate_email: string;
   candidate_phone: string;
+  candidate_linkedin: string;
+  candidate_photo_url: string;
   notes: string | null;
   cv_file_id: string | null;
   cv_name: string | null;
@@ -239,6 +241,8 @@ function toSubmission(r: SubmissionRow): Submission {
     candidateName: r.candidate_name,
     candidateEmail: r.candidate_email,
     candidatePhone: r.candidate_phone,
+    candidateLinkedin: r.candidate_linkedin ?? "",
+    candidatePhotoUrl: r.candidate_photo_url ?? "",
     notes: r.notes ?? "",
     cvUrl: r.cv_file_id ? signedFileUrl(r.cv_file_id) : "",
     cvName: r.cv_name ?? "",
@@ -281,7 +285,8 @@ function toSubmission(r: SubmissionRow): Submission {
    vanished would be worse than showing the row without a download link. */
 const SUB_COLUMNS = `
   s.id, s.job_id, s.job_title, s.company, s.recruiter_id, s.recruiter_name,
-  s.candidate_name, s.candidate_email, s.candidate_phone, s.notes,
+  s.candidate_name, s.candidate_email, s.candidate_phone,
+  s.candidate_linkedin, s.candidate_photo_url, s.notes,
   s.cv_file_id, f.filename AS cv_name, f.content_type AS cv_type,
   f.byte_size AS cv_size, s.bounty, s.fee_tier, s.status, s.created_at`;
 
@@ -338,6 +343,9 @@ export type SubmissionWrite = {
   candidateName: string;
   candidateEmail: string;
   candidatePhone: string;
+  /** Both optional — "" means "none on file". */
+  candidateLinkedin: string;
+  candidatePhotoUrl: string;
   notes: string;
   cvFileId: string;
   bounty: number | null;
@@ -351,14 +359,15 @@ export async function createSubmission(
   await execute(
     `INSERT INTO submissions
        (id, job_id, job_title, company, recruiter_id, recruiter_name,
-        candidate_name, candidate_email, candidate_phone, notes,
+        candidate_name, candidate_email, candidate_phone,
+        candidate_linkedin, candidate_photo_url, notes,
         cv_file_id, bounty, fee_tier, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'submitted')`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'submitted')`,
     [
       id, input.jobId, input.jobTitle, input.company, input.recruiterId,
       input.recruiterName, input.candidateName, input.candidateEmail,
-      input.candidatePhone, input.notes, input.cvFileId, input.bounty,
-      input.feeTier,
+      input.candidatePhone, input.candidateLinkedin, input.candidatePhotoUrl,
+      input.notes, input.cvFileId, input.bounty, input.feeTier,
     ],
   );
   return id;
@@ -494,6 +503,8 @@ type CandidateRow = {
   name: string;
   email: string;
   phone: string;
+  linkedin: string;
+  photo_url: string;
   notes: string | null;
   cv_file_id: string | null;
   cv_name: string | null;
@@ -509,6 +520,8 @@ export type SavedCandidate = {
   name: string;
   email: string;
   phone: string;
+  linkedin: string;
+  photoUrl: string;
   notes: string;
   cvFileId: string | null;
   cvUrl: string;
@@ -526,6 +539,8 @@ function toCandidate(r: CandidateRow): SavedCandidate {
     name: r.name,
     email: r.email,
     phone: r.phone,
+    linkedin: r.linkedin ?? "",
+    photoUrl: r.photo_url ?? "",
     notes: r.notes ?? "",
     cvFileId: r.cv_file_id,
     cvUrl: r.cv_file_id ? signedFileUrl(r.cv_file_id) : "",
@@ -538,7 +553,7 @@ function toCandidate(r: CandidateRow): SavedCandidate {
 }
 
 const CANDIDATE_COLUMNS = `
-  c.id, c.recruiter_id, c.name, c.email, c.phone, c.notes, c.cv_file_id,
+  c.id, c.recruiter_id, c.name, c.email, c.phone, c.linkedin, c.photo_url, c.notes, c.cv_file_id,
   f.filename AS cv_name, f.content_type AS cv_type, f.byte_size AS cv_size,
   c.created_at, c.updated_at`;
 
@@ -568,11 +583,15 @@ export type CandidateWrite = {
   name: string;
   email: string;
   phone: string;
+  /** Optional — omitted/empty means "none on file". */
+  linkedin: string;
   notes: string;
-  /** undefined = leave whatever CV is already saved untouched (an edit that
-      didn't attach a new file); null would mean "clear it", which the UI
-      never offers — there's no way to remove a saved CV without replacing it. */
+  /** undefined = leave whatever CV/photo is already saved untouched (an
+      edit that didn't attach a new file); null would mean "clear it", which
+      the UI never offers — there's no way to remove either without
+      replacing it. */
   cvFileId?: string;
+  photoUrl?: string;
 };
 
 export async function createCandidate(
@@ -581,22 +600,26 @@ export async function createCandidate(
 ): Promise<string> {
   const id = newId();
   await execute(
-    `INSERT INTO candidates (id, recruiter_id, name, email, phone, notes, cv_file_id)
-     VALUES (?,?,?,?,?,?,?)`,
-    [id, recruiterId, input.name, input.email, input.phone, input.notes, input.cvFileId ?? null],
+    `INSERT INTO candidates (id, recruiter_id, name, email, phone, linkedin, photo_url, notes, cv_file_id)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
+    [id, recruiterId, input.name, input.email, input.phone, input.linkedin, input.photoUrl ?? "", input.notes, input.cvFileId ?? null],
   );
   return id;
 }
 
 export async function updateCandidate(id: string, input: CandidateWrite): Promise<boolean> {
-  const result = await execute(
-    input.cvFileId === undefined
-      ? `UPDATE candidates SET name = ?, email = ?, phone = ?, notes = ? WHERE id = ?`
-      : `UPDATE candidates SET name = ?, email = ?, phone = ?, notes = ?, cv_file_id = ? WHERE id = ?`,
-    input.cvFileId === undefined
-      ? [input.name, input.email, input.phone, input.notes, id]
-      : [input.name, input.email, input.phone, input.notes, input.cvFileId, id],
-  );
+  // cv_file_id and photo_url are each independently "leave untouched when
+  // undefined" (no new file attached this edit) — built dynamically rather
+  // than hand-writing all four combinations. Every fragment here is a fixed
+  // string this function controls, and every value is still bound as a
+  // parameter, so this is not building SQL out of user input.
+  const sets = ["name = ?", "email = ?", "phone = ?", "linkedin = ?", "notes = ?"];
+  const args: (string | null)[] = [input.name, input.email, input.phone, input.linkedin, input.notes];
+  if (input.cvFileId !== undefined) { sets.push("cv_file_id = ?"); args.push(input.cvFileId); }
+  if (input.photoUrl !== undefined) { sets.push("photo_url = ?"); args.push(input.photoUrl); }
+  args.push(id);
+
+  const result = await execute(`UPDATE candidates SET ${sets.join(", ")} WHERE id = ?`, args);
   return result.affectedRows > 0;
 }
 

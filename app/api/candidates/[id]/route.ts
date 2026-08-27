@@ -25,8 +25,10 @@ export function PUT(
       name: str(body.name, "name", { max: 255, required: true }),
       email: str(body.email, "email", { max: 320, required: true }),
       phone: str(body.phone, "phone", { max: 64, required: true }),
+      linkedin: str(body.linkedin, "linkedin", { max: 512 }),
       notes: str(body.notes, "notes"),
       cvFileId: body.cvFileId === undefined ? undefined : str(body.cvFileId, "cvFileId", { max: 36 }),
+      photoUrl: body.photoUrl === undefined ? undefined : str(body.photoUrl, "photoUrl", { max: 1024 }),
     }).catch((err: unknown) => {
       if (
         err &&

@@ -20,8 +20,10 @@ export function SavedCandidateModal({
   const [name, setName] = useState(candidate?.name ?? "");
   const [email, setEmail] = useState(candidate?.email ?? "");
   const [phone, setPhone] = useState(candidate?.phone ?? "");
+  const [linkedin, setLinkedin] = useState(candidate?.linkedin ?? "");
   const [notes, setNotes] = useState(candidate?.notes ?? "");
   const [cv, setCv] = useState<File | null>(null);
+  const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -31,8 +33,8 @@ export function SavedCandidateModal({
     setSaving(true);
     try {
       const saved = candidate
-        ? await updateCandidate(candidate.id, { name, phone, notes }, cv)
-        : await createCandidate({ name, email, phone, notes }, cv);
+        ? await updateCandidate(candidate.id, { name, phone, linkedin, notes }, cv, photo)
+        : await createCandidate({ name, email, phone, linkedin, notes }, cv, photo);
       onClose(saved);
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : "Could not save this candidate.");
@@ -111,6 +113,30 @@ export function SavedCandidateModal({
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+44 7700 900000"
               />
+            </Field>
+            <Field label="LinkedIn / portfolio URL (optional)" className="sm:col-span-2">
+              <input
+                className="input"
+                type="url"
+                value={linkedin}
+                onChange={(e) => setLinkedin(e.target.value)}
+                placeholder="https://linkedin.com/in/jordanlee"
+              />
+            </Field>
+            <Field label="Photo (optional)" className="sm:col-span-2">
+              <input
+                className="block w-full text-sm text-muted file:mr-4 file:rounded-pill file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+              />
+              {candidate?.photoUrl && !photo && (
+                <span className="mt-1.5 flex items-center gap-2 text-xs text-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={candidate.photoUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+                  Currently saved — choose a file above to replace it.
+                </span>
+              )}
             </Field>
             <Field label="Notes (optional)" className="sm:col-span-2">
               <textarea

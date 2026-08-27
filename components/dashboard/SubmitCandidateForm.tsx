@@ -18,12 +18,17 @@ type CandidateDraft = {
   candidateName: string;
   candidateEmail: string;
   candidatePhone: string;
+  candidateLinkedin: string;
   notes: string;
   cv: File | null;
+  photo: File | null;
 };
 
 function emptyDraft(): CandidateDraft {
-  return { candidateName: "", candidateEmail: "", candidatePhone: "", notes: "", cv: null };
+  return {
+    candidateName: "", candidateEmail: "", candidatePhone: "", candidateLinkedin: "",
+    notes: "", cv: null, photo: null,
+  };
 }
 
 type Step = 1 | 2 | 3;
@@ -183,6 +188,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
         { uid: user.uid, name: profile?.name || user.displayName || "Recruiter" },
         draft,
         draft.cv as File,
+        draft.photo,
       );
       setOutcome({ ok: true, id });
       setSubmittedAt(new Date().toISOString());
@@ -563,6 +569,26 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
                   placeholder="A short pitch for this candidate…"
                 />
               </Field>
+              <Field label="LinkedIn / portfolio URL (optional)">
+                <input
+                  className="input"
+                  type="url"
+                  value={draft.candidateLinkedin}
+                  onChange={(e) => updateDraft({ candidateLinkedin: e.target.value })}
+                  placeholder="https://linkedin.com/in/jordanlee"
+                />
+              </Field>
+              <Field label="Candidate photo (optional)">
+                <input
+                  className="block w-full text-sm text-muted file:mr-4 file:rounded-pill file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => updateDraft({ photo: e.target.files?.[0] ?? null })}
+                />
+                {draft.photo && (
+                  <span className="mt-1.5 block text-xs text-muted">{draft.photo.name}</span>
+                )}
+              </Field>
               <Field label="CV (PDF or Word, max 10 MB)">
                 <input
                   className="block w-full text-sm text-muted file:mr-4 file:rounded-pill file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
@@ -639,6 +665,8 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
                 </div>
                 <dl className="mt-3 space-y-2.5 text-sm">
                   <ReviewRow label="Why they're a fit" value={draft.notes || "No answer"} />
+                  <ReviewRow label="LinkedIn / portfolio" value={draft.candidateLinkedin || "No answer"} />
+                  <ReviewRow label="Photo" value={draft.photo?.name ?? "No answer"} />
                   <ReviewRow label="CV" value={draft.cv?.name ?? "No answer"} />
                 </dl>
               </div>

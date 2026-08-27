@@ -70,6 +70,8 @@ export function POST(req: Request) {
     let candidateName: string;
     let candidateEmail: string;
     let candidatePhone: string;
+    let candidateLinkedin: string;
+    let candidatePhotoUrl: string;
     let cvFileId: string;
 
     if (candidateIdRaw !== undefined) {
@@ -91,6 +93,8 @@ export function POST(req: Request) {
       candidateName = candidate.name;
       candidateEmail = candidate.email;
       candidatePhone = candidate.phone;
+      candidateLinkedin = candidate.linkedin;
+      candidatePhotoUrl = candidate.photoUrl;
       cvFileId = cloned;
     } else {
       /* The CV was uploaded to POST /api/files first and its bytes are
@@ -104,6 +108,8 @@ export function POST(req: Request) {
       candidateName = str(body.candidateName, "candidateName", { max: 255, required: true });
       candidateEmail = str(body.candidateEmail, "candidateEmail", { max: 320, required: true });
       candidatePhone = str(body.candidatePhone, "candidatePhone", { max: 64, required: true });
+      candidateLinkedin = str(body.candidateLinkedin, "candidateLinkedin", { max: 512 });
+      candidatePhotoUrl = str(body.candidatePhotoUrl, "candidatePhotoUrl", { max: 1024 });
     }
 
     const id = await createSubmission({
@@ -115,6 +121,8 @@ export function POST(req: Request) {
       candidateName,
       candidateEmail,
       candidatePhone,
+      candidateLinkedin,
+      candidatePhotoUrl,
       notes: str(body.notes, "notes"),
       cvFileId,
       bounty: job.bounty,

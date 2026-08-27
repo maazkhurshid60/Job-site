@@ -201,6 +201,11 @@ CREATE TABLE submissions (
   candidate_name  VARCHAR(255) NOT NULL DEFAULT '',
   candidate_email VARCHAR(320) NOT NULL DEFAULT '',
   candidate_phone VARCHAR(64)  NOT NULL DEFAULT '',
+  -- Both optional — a recruiter can submit without either. photo_url is a
+  -- plain (unsigned) link, same as users.photo_url: a candidate photo isn't
+  -- sensitive the way a CV is, and it needs to work in a plain <img> tag.
+  candidate_linkedin VARCHAR(512)  NOT NULL DEFAULT '',
+  candidate_photo_url VARCHAR(1024) NOT NULL DEFAULT '',
   notes           MEDIUMTEXT,
   -- The CV itself lives in `files`. RESTRICT, not CASCADE: deleting a CV row
   -- out from under a live submission would silently destroy the only copy of
@@ -251,6 +256,10 @@ CREATE TABLE candidates (
   name         VARCHAR(255) NOT NULL DEFAULT '',
   email        VARCHAR(320) NOT NULL DEFAULT '',
   phone        VARCHAR(64)  NOT NULL DEFAULT '',
+  -- Both optional. photo_url is a plain (unsigned) link, same as
+  -- users.photo_url — a candidate photo isn't sensitive the way a CV is.
+  linkedin     VARCHAR(512)  NOT NULL DEFAULT '',
+  photo_url    VARCHAR(1024) NOT NULL DEFAULT '',
   notes        MEDIUMTEXT,
   -- Optional: a candidate can be saved before a CV is on hand. Required only
   -- at the point of actually applying — POST /api/submissions with a

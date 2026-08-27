@@ -11,6 +11,9 @@ export type SavedCandidate = {
   name: string;
   email: string;
   phone: string;
+  /** Both optional — "" means none on file. */
+  linkedin: string;
+  photoUrl: string;
   notes: string;
   cvFileId: string | null;
   /** Signed, one-hour download link — same as a submission's cvUrl. */
@@ -25,6 +28,8 @@ export type SavedCandidate = {
 export type SavedCandidateInput = {
   name: string;
   phone: string;
+  /** Both optional. */
+  linkedin: string;
   notes: string;
 };
 
@@ -39,40 +44,45 @@ export function listCandidates(): Promise<SavedCandidate[]> {
   return apiFetch<SavedCandidate[]>("/api/candidates", { auth: true });
 }
 
-/** Save a new candidate to the pool. CV is optional here — required only at
-    the point of actually quick-applying (see quickApply). */
+/** Save a new candidate to the pool. CV and photo are both optional here —
+    a CV is required only at the point of actually quick-applying (see
+    quickApply); a photo is never required. */
 export async function createCandidate(
   input: SavedCandidateInput & { email: string },
   cv: File | null,
+  photo?: File | null,
 ): Promise<SavedCandidate> {
   let cvFileId: string | undefined;
   if (cv) {
     checkCv(cv);
     cvFileId = (await uploadFile(cv, "cv")).id;
   }
+  const photoUrl = photo ? (await uploadFile(photo, "avatar")).url ?? "" : "";
   return apiFetch<SavedCandidate>("/api/candidates", {
     method: "POST",
     auth: true,
-    body: { ...input, cvFileId },
+    body: { ...input, photoUrl, cvFileId },
   });
 }
 
-/** Update a saved candidate. Passing a new CV replaces the old one; omitting
-    it leaves whatever was already saved untouched. */
+/** Update a saved candidate. Passing a new CV/photo replaces the old one;
+    omitting either leaves whatever was already saved untouched. */
 export async function updateCandidate(
   id: string,
   input: SavedCandidateInput,
   cv: File | null,
+  photo?: File | null,
 ): Promise<SavedCandidate> {
   let cvFileId: string | undefined;
   if (cv) {
     checkCv(cv);
     cvFileId = (await uploadFile(cv, "cv")).id;
   }
+  const photoUrl = photo ? (await uploadFile(photo, "avatar")).url ?? "" : undefined;
   return apiFetch<SavedCandidate>(`/api/candidates/${encodeURIComponent(id)}`, {
     method: "PUT",
     auth: true,
-    body: { ...input, ...(cvFileId ? { cvFileId } : {}) },
+    body: { ...input, ...(cvFileId ? { cvFileId } : {}), ...(photoUrl !== undefined ? { photoUrl } : {}) },
   });
 }
 

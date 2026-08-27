@@ -45,6 +45,9 @@ export type Submission = {
   candidateName: string;
   candidateEmail: string;
   candidatePhone: string;
+  /** Both optional — "" means none on file. */
+  candidateLinkedin: string;
+  candidatePhotoUrl: string;
   notes: string;
   /* A signed, one-hour download link minted by the server each time this
      submission is read. Not stored, and not shareable for long. */
@@ -92,6 +95,8 @@ export type SubmissionInput = {
   candidateName: string;
   candidateEmail: string;
   candidatePhone: string;
+  /** Both optional. */
+  candidateLinkedin: string;
   notes: string;
 };
 
@@ -120,6 +125,7 @@ export async function createSubmission(
   _recruiter: { uid: string; name: string } | null,
   input: SubmissionInput,
   cv: File,
+  photo?: File | null,
 ): Promise<{ id: string }> {
   // Checked again server-side; this is just a fast, friendly failure.
   if (cv.size > MAX_CV_BYTES) throw new Error("CV is larger than 10 MB.");
@@ -128,6 +134,7 @@ export async function createSubmission(
 
   // Store the bytes first, then reference them from the submission.
   const { id: cvFileId } = await uploadFile(cv, "cv");
+  const candidatePhotoUrl = photo ? (await uploadFile(photo, "avatar")).url ?? "" : "";
 
   return apiFetch<{ id: string }>("/api/submissions", {
     method: "POST",
@@ -137,6 +144,8 @@ export async function createSubmission(
       candidateName: input.candidateName,
       candidateEmail: input.candidateEmail,
       candidatePhone: input.candidatePhone,
+      candidateLinkedin: input.candidateLinkedin,
+      candidatePhotoUrl,
       notes: input.notes,
       cvFileId,
     },

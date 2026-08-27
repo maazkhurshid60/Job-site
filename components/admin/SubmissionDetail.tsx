@@ -47,14 +47,22 @@ export function SubmissionDetail({
       <aside className="flex h-full w-full max-w-5xl flex-col bg-cream shadow-2xl">
         {/* header */}
         <header className="flex items-start justify-between gap-4 border-b border-line bg-white px-6 py-4">
-          <div className="min-w-0">
-            <h2 className="truncate text-lg font-extrabold text-ink">
-              {s.candidateName}
-            </h2>
-            <p className="truncate text-sm text-muted">
-              {s.jobTitle}
-              {s.company ? ` · ${s.company}` : ""}
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            {s.candidatePhotoUrl && (
+              <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s.candidatePhotoUrl} alt="" className="h-full w-full object-cover" />
+              </span>
+            )}
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-extrabold text-ink">
+                {s.candidateName}
+              </h2>
+              <p className="truncate text-sm text-muted">
+                {s.jobTitle}
+                {s.company ? ` · ${s.company}` : ""}
+              </p>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <select
@@ -124,6 +132,9 @@ export function SubmissionDetail({
               <Row label="Name" value={s.candidateName} />
               <Row label="Email" value={s.candidateEmail} href={`mailto:${s.candidateEmail}`} />
               <Row label="Phone" value={s.candidatePhone} href={`tel:${s.candidatePhone}`} />
+              {s.candidateLinkedin && (
+                <Row label="LinkedIn" value={s.candidateLinkedin} href={s.candidateLinkedin} external />
+              )}
               <Row label="Submitted" value={formatDate(s.createdAt)} />
               <Row label="Bounty" value={s.bounty ? money(s.bounty) : "—"} />
             </Section>
