@@ -9,6 +9,9 @@ import { Logo } from "@/components/Logo";
 import { listJobs } from "@/lib/jobs";
 import { listAllSubmissions } from "@/lib/submissions";
 import { listAllUsers } from "@/lib/users";
+import {
+  RECRUITER_STATUS_TABS, RECRUITER_STATUS_LABEL, recruitersStatusHref, type RecruiterStatusTab,
+} from "@/lib/recruiterStatus";
 
 const groups = [
   {
@@ -45,7 +48,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
      to do when the count just hasn't arrived yet. */
   const [openJobs, setOpenJobs] = useState<number | null>(null);
   const [needsScreening, setNeedsScreening] = useState<number | null>(null);
-  const [pendingVerification, setPendingVerification] = useState<number | null>(null);
+  const [recruiterCounts, setRecruiterCounts] = useState<Record<RecruiterStatusTab, number> | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -58,7 +61,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       ))
       .catch(() => {});
     listAllUsers()
-      .then((users) => active && setPendingVerification(users.filter((u) => !u.verified).length))
+      .then((users) => {
+        if (!active) return;
+        const pending = users.filter((u) => !u.verified).length;
+        const suspended = users.filter((u) => u.suspended).length;
+        setRecruiterCounts({ all: users.length, pending, verified: users.length - pending, suspended });
+      })
       .catch(() => {});
     return () => {
       active = false;
@@ -68,7 +76,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   function badgeFor(href: string): string | null {
     if (href === adminRoutes.jobs) return openJobs === null ? null : String(openJobs);
     if (href === adminRoutes.submissions) return needsScreening ? String(needsScreening) : null;
-    if (href === adminRoutes.recruiters) return pendingVerification ? String(pendingVerification) : null;
+    if (href === adminRoutes.recruiters) return recruiterCounts?.pending ? String(recruiterCounts.pending) : null;
     return null;
   }
 
@@ -155,32 +163,52 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   {group.items.map((item) => {
                     const badge = badgeFor(item.href);
                     const active = isActive(item.href);
+                    const isRecruiters = item.href === adminRoutes.recruiters;
                     return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                          active
-                            ? "bg-white text-blue-brand-dark"
-                            : "text-white/70 hover:bg-white/8 hover:text-white"
-                        }`}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
-                          <path d={item.icon} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        {item.label}
-                        {badge && (
-                          <span
-                            className={`ml-auto rounded-pill px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
-                              item.href === adminRoutes.submissions || item.href === adminRoutes.recruiters
-                                ? active ? "bg-coral-soft text-coral" : "bg-coral text-white"
-                                : active ? "bg-blue-brand-soft text-primary" : "bg-white/15 text-white"
-                            }`}
-                          >
-                            {badge}
-                          </span>
+                      <div key={item.href}>
+                        <Link
+                          href={item.href}
+                          className={`flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                            active
+                              ? "bg-white text-blue-brand-dark"
+                              : "text-white/70 hover:bg-white/8 hover:text-white"
+                          }`}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden>
+                            <path d={item.icon} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          {item.label}
+                          {badge && (
+                            <span
+                              className={`ml-auto rounded-pill px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                                item.href === adminRoutes.submissions || item.href === adminRoutes.recruiters
+                                  ? active ? "bg-coral-soft text-coral" : "bg-coral text-white"
+                                  : active ? "bg-blue-brand-soft text-primary" : "bg-white/15 text-white"
+                              }`}
+                            >
+                              {badge}
+                            </span>
+                          )}
+                        </Link>
+                        {isRecruiters && (
+                          <div className="ml-5 mt-0.5 space-y-0.5 border-l border-white/10 pl-3">
+                            {RECRUITER_STATUS_TABS.filter((s) => s !== "all").map((s) => (
+                              <Link
+                                key={s}
+                                href={recruitersStatusHref(s)}
+                                className="flex items-center gap-2 rounded-md px-2 py-1 text-[11px] font-medium text-white/55 transition-colors hover:bg-white/8 hover:text-white"
+                              >
+                                <span className="truncate">{RECRUITER_STATUS_LABEL[s]}</span>
+                                {recruiterCounts && (
+                                  <span className="ml-auto rounded-pill bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white/70">
+                                    {recruiterCounts[s]}
+                                  </span>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
                         )}
-                      </Link>
+                      </div>
                     );
                   })}
                 </nav>
