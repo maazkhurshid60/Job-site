@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  listAllUsers, setRecruiterMetroTeamMember, setRecruiterVerified, setRecruiterSuspended, type UserProfile,
+  listAllUsers, setRecruiterMetroTeamMember, setRecruiterVerified, setRecruiterSuspended,
+  setRecruiterSiteBuilderEnabled, type UserProfile,
 } from "@/lib/users";
 import {
   listAllSubmissions,
@@ -41,6 +42,7 @@ export default function RecruiterDetailPage() {
   const [togglingMetro, setTogglingMetro] = useState(false);
   const [togglingVerified, setTogglingVerified] = useState(false);
   const [togglingSuspended, setTogglingSuspended] = useState(false);
+  const [togglingSiteBuilder, setTogglingSiteBuilder] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -142,6 +144,26 @@ export default function RecruiterDetailPage() {
       alert("Could not update suspension status.");
     } finally {
       setTogglingSuspended(false);
+    }
+  }
+
+  async function toggleSiteBuilder() {
+    if (!user) return;
+    const next = !user.siteBuilderEnabled;
+    if (next && !confirm(
+      `Unlock the free recruiter-website builder for ${user.name || "this recruiter"}?`,
+    )) {
+      return;
+    }
+    setUser({ ...user, siteBuilderEnabled: next });
+    setTogglingSiteBuilder(true);
+    try {
+      await setRecruiterSiteBuilderEnabled(user.uid, next);
+    } catch {
+      setUser((u) => (u ? { ...u, siteBuilderEnabled: !next } : u));
+      alert("Could not update the website builder access.");
+    } finally {
+      setTogglingSiteBuilder(false);
     }
   }
 
@@ -257,6 +279,19 @@ export default function RecruiterDetailPage() {
                   title="Suspending blocks submissions, saved candidates, messages, and file uploads"
                 >
                   {user.suspended ? "Reinstate" : "Suspend"}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleSiteBuilder}
+                  disabled={togglingSiteBuilder}
+                  className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                    user.siteBuilderEnabled
+                      ? "bg-primary text-white hover:bg-primary-dark"
+                      : "border border-line text-muted hover:border-primary hover:text-primary"
+                  }`}
+                  title="Unlocks the free recruiter-website builder on their dashboard"
+                >
+                  {user.siteBuilderEnabled ? "✓ Website builder unlocked" : "Unlock website builder"}
                 </button>
               </div>
             </div>

@@ -33,6 +33,9 @@ export type UserProfile = {
       submissions, saved candidates, messages, file uploads. They can still
       sign in and see the dashboard, which is what shows them the notice. */
   suspended: boolean;
+  /** Admin-set: unlocks the self-serve recruiter-website builder on
+      /dashboard/career-site. */
+  siteBuilderEnabled: boolean;
   /** ISO-8601 string from MySQL, or null. */
   createdAt: string | null;
 };
@@ -203,6 +206,19 @@ export async function setRecruiterSuspended(
   await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}`, {
     method: "PATCH",
     body: { suspended },
+    auth: true,
+  });
+}
+
+/** Admin action: unlock (or lock) the free recruiter-website builder for this
+    recruiter — a perk normally granted after their first placement. */
+export async function setRecruiterSiteBuilderEnabled(
+  uid: string,
+  siteBuilderEnabled: boolean,
+): Promise<void> {
+  await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}`, {
+    method: "PATCH",
+    body: { siteBuilderEnabled },
     auth: true,
   });
 }

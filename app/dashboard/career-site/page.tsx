@@ -1,9 +1,23 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/lib/auth";
+import { SiteBuilderWizard } from "@/components/dashboard/SiteBuilderWizard";
+import { PageLoader } from "@/components/Loader";
 
 /* A benefit recruiters don't know about until they see it: land one hire
    through JobFolder and we'll build you a free personal recruiter website —
-   your own place to show your track record, not just a profile on ours. */
+   your own place to show your track record, not just a profile on ours.
+
+   Until an admin unlocks it (UserProfile.siteBuilderEnabled), this is just
+   the pitch below. Once unlocked, the pitch is replaced by the actual
+   self-serve builder — see SiteBuilderWizard. */
 export default function CareerSitePage() {
+  const { profile, profileLoading } = useAuth();
+
+  if (profileLoading) return <PageLoader />;
+  if (profile?.siteBuilderEnabled) return <SiteBuilderWizard />;
+
   return (
     <div>
       <div className="mb-6">

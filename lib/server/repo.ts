@@ -7,6 +7,8 @@ import type { Submission, SubmissionStatus } from "@/lib/submissions";
 import type {
   UserProfile, AdminAccount, AdminInvite, AdminAuditEntry, AdminAuditAction,
 } from "@/lib/users";
+import type { RecruiterSite } from "@/lib/recruiterSite";
+import { siteTemplate } from "@/lib/siteThemes";
 
 /* Data access for every table. Routes call these; nothing else touches SQL.
 
@@ -648,6 +650,7 @@ type UserRow = {
   metro_team_member: number;
   verified: number;
   suspended: number;
+  site_builder_enabled: number;
   created_at: string | null;
 };
 
@@ -670,6 +673,7 @@ function toUserProfile(r: UserRow): UserProfile {
     metroTeamMember: Boolean(r.metro_team_member),
     verified: Boolean(r.verified),
     suspended: Boolean(r.suspended),
+    siteBuilderEnabled: Boolean(r.site_builder_enabled),
     createdAt: r.created_at,
   };
 }
@@ -677,7 +681,7 @@ function toUserProfile(r: UserRow): UserProfile {
 const USER_COLUMNS = `
   uid, name, email, phone, company, headline, location, linkedin, website,
   twitter, facebook, instagram, bio, photo_url, metro_team_member, verified,
-  suspended, created_at`;
+  suspended, site_builder_enabled, created_at`;
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const row = await queryOne<UserRow>(
@@ -811,6 +815,16 @@ export async function setMetroTeamMember(uid: string, value: boolean): Promise<b
   return result.affectedRows > 0;
 }
 
+/** Admin action: unlock (or lock) the self-serve recruiter-website builder
+    for this recruiter. See recruiter_sites below. */
+export async function setSiteBuilderEnabled(uid: string, value: boolean): Promise<boolean> {
+  const result = await execute(
+    "UPDATE users SET site_builder_enabled = ? WHERE uid = ?",
+    [value, uid],
+  );
+  return result.affectedRows > 0;
+}
+
 /** Public: recruiters an admin has approved to appear on Metro Associates'
     "Meet Our Team" page. Alphabetical — there is no other natural order for a
     public roster, and it keeps the listing stable as people are added. */
@@ -819,6 +833,160 @@ export async function listMetroTeamMembers(): Promise<UserProfile[]> {
     `SELECT ${USER_COLUMNS} FROM users WHERE metro_team_member = TRUE ORDER BY name ASC`,
   );
   return rows.map(toUserProfile);
+}
+
+/* ------------------------------------------------------- recruiter_sites */
+
+type RecruiterSiteRow = {
+  recruiter_id: string;
+  slug: string;
+  template: string;
+  theme: string;
+  tagline: string;
+  intro: string | null;
+  specialisms: unknown;
+  highlights: unknown;
+  cta_label: string;
+  cta_url: string;
+  published: number;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+function toRecruiterSite(r: RecruiterSiteRow): RecruiterSite {
+  return {
+    recruiterId: r.recruiter_id,
+    slug: r.slug,
+    template: siteTemplate(r.template),
+    theme: r.theme as RecruiterSite["theme"],
+    tagline: r.tagline,
+    intro: r.intro ?? "",
+    specialisms: parseJson<string[]>(r.specialisms, []),
+    highlights: parseJson<string[]>(r.highlights, []),
+    ctaLabel: r.cta_label,
+    ctaUrl: r.cta_url,
+    published: Boolean(r.published),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+const SITE_COLUMNS = `
+  recruiter_id, slug, template, theme, tagline, intro, specialisms,
+  highlights, cta_label, cta_url, published, created_at, updated_at`;
+
+export async function getRecruiterSiteByUid(uid: string): Promise<RecruiterSite | null> {
+  const row = await queryOne<RecruiterSiteRow>(
+    `SELECT ${SITE_COLUMNS} FROM recruiter_sites WHERE recruiter_id = ?`,
+    [uid],
+  );
+  return row ? toRecruiterSite(row) : null;
+}
+
+/** Public: the profile fields a rendered site needs, alongside the site row
+    itself. Only ever returned for a published site — see the route. */
+export type PublicRecruiterSite = {
+  site: RecruiterSite;
+  recruiter: Pick<
+    UserProfile,
+    "name" | "headline" | "bio" | "photoURL" | "phone" | "email" |
+    "linkedin" | "website" | "twitter" | "facebook" | "instagram"
+  >;
+};
+
+export async function getRecruiterSiteBySlug(slug: string): Promise<PublicRecruiterSite | null> {
+  const row = await queryOne<RecruiterSiteRow & Pick<UserRow,
+    "name" | "headline" | "bio" | "photo_url" | "phone" | "email" |
+    "linkedin" | "website" | "twitter" | "facebook" | "instagram"
+  >>(
+    `SELECT rs.recruiter_id, rs.slug, rs.template, rs.theme, rs.tagline, rs.intro,
+            rs.specialisms, rs.highlights, rs.cta_label, rs.cta_url, rs.published,
+            rs.created_at, rs.updated_at,
+            u.name, u.headline, u.bio, u.photo_url, u.phone, u.email,
+            u.linkedin, u.website, u.twitter, u.facebook, u.instagram
+       FROM recruiter_sites rs
+       JOIN users u ON u.uid = rs.recruiter_id
+      WHERE rs.slug = ? AND rs.published = TRUE`,
+    [slug],
+  );
+  if (!row) return null;
+  return {
+    site: toRecruiterSite(row),
+    recruiter: {
+      name: row.name,
+      headline: row.headline,
+      bio: row.bio ?? "",
+      photoURL: row.photo_url,
+      phone: row.phone,
+      email: row.email,
+      linkedin: row.linkedin,
+      website: row.website,
+      twitter: row.twitter,
+      facebook: row.facebook,
+      instagram: row.instagram,
+    },
+  };
+}
+
+export type RecruiterSiteWrite = {
+  slug: string;
+  template: string;
+  theme: string;
+  tagline: string;
+  intro: string;
+  specialisms: string; // JSON-encoded, see jsonArray()
+  highlights: string;  // JSON-encoded, see jsonArray()
+  ctaLabel: string;
+  ctaUrl: string;
+  published: boolean;
+};
+
+/** Slug is taken by a DIFFERENT recruiter than the one saving. */
+export class SlugTakenError extends Error {}
+
+/* UPDATE-else-INSERT rather than a single INSERT ... ON DUPLICATE KEY UPDATE:
+   this table has TWO unique keys (recruiter_id, slug), and when a bare INSERT
+   collides on the slug of a DIFFERENT recruiter_id, MySQL's merge semantics
+   for multiple violated keys are not something to rely on — worst case it
+   updates the OTHER recruiter's row instead of rejecting the write. Doing an
+   explicit UPDATE-by-PK first (and only INSERTing when no row exists yet)
+   means the only unique key that can ever be violated is `slug`, on a
+   straightforward UPDATE or INSERT — never a merge across two different
+   recruiter_id rows. */
+export async function upsertRecruiterSite(
+  uid: string,
+  input: RecruiterSiteWrite,
+): Promise<RecruiterSite> {
+  const args = [
+    input.slug, input.template, input.theme, input.tagline, input.intro,
+    input.specialisms, input.highlights, input.ctaLabel, input.ctaUrl, input.published,
+  ];
+  try {
+    const updated = await execute(
+      `UPDATE recruiter_sites SET
+         slug = ?, template = ?, theme = ?, tagline = ?, intro = ?,
+         specialisms = ?, highlights = ?, cta_label = ?, cta_url = ?, published = ?
+       WHERE recruiter_id = ?`,
+      [...args, uid],
+    );
+    if (updated.affectedRows === 0) {
+      await execute(
+        `INSERT INTO recruiter_sites
+           (slug, template, theme, tagline, intro, specialisms, highlights,
+            cta_label, cta_url, published, recruiter_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        [...args, uid],
+      );
+    }
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && (err as { code?: string }).code === "ER_DUP_ENTRY") {
+      throw new SlugTakenError("That link is already taken — please choose another.");
+    }
+    throw err;
+  }
+  const saved = await getRecruiterSiteByUid(uid);
+  if (!saved) throw new Error("Site vanished immediately after being saved.");
+  return saved;
 }
 
 /* -------------------------------------------------------------- messages */

@@ -63,6 +63,10 @@ CREATE TABLE users (
   -- lib/server/auth.ts. They can still sign in and see their own dashboard,
   -- which is what surfaces the suspension notice to them.
   suspended   BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Admin-set: unlocks the self-serve recruiter-website builder on
+  -- /dashboard/career-site. Off by default — this is an earned perk (land a
+  -- placement), not something every fresh signup gets. See recruiter_sites.
+  site_builder_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
                            ON UPDATE CURRENT_TIMESTAMP(3),
@@ -281,6 +285,41 @@ CREATE TABLE candidates (
     REFERENCES users (uid) ON DELETE CASCADE,
   CONSTRAINT fk_candidates_cv FOREIGN KEY (cv_file_id)
     REFERENCES files (id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ------------------------------------------------------------ recruiter_sites
+
+-- The free one-page recruiter website (see career-site perk). One row per
+-- recruiter — gated by users.site_builder_enabled, which an admin sets. Name,
+-- photo, phone/email and social links are NOT duplicated here: the public
+-- page reads those straight off `users` so a profile edit is reflected on the
+-- site automatically. This table only holds the site-specific extras and the
+-- template/theme/publish state.
+CREATE TABLE recruiter_sites (
+  recruiter_id VARCHAR(128) NOT NULL,
+  -- The public URL is /sites/{slug}. Chosen by the recruiter, so it needs its
+  -- own uniqueness constraint independent of recruiter_id.
+  slug         VARCHAR(64)  NOT NULL,
+  template     VARCHAR(32)  NOT NULL DEFAULT 'classic',
+  theme        VARCHAR(32)  NOT NULL DEFAULT 'navy',
+  -- Optional punchier subhead for the site; the page falls back to
+  -- users.headline when this is blank.
+  tagline      VARCHAR(255) NOT NULL DEFAULT '',
+  -- Optional "about" paragraph for the site; falls back to users.bio.
+  intro        MEDIUMTEXT,
+  specialisms  JSON,                 -- [string]
+  highlights   JSON,                 -- [string] — short track-record bullets
+  cta_label    VARCHAR(64)  NOT NULL DEFAULT '',
+  cta_url      VARCHAR(512) NOT NULL DEFAULT '',
+  -- A recruiter can draft and preview before the page is publicly reachable.
+  published    BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+                            ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (recruiter_id),
+  UNIQUE KEY uq_recruiter_sites_slug (slug),
+  CONSTRAINT fk_recruiter_sites_recruiter FOREIGN KEY (recruiter_id)
+    REFERENCES users (uid) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ------------------------------------------------------------- messages
