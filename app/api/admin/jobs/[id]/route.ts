@@ -1,6 +1,6 @@
 import { handle, ok, jsonBody, NotFound } from "@/lib/server/respond";
-import { getJob, updateJob, deleteJob } from "@/lib/server/repo";
-import { requireAdmin } from "@/lib/server/auth";
+import { getJob, updateJob, deleteJob, logAdminAction } from "@/lib/server/repo";
+import { requireAdmin, requireAdminIdentity } from "@/lib/server/auth";
 import { readJobWrite } from "../../jobWrite";
 
 export const runtime = "nodejs";
@@ -41,10 +41,23 @@ export function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   return handle(async () => {
-    await requireAdmin(req);
+    const actor = await requireAdminIdentity(req);
     const { id } = await params;
+    // Fetched before deleting — the job's title/company have to be
+    // snapshotted for the audit entry, since after this they're gone.
+    const job = await getJob(id);
+    if (!job) throw new NotFound("Job not found.");
+
     const deleted = await deleteJob(id);
     if (!deleted) throw new NotFound("Job not found.");
+
+    await logAdminAction({
+      action: "job_deleted",
+      actorUid: actor.uid, actorName: actor.name, actorEmail: actor.email,
+      targetUid: id, targetName: job.title, targetEmail: "",
+      details: `${job.company} — this also removed every submission referred against it.`,
+    });
+
     return ok({ id });
   });
 }

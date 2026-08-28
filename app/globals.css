@@ -10,11 +10,14 @@
   --color-primary-dark: #123173;
   --color-primary-soft: #e2e9f5;
 
-  /* Redesign Brand (Toned Down Corporate Blue) */
-  --color-blue-brand: #224fa8;
-  --color-blue-brand-dark: #123173;
+  /* Redesign Brand (Toned Down Corporate Blue) — the same blue as `primary`
+     above, referenced rather than re-declared, so the two token families
+     can't quietly drift apart. blue-brand-soft is a genuinely different,
+     lighter tint and stays its own value. */
+  --color-blue-brand: var(--color-primary);
+  --color-blue-brand-dark: var(--color-primary-dark);
   --color-blue-brand-soft: #f1f5fa;
-  --color-blue-brand-light: #e2e9f5;
+  --color-blue-brand-light: var(--color-primary-soft);
 
   /* Accents */
   --color-coral: #ee5b3f;

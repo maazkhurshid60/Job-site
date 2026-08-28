@@ -1,8 +1,9 @@
 import { handle, ok, jsonBody, BadRequest, NotFound } from "@/lib/server/respond";
 import {
   setMetroTeamMember, setRecruiterVerified, setRecruiterSuspended, setSiteBuilderEnabled,
+  getUserProfile, logAdminAction,
 } from "@/lib/server/repo";
-import { requireAdmin } from "@/lib/server/auth";
+import { requireAdminIdentity } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export function PATCH(
   { params }: { params: Promise<{ uid: string }> },
 ) {
   return handle(async () => {
-    await requireAdmin(req);
+    const actor = await requireAdminIdentity(req);
     const { uid } = await params;
     const body = await jsonBody(req);
 
@@ -30,6 +31,12 @@ export function PATCH(
         "Nothing to update — send metroTeamMember, verified, suspended, and/or siteBuilderEnabled.",
       );
     }
+
+    // Fetched once up front — every branch below needs it both to confirm
+    // the recruiter exists and to log a readable target name/email.
+    const recruiter = await getUserProfile(uid);
+    if (!recruiter) throw new NotFound("Recruiter not found.");
+    const target = { targetUid: uid, targetName: recruiter.name, targetEmail: recruiter.email };
 
     const result: {
       uid: string;
@@ -43,8 +50,7 @@ export function PATCH(
       if (typeof body.metroTeamMember !== "boolean") {
         throw new BadRequest("metroTeamMember must be a boolean.");
       }
-      const updated = await setMetroTeamMember(uid, body.metroTeamMember);
-      if (!updated) throw new NotFound("Recruiter not found.");
+      await setMetroTeamMember(uid, body.metroTeamMember);
       result.metroTeamMember = body.metroTeamMember;
     }
 
@@ -52,27 +58,39 @@ export function PATCH(
       if (typeof body.verified !== "boolean") {
         throw new BadRequest("verified must be a boolean.");
       }
-      const updated = await setRecruiterVerified(uid, body.verified);
-      if (!updated) throw new NotFound("Recruiter not found.");
+      await setRecruiterVerified(uid, body.verified);
       result.verified = body.verified;
+      await logAdminAction({
+        action: body.verified ? "recruiter_verified" : "recruiter_unverified",
+        actorUid: actor.uid, actorName: actor.name, actorEmail: actor.email,
+        ...target,
+      });
     }
 
     if (body.suspended !== undefined) {
       if (typeof body.suspended !== "boolean") {
         throw new BadRequest("suspended must be a boolean.");
       }
-      const updated = await setRecruiterSuspended(uid, body.suspended);
-      if (!updated) throw new NotFound("Recruiter not found.");
+      await setRecruiterSuspended(uid, body.suspended);
       result.suspended = body.suspended;
+      await logAdminAction({
+        action: body.suspended ? "recruiter_suspended" : "recruiter_reinstated",
+        actorUid: actor.uid, actorName: actor.name, actorEmail: actor.email,
+        ...target,
+      });
     }
 
     if (body.siteBuilderEnabled !== undefined) {
       if (typeof body.siteBuilderEnabled !== "boolean") {
         throw new BadRequest("siteBuilderEnabled must be a boolean.");
       }
-      const updated = await setSiteBuilderEnabled(uid, body.siteBuilderEnabled);
-      if (!updated) throw new NotFound("Recruiter not found.");
+      await setSiteBuilderEnabled(uid, body.siteBuilderEnabled);
       result.siteBuilderEnabled = body.siteBuilderEnabled;
+      await logAdminAction({
+        action: body.siteBuilderEnabled ? "site_builder_unlocked" : "site_builder_locked",
+        actorUid: actor.uid, actorName: actor.name, actorEmail: actor.email,
+        ...target,
+      });
     }
 
     return ok(result);

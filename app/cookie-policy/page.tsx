@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { InfoPage, InfoSection } from "@/components/InfoPage";
+import { CONTACT_EMAIL } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Cookie Policy — JobFolder",
@@ -46,8 +47,8 @@ export default function CookiePolicyPage() {
       <InfoSection heading="Contact">
         <p>
           Questions about our use of cookies? Email{" "}
-          <a href="mailto:hello@jobfolder.com" className="text-blue-brand hover:underline">
-            hello@jobfolder.com
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-brand hover:underline">
+            {CONTACT_EMAIL}
           </a>
           .
         </p>

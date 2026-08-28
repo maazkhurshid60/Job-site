@@ -67,7 +67,11 @@ export function verifyFileUrl(
 
 /* ------------------------------------------------------------- validation */
 
-export const MAX_CV_BYTES = 10 * 1024 * 1024; // 10 MB
+/* 4 MB, not 10 — Vercel rejects a request body over ~4.5 MB before this
+   route ever runs, so a higher limit here would just mean the platform
+   fails the upload with an opaque 413 instead of this friendly message.
+   Keep in sync with lib/cv.ts, the client-side copy of this same limit. */
+export const MAX_CV_BYTES = 4 * 1024 * 1024; // 4 MB
 export const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export const ACCEPTED_CV_TYPES = [

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import {
@@ -8,10 +8,11 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { bootstrapAdmin } from "@/lib/users";
+import { bootstrapAdmin, bootstrapAvailable } from "@/lib/users";
 import { adminRoutes } from "@/lib/routes";
 import { Logo } from "@/components/Logo";
 import { PasswordInput } from "@/components/PasswordInput";
+import { Loader } from "@/components/Loader";
 
 /* TEMPORARY bootstrap page — creates the first admin account and grants it
    admin rights, then signs in. Delete this route once your admin exists. */
@@ -22,6 +23,21 @@ export default function AdminSetupPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+
+  // The API already refuses once an admin exists — this just means the form
+  // itself says so up front, instead of only after someone fills it in and
+  // submits into a 403.
+  const [available, setAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    bootstrapAvailable()
+      .then((a) => active && setAvailable(a))
+      .catch(() => active && setAvailable(true)); // fail open to the form, not a false "closed"
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,6 +71,41 @@ export default function AdminSetupPage() {
       setError(explain(err));
       setBusy(false);
     }
+  }
+
+  if (available === null) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-white">
+        <Loader />
+      </div>
+    );
+  }
+
+  if (available === false) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-white px-6 py-12">
+        <div className="w-full max-w-sm text-center">
+          <div className="mb-8 flex justify-center">
+            <Logo />
+          </div>
+          <div className="rounded-2xl border border-line bg-white p-8 shadow-[0_24px_60px_-30px_rgba(23,19,15,0.25)]">
+            <h1 className="text-xl font-extrabold tracking-tight text-ink">
+              Setup already complete
+            </h1>
+            <p className="mt-2 text-sm text-muted">
+              An admin account already exists, so this page is closed. Sign in
+              from the console login instead.
+            </p>
+            <a
+              href={adminRoutes.login}
+              className="mt-6 inline-block w-full rounded-pill bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+            >
+              Go to console login
+            </a>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

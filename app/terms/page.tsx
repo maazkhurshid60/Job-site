@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { InfoPage, InfoSection } from "@/components/InfoPage";
+import { CONTACT_EMAIL } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Terms of Service — JobFolder",
@@ -57,8 +58,8 @@ export default function TermsPage() {
       <InfoSection heading="Contact">
         <p>
           Questions about these Terms? Email{" "}
-          <a href="mailto:hello@jobfolder.com" className="text-blue-brand hover:underline">
-            hello@jobfolder.com
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-brand hover:underline">
+            {CONTACT_EMAIL}
           </a>
           .
         </p>

@@ -17,11 +17,13 @@ export default function ReportsPage() {
   const { user } = useAuth();
   const [subs, setSubs] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     listSubmissionsByRecruiter()
       .then(setSubs)
+      .catch(() => setError("Could not load your reports right now."))
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -42,6 +44,8 @@ export default function ReportsPage() {
         <div className="grid h-40 place-items-center rounded-2xl border border-line bg-white">
           <Loader />
         </div>
+      ) : error ? (
+        <p className="rounded-lg bg-coral-soft px-4 py-3 text-sm text-coral">{error}</p>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">

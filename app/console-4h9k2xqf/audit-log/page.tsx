@@ -12,6 +12,15 @@ const ACTION_LABEL: Record<AdminAuditAction, string> = {
   invite: "Invited",
   invite_claimed: "Invite claimed",
   invite_cancelled: "Invite cancelled",
+  recruiter_verified: "Verified",
+  recruiter_unverified: "Un-verified",
+  recruiter_suspended: "Suspended",
+  recruiter_reinstated: "Reinstated",
+  site_builder_unlocked: "Site builder unlocked",
+  site_builder_locked: "Site builder locked",
+  job_deleted: "Job deleted",
+  submission_status_changed: "Status changed",
+  profile_reminder_sent: "Reminder sent",
 };
 
 const ACTION_STYLE: Record<AdminAuditAction, string> = {
@@ -20,6 +29,34 @@ const ACTION_STYLE: Record<AdminAuditAction, string> = {
   revoke: "bg-coral-soft text-coral",
   invite_cancelled: "bg-cream text-muted",
   invite: "bg-primary-soft text-primary",
+  recruiter_verified: "bg-sage-soft text-ink",
+  recruiter_unverified: "bg-cream text-muted",
+  recruiter_suspended: "bg-coral-soft text-coral",
+  recruiter_reinstated: "bg-sage-soft text-ink",
+  site_builder_unlocked: "bg-primary-soft text-primary",
+  site_builder_locked: "bg-cream text-muted",
+  job_deleted: "bg-coral-soft text-coral",
+  submission_status_changed: "bg-primary-soft text-primary",
+  profile_reminder_sent: "bg-cream text-muted",
+};
+
+/** The verb phrase after the target's name — kept as a lookup rather than a
+    chain of per-action JSX conditions, since it's the same "{target} {verb}
+    by {actor}" shape for every action except the two invite ones, which read
+    more naturally in their own voice. */
+const ACTION_VERB: Partial<Record<AdminAuditAction, string>> = {
+  grant: "was granted admin access",
+  revoke: "had admin access revoked",
+  invite_cancelled: "'s invite was cancelled",
+  recruiter_verified: "was verified",
+  recruiter_unverified: "was un-verified",
+  recruiter_suspended: "was suspended",
+  recruiter_reinstated: "was reinstated",
+  site_builder_unlocked: "had the website builder unlocked",
+  site_builder_locked: "had the website builder locked",
+  job_deleted: "was deleted",
+  submission_status_changed: "'s status was changed",
+  profile_reminder_sent: "was sent a profile reminder",
 };
 
 export default function AdminAuditLogPage() {
@@ -51,8 +88,9 @@ export default function AdminAuditLogPage() {
           Audit log
         </h1>
         <p className="mt-1 text-xs text-muted">
-          Every grant, revoke, and invite against the admin allow-list, most
-          recent first.
+          Every sensitive action taken from this console — admin access,
+          recruiter controls, job removal, and submission status changes —
+          most recent first.
         </p>
       </div>
 
@@ -66,7 +104,7 @@ export default function AdminAuditLogPage() {
         <div className="rounded-2xl border border-dashed border-line bg-white p-12 text-center">
           <h2 className="font-bold text-ink">No activity yet</h2>
           <p className="mt-1 text-sm text-muted">
-            Granting or revoking admin access will show up here.
+            Admin actions taken from this console will show up here.
           </p>
         </div>
       ) : (
@@ -84,10 +122,8 @@ export default function AdminAuditLogPage() {
                     {entry.targetName || entry.targetEmail || "Unknown"}
                   </span>
                   {entry.action === "invite" && " was invited"}
-                  {entry.action === "invite_cancelled" && "'s invite was cancelled"}
                   {entry.action === "invite_claimed" && " claimed a pending invite"}
-                  {entry.action === "grant" && " was granted admin access"}
-                  {entry.action === "revoke" && " had admin access revoked"}
+                  {ACTION_VERB[entry.action] ?? ""}
                   {entry.action !== "invite_claimed" && (
                     <>
                       {" "}by{" "}
@@ -97,6 +133,9 @@ export default function AdminAuditLogPage() {
                     </>
                   )}
                 </p>
+                {entry.details && (
+                  <p className="mt-0.5 text-xs text-muted">{entry.details}</p>
+                )}
                 <p className="mt-0.5 text-xs text-muted" title={formatDate(entry.createdAt)}>
                   {timeAgo(entry.createdAt)}
                 </p>

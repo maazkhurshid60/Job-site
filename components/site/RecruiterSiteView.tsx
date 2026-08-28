@@ -71,6 +71,16 @@ export function RecruiterSiteView({
 
   const hasCta = Boolean(site.ctaLabel.trim() && site.ctaUrl.trim());
 
+  // Only linked if the section actually renders on this recruiter's site —
+  // every content section below is optional, so the nav must match whatever
+  // this particular site actually has, not a fixed list.
+  const navSections = [
+    site.expertise.length > 0 && { id: "expertise", label: "Expertise" },
+    site.experience.length > 0 && { id: "experience", label: "Experience" },
+    site.highlights.length > 0 && { id: "highlights", label: "Track record" },
+    { id: "contact", label: "Contact" },
+  ].filter((s): s is { id: string; label: string } => Boolean(s));
+
   const layoutProps: LayoutProps = {
     name,
     tagline,
@@ -91,10 +101,41 @@ export function RecruiterSiteView({
   };
 
   return (
-    <div style={vars} className="min-h-screen bg-white">
+    <div id="top" style={vars} className="min-h-screen bg-white">
+      <SiteNav name={name} sections={navSections} />
       {site.template === "bold" ? <BoldLayout {...layoutProps} /> : <ClassicLayout {...layoutProps} />}
       <SiteFooter />
     </div>
+  );
+}
+
+/** Sticky top bar — the recruiter's name on the left (jumps back to the top),
+    anchor links to whichever sections this site actually has on the right.
+    Shared by both templates rather than living inside BoldLayout/
+    ClassicLayout, since it sits outside either one's own content flow. */
+function SiteNav({ name, sections }: { name: string; sections: { id: string; label: string }[] }) {
+  return (
+    <nav className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur supports-backdrop-filter:bg-white/75">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
+        <a href="#top" className="truncate text-sm font-black tracking-tight text-ink">
+          {name}
+        </a>
+        {sections.length > 0 && (
+          <ul className="hidden items-center gap-6 sm:flex">
+            {sections.map((s) => (
+              <li key={s.id}>
+                <a
+                  href={`#${s.id}`}
+                  className="text-xs font-semibold uppercase tracking-wide text-ink/55 transition-colors hover:text-[var(--site-accent)]"
+                >
+                  {s.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </nav>
   );
 }
 
@@ -156,7 +197,7 @@ function ClassicLayout({
       </div>
 
       {expertise.length > 0 && (
-        <div className="border-t border-line px-6 py-12">
+        <div id="expertise" className="border-t border-line px-6 py-12">
           <div className="mx-auto max-w-xl">
             <SectionLabel>Core expertise</SectionLabel>
             <div className="mt-5">
@@ -167,13 +208,13 @@ function ClassicLayout({
       )}
 
       {experience.length > 0 && (
-        <DarkBand title="Where I've worked">
+        <DarkBand id="experience" title="Where I've worked">
           <ExperienceTimeline items={experience} dark />
         </DarkBand>
       )}
 
       {highlights.length > 0 && (
-        <div className="border-y border-[var(--site-accent-soft)] bg-[var(--site-accent-soft)]/40 px-6 py-12">
+        <div id="highlights" className="border-y border-[var(--site-accent-soft)] bg-[var(--site-accent-soft)]/40 px-6 py-12">
           <div className="mx-auto max-w-xl">
             <SectionLabel>Track record</SectionLabel>
             <div className="mt-5">
@@ -183,7 +224,7 @@ function ClassicLayout({
         </div>
       )}
 
-      <div className="px-6 py-12 text-center">
+      <div id="contact" className="px-6 py-12 text-center">
         {socials.length > 0 && (
           <div className="flex justify-center">
             <Socials items={socials} />
@@ -240,7 +281,7 @@ function BoldLayout({
       )}
 
       {expertise.length > 0 && (
-        <div className="border-t border-line bg-cream/30 px-6 py-14">
+        <div id="expertise" className="border-t border-line bg-cream/30 px-6 py-14">
           <div className="mx-auto max-w-3xl">
             <SectionLabel>Core expertise</SectionLabel>
             <div className="mt-6">
@@ -251,13 +292,13 @@ function BoldLayout({
       )}
 
       {experience.length > 0 && (
-        <DarkBand title="Where I've worked">
+        <DarkBand id="experience" title="Where I've worked">
           <ExperienceTimeline items={experience} dark />
         </DarkBand>
       )}
 
       {highlights.length > 0 && (
-        <div className="border-t border-line px-6 py-14">
+        <div id="highlights" className="border-t border-line px-6 py-14">
           <div className="mx-auto max-w-3xl">
             <SectionLabel>Track record</SectionLabel>
             <div className="mt-6">
@@ -267,7 +308,7 @@ function BoldLayout({
         </div>
       )}
 
-      <div className="border-t border-line px-6 py-14 text-center">
+      <div id="contact" className="border-t border-line px-6 py-14 text-center">
         <SectionLabel>Get in touch</SectionLabel>
         <div className="mt-4">
           <ContactLines recruiter={recruiter} />
@@ -534,9 +575,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 /** A full-width dark band — the "Where I've worked" hallmark from nickjain.org,
     generalized to any accent color instead of a fixed yellow-on-navy. */
-function DarkBand({ title, children }: { title: string; children: React.ReactNode }) {
+function DarkBand({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <div className="bg-ink px-6 py-14">
+    <div id={id} className="bg-ink px-6 py-14">
       <div className="mx-auto max-w-3xl">
         <h2 className="text-center text-xs font-bold uppercase tracking-wider text-[var(--site-accent)] lg:text-left">
           {title}

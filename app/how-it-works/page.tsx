@@ -10,11 +10,16 @@ import { howSteps } from "@/lib/howItWorks";
 import { absoluteUrl } from "@/lib/seo";
 import { FEE_TIERS } from "@/lib/feeTiers";
 
+// Derived from FEE_TIERS rather than typed as literal dollar amounts below,
+// so this copy can't silently drift out of sync with the real tiers.
+const feeAmounts = FEE_TIERS.map((t) => `$${t.amount.toLocaleString()}`);
+const feeAmountList = feeAmounts.join(" | ");
+
 const recruiterSteps = [
   { title: "Join JobFolder", body: "Recruiters create an account at no cost." },
   {
     title: "Browse Active Positions",
-    body: "Choose from real recruiting assignments. Every position clearly shows the available recruiter fee: $1,000 | $2,000 | $3,000.",
+    body: `Choose from real recruiting assignments. Every position clearly shows the available recruiter fee: ${feeAmountList}.`,
   },
   {
     title: "Find a Qualified Candidate",
@@ -34,7 +39,7 @@ const recruiterSteps = [
   },
   {
     title: "Candidate Gets Hired",
-    body: "When your candidate successfully starts the position and satisfies the applicable placement terms, you earn $1,000, $2,000, or $3,000 — depending on the advertised recruiter fee for that position.",
+    body: `When your candidate successfully starts the position and satisfies the applicable placement terms, you earn ${feeAmounts.slice(0, -1).join(", ")}, or ${feeAmounts[feeAmounts.length - 1]} — depending on the advertised recruiter fee for that position.`,
   },
 ];
 

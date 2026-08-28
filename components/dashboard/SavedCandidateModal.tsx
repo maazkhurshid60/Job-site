@@ -147,7 +147,7 @@ export function SavedCandidateModal({
               />
             </Field>
             <Field
-              label={`CV (PDF or Word, max 10 MB)${candidate ? " — optional" : " — optional, can add later"}`}
+              label={`CV (PDF or Word, max 4 MB)${candidate ? " — optional" : " — optional, can add later"}`}
               className="sm:col-span-2"
             >
               <input

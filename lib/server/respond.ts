@@ -20,6 +20,15 @@ export class NotFound extends Error {
   }
 }
 
+/** Rate limit hit — see countRecentMessagesFromIp() in lib/server/repo.ts,
+    used by the contact form. */
+export class TooManyRequests extends Error {
+  readonly status = 429 as const;
+  constructor(message = "Too many requests. Please try again shortly.") {
+    super(message);
+  }
+}
+
 /* A deployment is misconfigured — a required environment variable is missing.
  *
  * This is worth its own class because it is the one 500 whose message is safe
@@ -44,7 +53,7 @@ export function handle<T>(fn: () => Promise<T>) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    if (err instanceof BadRequest || err instanceof NotFound) {
+    if (err instanceof BadRequest || err instanceof NotFound || err instanceof TooManyRequests) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     if (err instanceof ConfigError) {

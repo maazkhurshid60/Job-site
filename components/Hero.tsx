@@ -4,22 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container } from "./ui";
 import { photo } from "./images";
-import { CountUp } from "./motion/CountUp";
 
-type Stat = {
-  label: string;
-  to?: number;
-  decimals?: number;
-  prefix?: string;
-  suffix?: string;
-  value?: string;
-};
-
-const STATS: Stat[] = [
-  { to: 20, suffix: "K+", label: "Hires made" },
-  { to: 1.3, decimals: 1, suffix: "M+", label: "Candidates sourced" },
-  { to: 8.5, decimals: 1, prefix: "$", suffix: "B+", label: "Salaries placed" },
+/* Facts that are true by construction — no invented hire/candidate/volume
+   metrics. Matches the same honesty stance the case-studies, press, and
+   recruiters pages already take: nothing published here that isn't
+   verifiably true of how JobFolder actually works today. */
+const STATS: { value: string; label: string }[] = [
   { value: "$0", label: "Membership fees" },
+  { value: "$1K–$3K", label: "Recruiter fee per hire" },
+  { value: "Free", label: "To join and to refer" },
+  { value: "Screened", label: "Every candidate, before the client sees them" },
 ];
 
 export function Hero() {
@@ -91,14 +85,7 @@ export function Hero() {
               {STATS.map((s) => (
                 <div key={s.label} className="text-center">
                   <p className="text-2xl font-extrabold text-white sm:text-3xl">
-                    {s.value ?? (
-                      <CountUp
-                        to={s.to ?? 0}
-                        decimals={s.decimals}
-                        prefix={s.prefix}
-                        suffix={s.suffix}
-                      />
-                    )}
+                    {s.value}
                   </p>
                   <p className="mt-1.5 text-xs font-semibold text-blue-100/80 sm:text-sm">
                     {s.label}

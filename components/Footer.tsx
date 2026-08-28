@@ -82,20 +82,14 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+        {/* No real LinkedIn/X/Facebook links to point these at yet — a row of
+            icons that look clickable and aren't reads as an unfinished site,
+            worse than no icons at all. Add them back once there's a real
+            company profile on each. */}
+        <div className="mt-16 flex items-center justify-center border-t border-white/10 pt-8 sm:justify-start">
           <p className="text-sm text-white/50 font-medium">
             © {new Date().getFullYear()} JobFolder. All rights reserved.
           </p>
-          <div className="flex gap-3">
-            {["in", "X", "f"].map((s) => (
-              <span
-                key={s}
-                className="grid h-9 w-9 cursor-pointer place-items-center rounded-full border border-white/15 bg-white/5 text-sm font-bold text-white/70 hover:border-lime hover:text-lime hover:bg-lime/10 transition-all"
-              >
-                {s}
-              </span>
-            ))}
-          </div>
         </div>
       </Container>
     </footer>

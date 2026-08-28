@@ -12,13 +12,13 @@ export const dynamic = "force-dynamic";
 
    Sign-in is REQUIRED for both kinds. Leaving CV upload open while the
    submission endpoint required a login would be pointless: anyone could still
-   fill the table with 10 MB blobs against a 4 GB account-wide quota, with no
-   account to attribute or rate-limit.
+   fill the table with multi-MB blobs against a 4 GB account-wide quota, with
+   no account to attribute or rate-limit.
 
    DEPLOYMENT LIMIT: Vercel caps a serverless function's request body at about
-   4.5 MB. The 10 MB CV limit below is enforceable when self-hosting or on a
-   platform without that cap; on Vercel, uploads above ~4.5 MB are rejected by
-   the platform before this handler ever runs. */
+   4.5 MB, so MAX_CV_BYTES (lib/server/files.ts) is deliberately 4 MB, not a
+   more generous figure — anything higher would pass this route's own check
+   but still get rejected by the platform first with an opaque 413. */
 export function POST(req: Request) {
   return handle(async () => {
     const uid = await requireActiveUid(req);
@@ -43,7 +43,7 @@ export function POST(req: Request) {
     /* file.size is what the client declared; bytes.length is what actually
        arrived. Re-check, so a lying size header cannot smuggle a larger blob. */
     if (bytes.length > MAX_CV_BYTES) {
-      throw new BadRequest("File is larger than 10 MB.");
+      throw new BadRequest("File is larger than 4 MB.");
     }
 
     const id = newFileId();

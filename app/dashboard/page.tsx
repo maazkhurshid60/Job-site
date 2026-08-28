@@ -23,6 +23,7 @@ export default function DashboardOverview() {
   const [subs, setSubs] = useState<Submission[]>([]);
   const [openJobs, setOpenJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [mySite, setMySite] = useState<RecruiterSite | null>(null);
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function DashboardOverview() {
         setSubs(s);
         setOpenJobs(jobs);
       })
+      .catch(() => setError("Could not load your dashboard right now."))
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -213,6 +215,8 @@ export default function DashboardOverview() {
         <div className="grid h-40 place-items-center rounded-2xl border border-line bg-white">
           <Loader />
         </div>
+      ) : error ? (
+        <p className="rounded-lg bg-coral-soft px-4 py-3 text-sm text-coral">{error}</p>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

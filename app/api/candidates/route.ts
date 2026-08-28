@@ -1,5 +1,5 @@
 import { handle, ok, jsonBody, str, BadRequest } from "@/lib/server/respond";
-import { listCandidatesByRecruiter, createCandidate, getCandidate } from "@/lib/server/repo";
+import { listCandidatesByRecruiter, createCandidate, getCandidate, cvFileOwnedBy } from "@/lib/server/repo";
 import { requireUid, requireActiveUid } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
@@ -21,6 +21,11 @@ export function POST(req: Request) {
     const uid = await requireActiveUid(req);
     const body = await jsonBody(req);
 
+    const cvFileId = body.cvFileId === undefined ? undefined : str(body.cvFileId, "cvFileId", { max: 36 });
+    if (cvFileId !== undefined && !(await cvFileOwnedBy(cvFileId, uid))) {
+      throw new BadRequest("That CV upload is missing or doesn't belong to you.");
+    }
+
     const id = await createCandidate(uid, {
       name: str(body.name, "name", { max: 255, required: true }),
       email: str(body.email, "email", { max: 320, required: true }),
@@ -28,7 +33,7 @@ export function POST(req: Request) {
       linkedin: str(body.linkedin, "linkedin", { max: 512 }),
       photoUrl: str(body.photoUrl, "photoUrl", { max: 1024 }),
       notes: str(body.notes, "notes"),
-      cvFileId: body.cvFileId === undefined ? undefined : str(body.cvFileId, "cvFileId", { max: 36 }),
+      cvFileId,
     }).catch((err: unknown) => {
       // uq_candidates_recruiter_email — this recruiter already saved this email.
       if (

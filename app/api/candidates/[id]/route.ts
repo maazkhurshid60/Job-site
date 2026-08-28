@@ -1,5 +1,5 @@
 import { handle, ok, jsonBody, str, BadRequest, NotFound } from "@/lib/server/respond";
-import { getCandidate, updateCandidate, deleteCandidate } from "@/lib/server/repo";
+import { getCandidate, updateCandidate, deleteCandidate, cvFileOwnedBy } from "@/lib/server/repo";
 import { requireActiveUid, AuthError } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
@@ -21,13 +21,18 @@ export function PUT(
     }
 
     const body = await jsonBody(req);
+    const cvFileId = body.cvFileId === undefined ? undefined : str(body.cvFileId, "cvFileId", { max: 36 });
+    if (cvFileId !== undefined && !(await cvFileOwnedBy(cvFileId, uid))) {
+      throw new BadRequest("That CV upload is missing or doesn't belong to you.");
+    }
+
     await updateCandidate(id, {
       name: str(body.name, "name", { max: 255, required: true }),
       email: str(body.email, "email", { max: 320, required: true }),
       phone: str(body.phone, "phone", { max: 64, required: true }),
       linkedin: str(body.linkedin, "linkedin", { max: 512 }),
       notes: str(body.notes, "notes"),
-      cvFileId: body.cvFileId === undefined ? undefined : str(body.cvFileId, "cvFileId", { max: 36 }),
+      cvFileId,
       photoUrl: body.photoUrl === undefined ? undefined : str(body.photoUrl, "photoUrl", { max: 1024 }),
     }).catch((err: unknown) => {
       if (

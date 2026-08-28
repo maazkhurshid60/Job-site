@@ -375,13 +375,30 @@ export async function createSubmission(
   return id;
 }
 
-/** True when the file exists, is a CV, and isn't already attached elsewhere. */
-export async function cvFileIsAvailable(fileId: string): Promise<boolean> {
+/** True when the file exists, is a CV, belongs to the calling recruiter, and
+    isn't already attached elsewhere. The owner check matters as much as the
+    other two: without it, a caller who learns any valid CV file id — from a
+    log line, a stray screenshot, whatever — could attach someone else's file
+    to their own submission. */
+export async function cvFileIsAvailable(fileId: string, ownerUid: string): Promise<boolean> {
   const row = await queryOne<{ n: number }>(
     `SELECT COUNT(*) AS n FROM files f
-      WHERE f.id = ? AND f.kind = 'cv'
+      WHERE f.id = ? AND f.kind = 'cv' AND f.owner_uid = ?
         AND NOT EXISTS (SELECT 1 FROM submissions s WHERE s.cv_file_id = f.id)`,
-    [fileId],
+    [fileId, ownerUid],
+  );
+  return (row?.n ?? 0) > 0;
+}
+
+/** True when the file exists, is a CV, and belongs to the calling recruiter —
+    used when attaching a CV to a saved candidate (lib/candidates.ts), where
+    unlike a submission the file is never "consumed": the same pool CV can be
+    pointed at from a candidate indefinitely, so this deliberately skips the
+    not-already-attached check cvFileIsAvailable does. */
+export async function cvFileOwnedBy(fileId: string, ownerUid: string): Promise<boolean> {
+  const row = await queryOne<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM files WHERE id = ? AND kind = 'cv' AND owner_uid = ?`,
+    [fileId, ownerUid],
   );
   return (row?.n ?? 0) > 0;
 }
@@ -1043,11 +1060,25 @@ export async function createMessage(input: {
   email: string;
   subject: string;
   message: string;
+  ip: string | null;
 }): Promise<void> {
   await execute(
-    `INSERT INTO messages (name, email, subject, message) VALUES (?,?,?,?)`,
-    [input.name, input.email, input.subject, input.message],
+    `INSERT INTO messages (name, email, subject, message, ip) VALUES (?,?,?,?,?)`,
+    [input.name, input.email, input.subject, input.message, input.ip],
   );
+}
+
+/** How many contact-form messages this IP has sent in the last `windowSeconds`
+    — defense-in-depth behind reCAPTCHA (lib/server/recaptcha.ts) for when
+    that's unset or a solver defeats it. Null IPs (can't happen in production
+    behind Vercel, but possible locally) never rate-limit each other. */
+export async function countRecentMessagesFromIp(ip: string, windowSeconds: number): Promise<number> {
+  const row = await queryOne<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM messages
+      WHERE ip = ? AND created_at > (NOW() - INTERVAL ? SECOND)`,
+    [ip, windowSeconds],
+  );
+  return row?.n ?? 0;
 }
 
 export async function listMessages(): Promise<ContactMessage[]> {
@@ -1105,6 +1136,21 @@ export async function createAdmin(uid: string, note = ""): Promise<void> {
        ON DUPLICATE KEY UPDATE note = VALUES(note)`,
     [uid, note],
   );
+}
+
+/** Atomic version of "countAdmins() === 0, then createAdmin()" for the
+    /setup bootstrap flow: a single INSERT...SELECT...WHERE NOT EXISTS rather
+    than two separate round trips, which closes the window where two accounts
+    racing the bootstrap endpoint at the same instant could both read "zero
+    admins" and both get promoted. Returns whether this call was the one that
+    won — false means an admin already existed by the time it ran. */
+export async function bootstrapFirstAdmin(uid: string, note = ""): Promise<boolean> {
+  const result = await execute(
+    `INSERT INTO admins (uid, note)
+     SELECT ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM admins)`,
+    [uid, note],
+  );
+  return result.affectedRows > 0;
 }
 
 /** Every admin, oldest first — the order they were granted access, which for
@@ -1223,9 +1269,10 @@ export async function claimAdminInvite(
 
 /* ------------------------------------------------------- admin audit log */
 
-/** History of every grant/revoke/invite against the admin allow-list. Actor
-    and target are snapshotted as text, not joined live — either account can
-    later be removed and the entry must still read sensibly. */
+/** History of every sensitive admin action — allow-list changes, recruiter
+    controls, job deletion, submission status changes. Actor and target are
+    snapshotted as text, not joined live — either account can later be
+    removed and the entry must still read sensibly. */
 export async function logAdminAction(input: {
   action: AdminAuditAction;
   actorUid: string | null;
@@ -1234,14 +1281,15 @@ export async function logAdminAction(input: {
   targetUid: string | null;
   targetName: string;
   targetEmail: string;
+  details?: string | null;
 }): Promise<void> {
   await execute(
     `INSERT INTO admin_audit_log
-       (action, actor_uid, actor_name, actor_email, target_uid, target_name, target_email)
-     VALUES (?,?,?,?,?,?,?)`,
+       (action, actor_uid, actor_name, actor_email, target_uid, target_name, target_email, details)
+     VALUES (?,?,?,?,?,?,?,?)`,
     [
       input.action, input.actorUid, input.actorName, input.actorEmail,
-      input.targetUid, input.targetName, input.targetEmail,
+      input.targetUid, input.targetName, input.targetEmail, input.details ?? null,
     ],
   );
 }
@@ -1256,9 +1304,10 @@ export async function listAdminAuditLog(): Promise<AdminAuditEntry[]> {
     actor_email: string;
     target_name: string;
     target_email: string;
+    details: string | null;
     created_at: string | null;
   }>(
-    `SELECT id, action, actor_name, actor_email, target_name, target_email, created_at
+    `SELECT id, action, actor_name, actor_email, target_name, target_email, details, created_at
        FROM admin_audit_log ORDER BY created_at DESC LIMIT 200`,
   );
   return rows.map((r) => ({
@@ -1268,6 +1317,7 @@ export async function listAdminAuditLog(): Promise<AdminAuditEntry[]> {
     actorEmail: r.actor_email,
     targetName: r.target_name,
     targetEmail: r.target_email,
+    details: r.details,
     createdAt: r.created_at,
   }));
 }

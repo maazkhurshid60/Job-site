@@ -49,10 +49,21 @@ export default function AdminAdminsPage() {
     e.preventDefault();
     setAddError(null);
     setAddNotice(null);
-    if (!email.trim()) return;
+    const trimmed = email.trim();
+    if (!trimmed) return;
+    // The one privilege-escalating action on this page with no undo button
+    // short of another admin revoking it — every other toggle here confirms,
+    // this should too. Can't show the matched account's name up front (that
+    // requires the lookup this same request performs), so this confirms
+    // intent on the email itself.
+    if (!confirm(
+      `Grant admin access to ${trimmed}? If that's an existing account, they'll have full admin control of this console immediately.`,
+    )) {
+      return;
+    }
     setAdding(true);
     try {
-      const result = await addAdmin(email.trim());
+      const result = await addAdmin(trimmed);
       if (result.kind === "admin") {
         setAdmins((list) => [...list, result.admin]);
         setAddNotice(`${result.admin.name || result.admin.email} now has admin access.`);

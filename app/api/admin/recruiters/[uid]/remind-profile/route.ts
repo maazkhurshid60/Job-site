@@ -1,6 +1,6 @@
 import { handle, ok, BadRequest, NotFound } from "@/lib/server/respond";
-import { getUserProfile, markProfileReminderSent } from "@/lib/server/repo";
-import { requireAdmin } from "@/lib/server/auth";
+import { getUserProfile, markProfileReminderSent, logAdminAction } from "@/lib/server/repo";
+import { requireAdminIdentity } from "@/lib/server/auth";
 import { notifyProfileReminder } from "@/lib/server/notify";
 import { profileCompletion } from "@/lib/profileCompletion";
 import { SITE_URL } from "@/lib/seo";
@@ -16,7 +16,7 @@ export function POST(
   { params }: { params: Promise<{ uid: string }> },
 ) {
   return handle(async () => {
-    await requireAdmin(req);
+    const actor = await requireAdminIdentity(req);
     const { uid } = await params;
 
     const profile = await getUserProfile(uid);
@@ -35,6 +35,12 @@ export function POST(
     });
 
     await markProfileReminderSent(uid);
+    await logAdminAction({
+      action: "profile_reminder_sent",
+      actorUid: actor.uid, actorName: actor.name, actorEmail: actor.email,
+      targetUid: uid, targetName: profile.name, targetEmail: profile.email,
+      details: `Missing: ${completion.missing.map((f) => f.label).join(", ")}`,
+    });
 
     return ok({ sent: true });
   });

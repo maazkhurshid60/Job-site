@@ -34,7 +34,7 @@ export type SavedCandidateInput = {
 };
 
 function checkCv(cv: File) {
-  if (cv.size > MAX_CV_BYTES) throw new Error("CV is larger than 10 MB.");
+  if (cv.size > MAX_CV_BYTES) throw new Error("CV is larger than 4 MB.");
   if (!ACCEPTED_CV_TYPES.includes(cv.type))
     throw new Error("CV must be a PDF or Word document.");
 }

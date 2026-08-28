@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { InfoPage, InfoSection } from "@/components/InfoPage";
+import { CONTACT_EMAIL } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — JobFolder",
@@ -53,8 +54,8 @@ export default function PrivacyPage() {
         <p>
           You may request access to, correction of, or deletion of your personal
           data at any time. To do so, contact us at{" "}
-          <a href="mailto:hello@jobfolder.com" className="text-blue-brand hover:underline">
-            hello@jobfolder.com
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-brand hover:underline">
+            {CONTACT_EMAIL}
           </a>
           .
         </p>
@@ -63,8 +64,8 @@ export default function PrivacyPage() {
       <InfoSection heading="Contact">
         <p>
           Questions about this policy? Email{" "}
-          <a href="mailto:hello@jobfolder.com" className="text-blue-brand hover:underline">
-            hello@jobfolder.com
+          <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-brand hover:underline">
+            {CONTACT_EMAIL}
           </a>
           .
         </p>

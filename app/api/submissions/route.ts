@@ -102,7 +102,7 @@ export function POST(req: Request) {
          rather than trusting it: otherwise a caller could point a new
          submission at someone else's CV row, or at an avatar. */
       cvFileId = str(body.cvFileId, "cvFileId", { max: 36, required: true });
-      if (!(await cvFileIsAvailable(cvFileId))) {
+      if (!(await cvFileIsAvailable(cvFileId, uid))) {
         throw new BadRequest("That CV upload is missing or already used.");
       }
       candidateName = str(body.candidateName, "candidateName", { max: 255, required: true });

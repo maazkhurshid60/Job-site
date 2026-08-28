@@ -5,7 +5,6 @@ import { RecruiterFeeSection } from "@/components/RecruiterFeeSection";
 import { SocialProof } from "@/components/SocialProof";
 import { HowItWorks } from "@/components/HowItWorks";
 import { Reasons } from "@/components/Reasons";
-import { Testimonial } from "@/components/Testimonial";
 import { JoinOnDemand } from "@/components/JoinOnDemand";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/motion/Reveal";
@@ -37,10 +36,6 @@ export default function Home() {
           <Reasons />
         </Reveal>
         
-        <Reveal>
-          <Testimonial />
-        </Reveal>
-
         <Reveal>
           <JoinOnDemand />
         </Reveal>

@@ -104,19 +104,30 @@ CREATE TABLE admin_invites (
   PRIMARY KEY (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- History of every grant/revoke/invite against the admin allow-list. Actor
--- and target are snapshotted (name/email as text, not a FK) because either
--- account can later be removed and the log entry must still read sensibly —
--- same reasoning as submissions.recruiter_name.
+-- History of every sensitive admin action — not just the allow-list, also
+-- recruiter-control toggles, job deletion, and submission status changes, so
+-- "who did this" has an answer for every action that matters, not just admin
+-- grants. Actor and target are snapshotted (name/email as text, not a FK)
+-- because either account can later be removed and the log entry must still
+-- read sensibly — same reasoning as submissions.recruiter_name.
 CREATE TABLE admin_audit_log (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  action       ENUM('grant','revoke','invite','invite_claimed','invite_cancelled') NOT NULL,
+  action       ENUM(
+    'grant','revoke','invite','invite_claimed','invite_cancelled',
+    'recruiter_verified','recruiter_unverified',
+    'recruiter_suspended','recruiter_reinstated',
+    'site_builder_unlocked','site_builder_locked',
+    'job_deleted','submission_status_changed','profile_reminder_sent'
+  ) NOT NULL,
   actor_uid    VARCHAR(128) NULL,
   actor_name   VARCHAR(255) NOT NULL DEFAULT '',
   actor_email  VARCHAR(320) NOT NULL DEFAULT '',
   target_uid   VARCHAR(128) NULL,
   target_name  VARCHAR(255) NOT NULL DEFAULT '',
   target_email VARCHAR(320) NOT NULL DEFAULT '',
+  -- Short free-text context that doesn't fit actor/target, e.g. a status
+  -- change ("client_review → hired") or a job's submission count on delete.
+  details      VARCHAR(500) NULL,
   created_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   KEY idx_admin_audit_created (created_at DESC)
@@ -342,10 +353,14 @@ CREATE TABLE messages (
   email      VARCHAR(320) NOT NULL DEFAULT '',
   subject    VARCHAR(255) NOT NULL DEFAULT '',
   message    MEDIUMTEXT,
+  -- Sender's IP, best-effort from the platform's forwarded-for header. Only
+  -- used server-side, to rate-limit repeat posts — never shown to anyone.
+  ip         VARCHAR(64)  NULL,
   handled    BOOLEAN      NOT NULL DEFAULT FALSE,
   created_at DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
-  KEY idx_messages_created (created_at DESC)
+  KEY idx_messages_created (created_at DESC),
+  KEY idx_messages_ip_created (ip, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ------------------------------------------------ submission_messages

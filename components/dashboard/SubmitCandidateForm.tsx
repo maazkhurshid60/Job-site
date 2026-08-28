@@ -130,7 +130,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
   function step2Problem(d: CandidateDraft): string | null {
     if (!d.cv) return "Please attach the candidate's CV.";
     if (!ACCEPTED_CV_TYPES.includes(d.cv.type)) return "CV must be a PDF or Word document.";
-    if (d.cv.size > MAX_CV_BYTES) return "CV is larger than 10 MB.";
+    if (d.cv.size > MAX_CV_BYTES) return "CV is larger than 4 MB.";
     return null;
   }
 
@@ -589,7 +589,7 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
                   <span className="mt-1.5 block text-xs text-muted">{draft.photo.name}</span>
                 )}
               </Field>
-              <Field label="CV (PDF or Word, max 10 MB)">
+              <Field label="CV (PDF or Word, max 4 MB)">
                 <input
                   className="block w-full text-sm text-muted file:mr-4 file:rounded-pill file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
                   type="file"

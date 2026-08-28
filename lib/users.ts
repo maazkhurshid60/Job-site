@@ -70,9 +70,19 @@ export type AdminAuditAction =
   | "revoke"
   | "invite"
   | "invite_claimed"
-  | "invite_cancelled";
+  | "invite_cancelled"
+  | "recruiter_verified"
+  | "recruiter_unverified"
+  | "recruiter_suspended"
+  | "recruiter_reinstated"
+  | "site_builder_unlocked"
+  | "site_builder_locked"
+  | "job_deleted"
+  | "submission_status_changed"
+  | "profile_reminder_sent";
 
-/** One entry in the admin allow-list's history. */
+/** One entry in the admin action history — every sensitive action taken from
+    the console, not just changes to the admin allow-list. */
 export type AdminAuditEntry = {
   id: number;
   action: AdminAuditAction;
@@ -80,6 +90,7 @@ export type AdminAuditEntry = {
   actorEmail: string;
   targetName: string;
   targetEmail: string;
+  details: string | null;
   createdAt: string | null;
 };
 

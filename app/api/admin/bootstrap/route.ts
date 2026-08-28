@@ -1,5 +1,5 @@
 import { handle, ok } from "@/lib/server/respond";
-import { countAdmins, createAdmin } from "@/lib/server/repo";
+import { countAdmins, bootstrapFirstAdmin } from "@/lib/server/repo";
 import { requireUid, AuthError } from "@/lib/server/auth";
 
 export const runtime = "nodejs";
@@ -20,16 +20,18 @@ export function GET() {
   return handle(async () => ok({ available: (await countAdmins()) === 0 }));
 }
 
-/** Promote the caller to admin, but only while no admin exists. */
+/** Promote the caller to admin, but only while no admin exists. Uses a single
+    atomic insert (see bootstrapFirstAdmin) rather than a check-then-insert,
+    so two accounts hitting this at the same instant can't both win. */
 export function POST(req: Request) {
   return handle(async () => {
     const uid = await requireUid(req);
 
-    if ((await countAdmins()) > 0) {
+    const won = await bootstrapFirstAdmin(uid, "bootstrap");
+    if (!won) {
       throw new AuthError("An admin already exists. Bootstrap is closed.", 403);
     }
 
-    await createAdmin(uid, "bootstrap");
     return ok({ uid, isAdmin: true }, { status: 201 });
   });
 }

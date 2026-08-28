@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getJob, type Job } from "@/lib/jobs";
+import { getJobAsAdmin, type Job } from "@/lib/jobs";
 import { adminRoutes } from "@/lib/routes";
 import { JobWizard } from "@/components/admin/JobWizard";
 import { Loader } from "@/components/Loader";
@@ -16,7 +16,7 @@ export default function EditJobPage() {
 
   useEffect(() => {
     let active = true;
-    getJob(id)
+    getJobAsAdmin(id)
       .then((j) => {
         if (!active) return;
         setJob(j);

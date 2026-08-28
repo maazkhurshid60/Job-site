@@ -1,12 +1,14 @@
 "use client";
 
 import { Container } from "./ui";
-import { CountUp } from "./motion/CountUp";
 
+/* True by construction — no invented hire/candidate/volume figures. Same
+   honesty stance as the rest of the site (see case-studies, press,
+   recruiters pages). */
 const stats = [
-  { to: 20, decimals: 0, suffix: "K", label: "Hires made" },
-  { to: 1.3, decimals: 1, suffix: "M", label: "Candidates sourced" },
-  { to: 8.5, decimals: 1, prefix: "$", suffix: "B", label: "In salaries placed" },
+  { value: "Free", label: "To join and to refer" },
+  { value: "Screened", label: "Every candidate, before the client sees them" },
+  { value: "$1K–$3K", label: "Recruiter fee per hire" },
 ];
 
 const companies = ["State DOTs", "Municipalities", "AEC Firms", "Design-Builders", "Public Agencies"];
@@ -35,12 +37,7 @@ export function SocialProof() {
             {stats.map((s) => (
               <div key={s.label} className="text-center">
                 <p className="text-3xl sm:text-4xl font-extrabold text-blue-brand">
-                  <CountUp
-                    to={s.to}
-                    decimals={s.decimals}
-                    prefix={s.prefix}
-                    suffix={s.suffix}
-                  />
+                  {s.value}
                 </p>
                 <p className="mt-2 text-xs sm:text-sm font-semibold text-muted">{s.label}</p>
               </div>

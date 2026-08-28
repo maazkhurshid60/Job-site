@@ -25,6 +25,17 @@ export default function DashboardJobsPage() {
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const [q, setQ] = useState(() => searchParams.get("q") ?? "");
+
+  // Re-syncs when the URL's own q param changes — e.g. the header search bar
+  // pushing a new ?q= while already on this page, which a mount-only
+  // initializer would silently miss since the route doesn't remount. Deferred
+  // via the timer (rather than calling setQ directly in the effect body) so
+  // this doesn't trigger a synchronous-setState-in-effect render cascade.
+  useEffect(() => {
+    const urlQ = searchParams.get("q") ?? "";
+    const timer = setTimeout(() => setQ(urlQ), 0);
+    return () => clearTimeout(timer);
+  }, [searchParams]);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [boardFilters, setBoardFilters] = useState<BoardFilters>(DEFAULT_FILTERS);
   const [onlySaved, setOnlySaved] = useState(false);
