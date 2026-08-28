@@ -13,6 +13,7 @@ import {
   StatCard, ProfileMeter, money, HiringPipeline, RecentActivity, OpenRolesForYou,
 } from "@/components/dashboard/parts";
 import { profileCompletion } from "@/lib/profileCompletion";
+import { siteCompletion } from "@/lib/siteCompletion";
 import { getMySite, type RecruiterSite } from "@/lib/recruiterSite";
 import { OutcomesDonut } from "@/components/dashboard/Charts";
 import { Loader } from "@/components/Loader";
@@ -49,6 +50,7 @@ export default function DashboardOverview() {
 
   const firstName = profile?.name?.split(" ")[0] || "there";
   const completion = profileCompletion(profile);
+  const siteMeter = siteCompletion(mySite);
   const hired = subs.filter((s) => s.status === "hired");
   const active = subs.filter(
     (s) => s.status !== "hired" && s.status !== "rejected",
@@ -142,30 +144,51 @@ export default function DashboardOverview() {
 
       {/* Site-builder perk: shown once an admin unlocks it, until the site is
           actually live — a delightful bonus, not a blocker, so it sits below
-          the verification/profile nudges rather than above them. */}
+          the verification/profile nudges rather than above them. Once a
+          draft exists, this mirrors the profile-completion banner above:
+          a percent, a bar, and what's still missing — the same "how much of
+          this have I actually filled in" signal, for the site instead of
+          the account. */}
       {profile?.siteBuilderEnabled && !mySite?.published && (
-        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-sage/50 bg-sage-soft p-4">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-ink">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM2 10h16M10 2c2 2.2 3 5 3 8s-1 5.8-3 8c-2-2.2-3-5-3-8s1-5.8 3-8z" />
-            </svg>
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-ink">
-              {mySite ? "Your recruiter website is saved as a draft" : "You've unlocked your free recruiter website"}
-            </p>
-            <p className="mt-0.5 text-xs text-ink/70">
-              {mySite
-                ? `Publish it to go live at jobfolder.com/sites/${mySite.slug}.`
-                : "Build a one-page site with your story and track record — free, hosted by us."}
-            </p>
+        <div className="mb-5 rounded-2xl border border-sage/50 bg-sage-soft p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-ink">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM2 10h16M10 2c2 2.2 3 5 3 8s-1 5.8-3 8c-2-2.2-3-5-3-8s1-5.8 3-8z" />
+                </svg>
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-ink">
+                  {mySite ? `Your website is ${siteMeter.percent}% complete` : "You've unlocked your free recruiter website"}
+                </p>
+                <p className="mt-0.5 text-xs text-ink/70">
+                  {mySite
+                    ? `Finish it up and publish to go live at jobfolder.com/sites/${mySite.slug}.`
+                    : "Build a one-page site with your story and track record — free, hosted by us."}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/career-site"
+              className="shrink-0 rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
+            >
+              {mySite ? "Finish & publish" : "Build your site"}
+            </Link>
           </div>
-          <Link
-            href="/dashboard/career-site"
-            className="shrink-0 rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
-          >
-            {mySite ? "Finish & publish" : "Build your site"}
-          </Link>
+
+          {mySite && (
+            <>
+              <ProfileMeter percent={siteMeter.percent} className="mt-3" />
+              {!siteMeter.isComplete && (
+                <p className="mt-2.5 text-[11px] text-ink/70">
+                  <span className="font-semibold text-ink">Still to add:</span>{" "}
+                  {siteMeter.missing.slice(0, 4).map((f) => f.label).join(", ")}
+                  {siteMeter.missing.length > 4 && ` and ${siteMeter.missing.length - 4} more`}
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
 

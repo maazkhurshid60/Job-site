@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { uploadAvatar, updateUserProfile } from "@/lib/users";
 import {
-  getMySite, saveMySite, type RecruiterSite, type SiteStat, type SiteExpertise, type SiteExperience,
+  getMySite, saveMySite, checkSlugAvailable,
+  type RecruiterSite, type SiteStat, type SiteExpertise, type SiteExperience,
 } from "@/lib/recruiterSite";
 import {
   SITE_TEMPLATES, SITE_THEMES, slugProblem, type SiteTemplate, type SiteThemeId,
@@ -68,8 +70,12 @@ const STEPS: { n: Step; label: string }[] = [
 ];
 
 export function SiteBuilderWizard() {
-  const { profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [loaded, setLoaded] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const slugCheckRef = useRef<string>("");
   const [existing, setExisting] = useState<RecruiterSite | null>(null);
   const [step, setStep] = useState<Step>(1);
   // How far the recruiter has actually progressed — steps beyond this aren't
@@ -94,6 +100,41 @@ export function SiteBuilderWizard() {
   const [saving, setSaving] = useState<"draft" | "publish" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Live slug availability — two recruiters sharing a first name isn't rare,
+  // so this surfaces a collision while typing instead of only as a save-time
+  // error. Debounced, and guarded against out-of-order responses by only
+  // trusting the check that matches the current slug when it resolves.
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [slugReason, setSlugReason] = useState<string | null>(null);
+
+  useEffect(() => {
+    const slug = draft.slug;
+    const formatIssue = slugProblem(slug);
+    slugCheckRef.current = slug;
+    // Every branch below sets state from inside a timer callback, never
+    // synchronously in the effect body — including the "reset to idle" case,
+    // via a 0ms timer — so a fast-typed invalid slug can't cause a
+    // cascading-render warning.
+    const timer = setTimeout(() => {
+      if (formatIssue) {
+        setSlugStatus("idle");
+        setSlugReason(null);
+        return;
+      }
+      setSlugStatus("checking");
+      setSlugReason(null);
+      checkSlugAvailable(slug)
+        .then((res) => {
+          // Only the check for the most recently typed slug should ever land.
+          if (slugCheckRef.current !== slug) return;
+          setSlugStatus(res.available ? "available" : "taken");
+          setSlugReason(res.available ? null : res.reason ?? null);
+        })
+        .catch(() => {});
+    }, formatIssue ? 0 : 400);
+    return () => clearTimeout(timer);
+  }, [draft.slug]);
 
   useEffect(() => {
     let active = true;
@@ -132,6 +173,10 @@ export function SiteBuilderWizard() {
         setError(slugIssue);
         return;
       }
+      if (slugStatus === "taken") {
+        setError(slugReason ?? "That link is already taken — please choose another.");
+        return;
+      }
     }
     setError(null);
     const next = Math.min(5, step + 1) as Step;
@@ -142,6 +187,26 @@ export function SiteBuilderWizard() {
   function goBack() {
     setError(null);
     setStep((s) => Math.max(1, s - 1) as Step);
+  }
+
+  // The site's photo is the recruiter's one profile photo — same source the
+  // dashboard and admin console already show — so uploading here just updates
+  // that field directly rather than introducing a second, site-only image.
+  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setPhotoError(null);
+    setUploadingPhoto(true);
+    try {
+      const url = await uploadAvatar(user.uid, file);
+      await updateUserProfile(user.uid, { photoURL: url });
+      await refreshProfile();
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : "Could not upload image.");
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
   }
 
   async function save(publish: boolean) {
@@ -216,11 +281,51 @@ export function SiteBuilderWizard() {
         {step === 1 && (
           <div className="mt-5 space-y-6">
             <div>
+              <h3 className="text-lg font-bold text-ink">Your photo</h3>
+              <p className="mt-1 text-sm text-muted">
+                The big photo on your site — the same one shown on your profile.
+              </p>
+              <div className="mt-3 flex items-center gap-4">
+                <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full bg-primary-soft text-xl font-bold text-primary ring-4 ring-cream">
+                  {profile?.photoURL ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.photoURL} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    (profile?.name || "R").charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                    className="rounded-pill border border-line px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-cream/60 disabled:opacity-60"
+                  >
+                    {uploadingPhoto ? "Uploading…" : profile?.photoURL ? "Change photo" : "Upload photo"}
+                  </button>
+                  <p className="mt-1.5 text-[11px] text-muted">JPG, PNG, or WebP · max 5 MB</p>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={onPickPhoto}
+                  />
+                </div>
+              </div>
+              {photoError && <p className="mt-2 text-xs text-coral">{photoError}</p>}
+            </div>
+
+            <div>
               <h3 className="text-lg font-bold text-ink">Your link</h3>
               <p className="mt-1 text-sm text-muted">
                 This is the address your site will live at.
               </p>
-              <div className="mt-3 flex items-center gap-1 rounded-xl border border-line bg-cream/40 px-3.5 py-2.5">
+              <div
+                className={`mt-3 flex items-center gap-1 rounded-xl border bg-cream/40 px-3.5 py-2.5 ${
+                  slugStatus === "taken" ? "border-coral/50" : "border-line"
+                }`}
+              >
                 <span className="shrink-0 text-sm text-muted">jobfolder.com/sites/</span>
                 <input
                   className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-semibold text-ink outline-none"
@@ -229,7 +334,20 @@ export function SiteBuilderWizard() {
                   placeholder="jordan-lee"
                   autoFocus
                 />
+                {slugStatus === "checking" && (
+                  <span className="shrink-0 text-xs text-muted">Checking…</span>
+                )}
+                {slugStatus === "available" && (
+                  <span className="shrink-0 text-xs font-semibold text-sage">✓ Available</span>
+                )}
               </div>
+              {slugStatus === "taken" ? (
+                <p className="mt-1.5 text-xs text-coral">{slugReason}</p>
+              ) : (
+                <p className="mt-1.5 text-xs text-muted">
+                  Common names get taken fast — worth pairing with your surname or role.
+                </p>
+              )}
             </div>
 
             <div>

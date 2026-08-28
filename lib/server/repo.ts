@@ -902,6 +902,18 @@ export async function getRecruiterSiteByUid(uid: string): Promise<RecruiterSite 
   return row ? toRecruiterSite(row) : null;
 }
 
+/** Whether `slug` already belongs to some OTHER recruiter — powers the
+    live availability check while typing, so a collision shows up before
+    save instead of only as an error on submit. A recruiter's own current
+    slug is never "taken" from their own point of view. */
+export async function slugTakenByOther(slug: string, uid: string): Promise<boolean> {
+  const row = await queryOne<{ recruiter_id: string }>(
+    `SELECT recruiter_id FROM recruiter_sites WHERE slug = ? AND recruiter_id != ?`,
+    [slug, uid],
+  );
+  return Boolean(row);
+}
+
 /** Public: the profile fields a rendered site needs, alongside the site row
     itself. Only ever returned for a published site — see the route. */
 export type PublicRecruiterSite = {

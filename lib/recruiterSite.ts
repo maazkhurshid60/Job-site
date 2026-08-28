@@ -65,6 +65,17 @@ export function saveMySite(input: RecruiterSiteInput): Promise<RecruiterSite> {
   return apiFetch<RecruiterSite>("/api/me/site", { method: "PUT", body: input, auth: true });
 }
 
+/** Live availability check for the slug field — checked as the recruiter
+    types, not just on save. */
+export function checkSlugAvailable(
+  slug: string,
+): Promise<{ available: boolean; reason?: string }> {
+  return apiFetch<{ available: boolean; reason?: string }>(
+    `/api/me/site/slug-check?slug=${encodeURIComponent(slug)}`,
+    { auth: true },
+  );
+}
+
 /** Admin action: read-only look at any recruiter's site, or null if they
     haven't started one. */
 export function getRecruiterSiteForAdmin(uid: string): Promise<RecruiterSite | null> {
