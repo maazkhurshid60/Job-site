@@ -267,82 +267,7 @@ export default function RecruiterDetailPage() {
                   {user.company ? ` · ${user.company}` : ""}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={toggleVerified}
-                  disabled={togglingVerified}
-                  className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
-                    user.verified
-                      ? "border border-line text-muted hover:border-coral hover:text-coral"
-                      : "bg-primary text-white hover:bg-primary-dark"
-                  }`}
-                  title="Vetting this recruiter lets them submit candidates"
-                >
-                  {user.verified ? "Un-verify" : "Verify recruiter"}
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleMetroTeam}
-                  disabled={togglingMetro}
-                  className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
-                    user.metroTeamMember
-                      ? "bg-primary text-white hover:bg-primary-dark"
-                      : "border border-line text-muted hover:border-primary hover:text-primary"
-                  }`}
-                  title="Show or hide this recruiter on Metro Associates' public Meet Our Team page"
-                >
-                  {user.metroTeamMember ? "✓ On Metro Associates team" : "Add to Metro Associates team"}
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleSuspended}
-                  disabled={togglingSuspended}
-                  className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
-                    user.suspended
-                      ? "bg-coral text-white hover:bg-coral/90"
-                      : "border border-coral/40 text-coral hover:bg-coral-soft"
-                  }`}
-                  title="Suspending blocks submissions, saved candidates, messages, and file uploads"
-                >
-                  {user.suspended ? "Reinstate" : "Suspend"}
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleSiteBuilder}
-                  disabled={togglingSiteBuilder}
-                  className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
-                    user.siteBuilderEnabled
-                      ? "bg-primary text-white hover:bg-primary-dark"
-                      : "border border-line text-muted hover:border-primary hover:text-primary"
-                  }`}
-                  title="Unlocks the free recruiter-website builder on their dashboard"
-                >
-                  {user.siteBuilderEnabled ? "✓ Website builder unlocked" : "Unlock website builder"}
-                </button>
-              </div>
             </div>
-
-            {(user.siteBuilderEnabled || site) && (
-              <p className="mt-2.5 text-xs text-muted">
-                {site?.published ? (
-                  <>
-                    Website:{" "}
-                    <Link
-                      href={`/sites/${site.slug}`}
-                      target="_blank"
-                      className="font-semibold text-primary hover:underline"
-                    >
-                      jobfolder.com/sites/{site.slug}
-                    </Link>
-                  </>
-                ) : site ? (
-                  "Website: draft saved, not published yet."
-                ) : (
-                  "Website: hasn't started building yet."
-                )}
-              </p>
-            )}
 
             <dl className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2">
               <Row label="Email" value={user.email} href={`mailto:${user.email}`} />
@@ -365,6 +290,62 @@ export default function RecruiterDetailPage() {
             </p>
           </div>
         )}
+
+        <div className="mt-5 border-t border-line pt-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">
+            Account controls
+          </p>
+          <div className="mt-1 divide-y divide-line">
+            <ToggleRow
+              label="Verified"
+              description="Lets them submit candidates to open roles."
+              on={user.verified}
+              onToggle={toggleVerified}
+              disabled={togglingVerified}
+            />
+            <ToggleRow
+              label="Metro Associates team"
+              description="Shown on Metro Associates' public Meet Our Team page."
+              on={user.metroTeamMember}
+              onToggle={toggleMetroTeam}
+              disabled={togglingMetro}
+            />
+            <ToggleRow
+              label="Website builder"
+              description={
+                site?.published ? (
+                  <>
+                    Live at{" "}
+                    <Link
+                      href={`/sites/${site.slug}`}
+                      target="_blank"
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      jobfolder.com/sites/{site.slug}
+                    </Link>
+                  </>
+                ) : site ? (
+                  "Draft saved, not published yet."
+                ) : user.siteBuilderEnabled ? (
+                  "Unlocked — hasn't started building yet."
+                ) : (
+                  "Free recruiter-website builder, hosted at jobfolder.com/sites/…"
+                )
+              }
+              on={user.siteBuilderEnabled}
+              onToggle={toggleSiteBuilder}
+              disabled={togglingSiteBuilder}
+            />
+            <ToggleRow
+              label="Suspended"
+              description="Blocks submissions, saved candidates, messages, and file uploads."
+              on={user.suspended}
+              onToggle={toggleSuspended}
+              disabled={togglingSuspended}
+              tone="danger"
+            />
+          </div>
+        </div>
 
         <div className="mt-5 border-t border-line pt-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -493,6 +474,46 @@ function BackLink() {
     >
       ← All recruiters
     </Link>
+  );
+}
+
+/** One row of the "Account controls" table — a labeled setting with its
+    current state as a switch, replacing what used to be a row of pill
+    buttons that overflowed the card on narrower screens. */
+function ToggleRow({
+  label, description, on, onToggle, disabled, tone = "primary",
+}: {
+  label: string;
+  description: React.ReactNode;
+  on: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+  tone?: "primary" | "danger";
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-ink">{label}</p>
+        <p className="mt-0.5 text-xs text-muted">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        onClick={onToggle}
+        disabled={disabled}
+        className={`relative h-6 w-11 shrink-0 rounded-pill transition-colors disabled:opacity-60 ${
+          on ? (tone === "danger" ? "bg-coral" : "bg-primary") : "bg-line"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+            on ? "translate-x-5" : "translate-x-0"
+          }`}
+        />
+      </button>
+    </div>
   );
 }
 

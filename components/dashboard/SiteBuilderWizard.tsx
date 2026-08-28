@@ -10,6 +10,7 @@ import {
   SITE_TEMPLATES, SITE_THEMES, slugProblem, type SiteTemplate, type SiteThemeId,
 } from "@/lib/siteThemes";
 import { RecruiterSiteView } from "@/components/site/RecruiterSiteView";
+import { ScaledPreview } from "@/components/dashboard/ScaledPreview";
 
 /* Step-by-step builder for the free recruiter website perk (see
    /dashboard/career-site). Unlike SubmitCandidateForm's linear one-shot
@@ -416,23 +417,25 @@ export function SiteBuilderWizard() {
               jobfolder.com/sites/{draft.slug || "…"}
             </span>
           </div>
-          <div className="h-192 overflow-x-hidden overflow-y-auto">
-            <RecruiterSiteView
-              site={{
-                template: draft.template,
-                theme: draft.theme,
-                tagline: draft.tagline,
-                intro: draft.intro,
-                specialisms: draft.specialisms,
-                highlights: draft.highlights,
-                stats: draft.stats,
-                expertise: draft.expertise,
-                experience: draft.experience,
-                ctaLabel: draft.ctaLabel,
-                ctaUrl: draft.ctaUrl,
-              }}
-              recruiter={previewRecruiter}
-            />
+          <div className="h-192 overflow-y-auto">
+            <ScaledPreview>
+              <RecruiterSiteView
+                site={{
+                  template: draft.template,
+                  theme: draft.theme,
+                  tagline: draft.tagline,
+                  intro: draft.intro,
+                  specialisms: draft.specialisms,
+                  highlights: draft.highlights,
+                  stats: draft.stats,
+                  expertise: draft.expertise,
+                  experience: draft.experience,
+                  ctaLabel: draft.ctaLabel,
+                  ctaUrl: draft.ctaUrl,
+                }}
+                recruiter={previewRecruiter}
+              />
+            </ScaledPreview>
           </div>
         </div>
       </div>
