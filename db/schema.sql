@@ -314,6 +314,12 @@ CREATE TABLE recruiter_sites (
   intro        MEDIUMTEXT,
   specialisms  JSON,                 -- [string]
   highlights   JSON,                 -- [string] — short track-record bullets
+  -- Hero stat row, e.g. { value: "8+", label: "Years recruiting" }.
+  stats        JSON,                 -- [{ value, label }]
+  -- Animated skill bars, e.g. { skill: "DOT Recruiting", percent: 90 }.
+  expertise    JSON,                 -- [{ skill, percent }]
+  -- Work history timeline, most recent first.
+  experience   JSON,                 -- [{ role, company, period, current, bullets: [string] }]
   cta_label    VARCHAR(64)  NOT NULL DEFAULT '',
   cta_url      VARCHAR(512) NOT NULL DEFAULT '',
   -- A recruiter can draft and preview before the page is publicly reachable.

@@ -49,16 +49,12 @@ export default function CareerSitePage() {
               </Link>
               .
             </Step>
-            <Step n={3} title="We design, build and host it">
-              A clean, fast, one-page recruiter site — live on a domain of
-              your choice, at no cost to you.
+            <Step n={3} title="Build it yourself, in minutes">
+              Pick a template and colour, add your story, and publish — a
+              clean, fast, one-page site live at jobfolder.com/sites/you,
+              hosted at no cost to you.
             </Step>
           </ol>
-          <p className="mt-4 text-[11px] text-muted">
-            Already have your own website or domain? Send it over and
-            we&apos;ll point your new site there instead of a JobFolder
-            subdomain.
-          </p>
           <Link
             href="/contact?subject=Recruiter website — free site perk"
             className="mt-3 inline-block rounded-pill bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-dark"

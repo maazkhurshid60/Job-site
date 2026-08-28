@@ -858,6 +858,9 @@ type RecruiterSiteRow = {
   intro: string | null;
   specialisms: unknown;
   highlights: unknown;
+  stats: unknown;
+  expertise: unknown;
+  experience: unknown;
   cta_label: string;
   cta_url: string;
   published: number;
@@ -875,6 +878,9 @@ function toRecruiterSite(r: RecruiterSiteRow): RecruiterSite {
     intro: r.intro ?? "",
     specialisms: parseJson<string[]>(r.specialisms, []),
     highlights: parseJson<string[]>(r.highlights, []),
+    stats: parseJson<RecruiterSite["stats"]>(r.stats, []),
+    expertise: parseJson<RecruiterSite["expertise"]>(r.expertise, []),
+    experience: parseJson<RecruiterSite["experience"]>(r.experience, []),
     ctaLabel: r.cta_label,
     ctaUrl: r.cta_url,
     published: Boolean(r.published),
@@ -885,7 +891,8 @@ function toRecruiterSite(r: RecruiterSiteRow): RecruiterSite {
 
 const SITE_COLUMNS = `
   recruiter_id, slug, template, theme, tagline, intro, specialisms,
-  highlights, cta_label, cta_url, published, created_at, updated_at`;
+  highlights, stats, expertise, experience, cta_label, cta_url, published,
+  created_at, updated_at`;
 
 export async function getRecruiterSiteByUid(uid: string): Promise<RecruiterSite | null> {
   const row = await queryOne<RecruiterSiteRow>(
@@ -901,20 +908,20 @@ export type PublicRecruiterSite = {
   site: RecruiterSite;
   recruiter: Pick<
     UserProfile,
-    "name" | "headline" | "bio" | "photoURL" | "phone" | "email" |
+    "name" | "headline" | "bio" | "photoURL" | "phone" | "email" | "location" |
     "linkedin" | "website" | "twitter" | "facebook" | "instagram"
   >;
 };
 
 export async function getRecruiterSiteBySlug(slug: string): Promise<PublicRecruiterSite | null> {
   const row = await queryOne<RecruiterSiteRow & Pick<UserRow,
-    "name" | "headline" | "bio" | "photo_url" | "phone" | "email" |
+    "name" | "headline" | "bio" | "photo_url" | "phone" | "email" | "location" |
     "linkedin" | "website" | "twitter" | "facebook" | "instagram"
   >>(
     `SELECT rs.recruiter_id, rs.slug, rs.template, rs.theme, rs.tagline, rs.intro,
-            rs.specialisms, rs.highlights, rs.cta_label, rs.cta_url, rs.published,
-            rs.created_at, rs.updated_at,
-            u.name, u.headline, u.bio, u.photo_url, u.phone, u.email,
+            rs.specialisms, rs.highlights, rs.stats, rs.expertise, rs.experience,
+            rs.cta_label, rs.cta_url, rs.published, rs.created_at, rs.updated_at,
+            u.name, u.headline, u.bio, u.photo_url, u.phone, u.email, u.location,
             u.linkedin, u.website, u.twitter, u.facebook, u.instagram
        FROM recruiter_sites rs
        JOIN users u ON u.uid = rs.recruiter_id
@@ -931,6 +938,7 @@ export async function getRecruiterSiteBySlug(slug: string): Promise<PublicRecrui
       photoURL: row.photo_url,
       phone: row.phone,
       email: row.email,
+      location: row.location,
       linkedin: row.linkedin,
       website: row.website,
       twitter: row.twitter,
@@ -948,6 +956,9 @@ export type RecruiterSiteWrite = {
   intro: string;
   specialisms: string; // JSON-encoded, see jsonArray()
   highlights: string;  // JSON-encoded, see jsonArray()
+  stats: string;       // JSON-encoded [{ value, label }]
+  expertise: string;   // JSON-encoded [{ skill, percent }]
+  experience: string;  // JSON-encoded [{ role, company, period, current, bullets }]
   ctaLabel: string;
   ctaUrl: string;
   published: boolean;
@@ -971,13 +982,15 @@ export async function upsertRecruiterSite(
 ): Promise<RecruiterSite> {
   const args = [
     input.slug, input.template, input.theme, input.tagline, input.intro,
-    input.specialisms, input.highlights, input.ctaLabel, input.ctaUrl, input.published,
+    input.specialisms, input.highlights, input.stats, input.expertise, input.experience,
+    input.ctaLabel, input.ctaUrl, input.published,
   ];
   try {
     const updated = await execute(
       `UPDATE recruiter_sites SET
          slug = ?, template = ?, theme = ?, tagline = ?, intro = ?,
-         specialisms = ?, highlights = ?, cta_label = ?, cta_url = ?, published = ?
+         specialisms = ?, highlights = ?, stats = ?, expertise = ?, experience = ?,
+         cta_label = ?, cta_url = ?, published = ?
        WHERE recruiter_id = ?`,
       [...args, uid],
     );
@@ -985,8 +998,8 @@ export async function upsertRecruiterSite(
       await execute(
         `INSERT INTO recruiter_sites
            (slug, template, theme, tagline, intro, specialisms, highlights,
-            cta_label, cta_url, published, recruiter_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+            stats, expertise, experience, cta_label, cta_url, published, recruiter_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [...args, uid],
       );
     }

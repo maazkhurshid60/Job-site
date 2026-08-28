@@ -8,6 +8,7 @@ import {
   setRecruiterSiteBuilderEnabled, sendProfileReminder, type UserProfile,
 } from "@/lib/users";
 import { profileCompletion } from "@/lib/profileCompletion";
+import { getRecruiterSiteForAdmin, type RecruiterSite } from "@/lib/recruiterSite";
 import {
   listAllSubmissions,
   setSubmissionStatus,
@@ -36,6 +37,7 @@ export default function RecruiterDetailPage() {
   const { uid } = useParams<{ uid: string }>();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [subs, setSubs] = useState<Submission[]>([]);
+  const [site, setSite] = useState<RecruiterSite | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -51,11 +53,14 @@ export default function RecruiterDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const [users, all] = await Promise.all([listAllUsers(), listAllSubmissions()]);
+      const [users, all, recruiterSite] = await Promise.all([
+        listAllUsers(), listAllSubmissions(), getRecruiterSiteForAdmin(uid).catch(() => null),
+      ]);
       const found = users.find((u) => u.uid === uid) ?? null;
       setUser(found);
       setNotFound(!found);
       setSubs(all.filter((s) => s.recruiterId === uid));
+      setSite(recruiterSite);
     } catch (err) {
       setError(errorMessage(err, "The server didn't respond. Please try again."));
     } finally {
@@ -317,6 +322,28 @@ export default function RecruiterDetailPage() {
                 </button>
               </div>
             </div>
+
+            {(user.siteBuilderEnabled || site) && (
+              <p className="mt-2.5 text-xs text-muted">
+                {site?.published ? (
+                  <>
+                    Website:{" "}
+                    <Link
+                      href={`/sites/${site.slug}`}
+                      target="_blank"
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      jobfolder.com/sites/{site.slug}
+                    </Link>
+                  </>
+                ) : site ? (
+                  "Website: draft saved, not published yet."
+                ) : (
+                  "Website: hasn't started building yet."
+                )}
+              </p>
+            )}
+
             <dl className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2">
               <Row label="Email" value={user.email} href={`mailto:${user.email}`} />
               <Row label="Phone" value={user.phone} href={`tel:${user.phone}`} />

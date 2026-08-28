@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getMySite, saveMySite, type RecruiterSite } from "@/lib/recruiterSite";
+import {
+  getMySite, saveMySite, type RecruiterSite, type SiteStat, type SiteExpertise, type SiteExperience,
+} from "@/lib/recruiterSite";
 import {
   SITE_TEMPLATES, SITE_THEMES, slugProblem, type SiteTemplate, type SiteThemeId,
 } from "@/lib/siteThemes";
@@ -23,6 +25,9 @@ type Draft = {
   intro: string;
   specialisms: string[];
   highlights: string[];
+  stats: SiteStat[];
+  expertise: SiteExpertise[];
+  experience: SiteExperience[];
   ctaLabel: string;
   ctaUrl: string;
 };
@@ -44,16 +49,21 @@ function draftFromSite(site: RecruiterSite): Draft {
     intro: site.intro,
     specialisms: site.specialisms,
     highlights: site.highlights,
+    stats: site.stats,
+    expertise: site.expertise,
+    experience: site.experience,
     ctaLabel: site.ctaLabel,
     ctaUrl: site.ctaUrl,
   };
 }
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4 | 5;
 const STEPS: { n: Step; label: string }[] = [
   { n: 1, label: "Link & look" },
-  { n: 2, label: "Content" },
-  { n: 3, label: "Publish" },
+  { n: 2, label: "About" },
+  { n: 3, label: "Experience" },
+  { n: 4, label: "Extras" },
+  { n: 5, label: "Publish" },
 ];
 
 export function SiteBuilderWizard() {
@@ -69,6 +79,9 @@ export function SiteBuilderWizard() {
     intro: "",
     specialisms: [],
     highlights: [],
+    stats: [],
+    expertise: [],
+    experience: [],
     ctaLabel: "Get in touch",
     ctaUrl: "",
   });
@@ -143,6 +156,7 @@ export function SiteBuilderWizard() {
     photoURL: profile?.photoURL ?? "",
     phone: profile?.phone ?? "",
     email: profile?.email ?? "",
+    location: profile?.location ?? "",
     linkedin: profile?.linkedin ?? "",
     website: profile?.website ?? "",
     twitter: profile?.twitter ?? "",
@@ -256,6 +270,19 @@ export function SiteBuilderWizard() {
                 placeholder="A short story about how you work and who you help…"
               />
             </Field>
+            <StatsField items={draft.stats} onChange={(stats) => patch({ stats })} />
+            <ExpertiseField items={draft.expertise} onChange={(expertise) => patch({ expertise })} />
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="mt-5">
+            <ExperienceField items={draft.experience} onChange={(experience) => patch({ experience })} />
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="mt-5 space-y-5">
             <TagListField
               label="Specialisms (optional)"
               placeholder="e.g. Structural Engineering"
@@ -292,7 +319,7 @@ export function SiteBuilderWizard() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 5 && (
           <div className="mt-5">
             <h3 className="text-lg font-bold text-ink">Ready to publish?</h3>
             <p className="mt-1 text-sm text-muted">
@@ -351,6 +378,9 @@ export function SiteBuilderWizard() {
                 intro: draft.intro,
                 specialisms: draft.specialisms,
                 highlights: draft.highlights,
+                stats: draft.stats,
+                expertise: draft.expertise,
+                experience: draft.experience,
                 ctaLabel: draft.ctaLabel,
                 ctaUrl: draft.ctaUrl,
               }}
@@ -468,6 +498,292 @@ function TagListField({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** A vertical list of longer, sentence-length entries (job bullet points) —
+    same add/remove interaction as TagListField, but rendered as a bulleted
+    list rather than pill chips, since a full sentence doesn't read well as a
+    pill. */
+function BulletListField({
+  items, onChange, max = 8,
+}: {
+  items: string[];
+  onChange: (items: string[]) => void;
+  max?: number;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function add() {
+    const value = draft.trim();
+    if (!value || items.length >= max) return;
+    onChange([...items, value]);
+    setDraft("");
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <input
+          className="input text-sm"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Add a bullet point…"
+          disabled={items.length >= max}
+        />
+        <button
+          type="button"
+          onClick={add}
+          disabled={!draft.trim() || items.length >= max}
+          className="shrink-0 rounded-pill border border-line px-3 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-50"
+        >
+          Add
+        </button>
+      </div>
+      {items.length > 0 && (
+        <ul className="mt-2 space-y-1.5">
+          {items.map((item, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs text-ink">
+              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink/40" />
+              <span className="flex-1">{item}</span>
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+                aria-label="Remove bullet"
+                className="shrink-0 text-muted hover:text-coral"
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Hero stat row — short value/label pairs, e.g. "8+" / "Years recruiting". */
+function StatsField({
+  items, onChange, max = 4,
+}: {
+  items: SiteStat[];
+  onChange: (items: SiteStat[]) => void;
+  max?: number;
+}) {
+  function update(i: number, patch: Partial<SiteStat>) {
+    onChange(items.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  }
+  function remove(i: number) {
+    onChange(items.filter((_, idx) => idx !== i));
+  }
+  function add() {
+    if (items.length >= max) return;
+    onChange([...items, { value: "", label: "" }]);
+  }
+
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium text-ink">Hero stats (optional)</span>
+      <p className="mb-2 text-[11px] text-muted">
+        Short numbers shown at the top of your site, e.g. &ldquo;8+&rdquo; / &ldquo;Years recruiting&rdquo;.
+      </p>
+      <div className="space-y-2">
+        {items.map((s, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              className="input w-24"
+              value={s.value}
+              onChange={(e) => update(i, { value: e.target.value })}
+              placeholder="8+"
+            />
+            <input
+              className="input flex-1"
+              value={s.label}
+              onChange={(e) => update(i, { label: e.target.value })}
+              placeholder="Years recruiting"
+            />
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              aria-label="Remove stat"
+              className="shrink-0 text-muted hover:text-coral"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={add}
+        disabled={items.length >= max}
+        className="mt-2 rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-50"
+      >
+        + Add stat
+      </button>
+    </div>
+  );
+}
+
+/** Animated skill bars, e.g. "DOT Recruiting — 90%". */
+function ExpertiseField({
+  items, onChange, max = 8,
+}: {
+  items: SiteExpertise[];
+  onChange: (items: SiteExpertise[]) => void;
+  max?: number;
+}) {
+  function update(i: number, patch: Partial<SiteExpertise>) {
+    onChange(items.map((e, idx) => (idx === i ? { ...e, ...patch } : e)));
+  }
+  function remove(i: number) {
+    onChange(items.filter((_, idx) => idx !== i));
+  }
+  function add() {
+    if (items.length >= max) return;
+    onChange([...items, { skill: "", percent: 80 }]);
+  }
+
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-medium text-ink">Core expertise (optional)</span>
+      <p className="mb-2 text-[11px] text-muted">
+        Shown as skill bars, e.g. &ldquo;DOT Recruiting — 90%&rdquo;.
+      </p>
+      <div className="space-y-2">
+        {items.map((e, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              className="input flex-1"
+              value={e.skill}
+              onChange={(ev) => update(i, { skill: ev.target.value })}
+              placeholder="e.g. DOT Recruiting"
+            />
+            <input
+              className="input w-20"
+              type="number"
+              min={0}
+              max={100}
+              value={e.percent}
+              onChange={(ev) => update(i, { percent: Math.max(0, Math.min(100, Number(ev.target.value) || 0)) })}
+            />
+            <span className="shrink-0 text-xs text-muted">%</span>
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              aria-label="Remove skill"
+              className="shrink-0 text-muted hover:text-coral"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={add}
+        disabled={items.length >= max}
+        className="mt-2 rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-50"
+      >
+        + Add skill
+      </button>
+    </div>
+  );
+}
+
+/** Work-history timeline — the "Where I've worked" section. Each role is a
+    small card of its own fields plus a BulletListField for the achievements
+    under it. */
+function ExperienceField({
+  items, onChange, max = 6,
+}: {
+  items: SiteExperience[];
+  onChange: (items: SiteExperience[]) => void;
+  max?: number;
+}) {
+  function update(i: number, patch: Partial<SiteExperience>) {
+    onChange(items.map((job, idx) => (idx === i ? { ...job, ...patch } : job)));
+  }
+  function remove(i: number) {
+    onChange(items.filter((_, idx) => idx !== i));
+  }
+  function add() {
+    if (items.length >= max) return;
+    onChange([...items, { role: "", company: "", period: "", current: false, bullets: [] }]);
+  }
+
+  return (
+    <div>
+      <h3 className="text-lg font-bold text-ink">Work history (optional)</h3>
+      <p className="mt-1 text-sm text-muted">
+        Most recent role first — this becomes your &ldquo;Where I&apos;ve worked&rdquo; timeline.
+      </p>
+
+      <div className="mt-4 space-y-4">
+        {items.map((job, i) => (
+          <div key={i} className="rounded-xl border border-line p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wide text-muted">Role {i + 1}</span>
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                className="text-xs font-semibold text-coral hover:underline"
+              >
+                Remove
+              </button>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <input
+                className="input"
+                value={job.role}
+                onChange={(e) => update(i, { role: e.target.value })}
+                placeholder="Role, e.g. Senior Recruiter"
+              />
+              <input
+                className="input"
+                value={job.company}
+                onChange={(e) => update(i, { company: e.target.value })}
+                placeholder="Company"
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <input
+                className="input min-w-0 flex-1"
+                value={job.period}
+                onChange={(e) => update(i, { period: e.target.value })}
+                placeholder="Period, e.g. Jan 2022 – Present"
+              />
+              <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-ink">
+                <input
+                  type="checkbox"
+                  checked={job.current}
+                  onChange={(e) => update(i, { current: e.target.checked })}
+                />
+                Current role
+              </label>
+            </div>
+            <div className="mt-3">
+              <BulletListField items={job.bullets} onChange={(bullets) => update(i, { bullets })} max={8} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={add}
+        disabled={items.length >= max}
+        className="mt-4 rounded-pill border border-line px-4 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary disabled:opacity-50"
+      >
+        + Add role
+      </button>
     </div>
   );
 }
