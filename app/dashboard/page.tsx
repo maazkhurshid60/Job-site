@@ -142,14 +142,13 @@ export default function DashboardOverview() {
         </div>
       )}
 
-      {/* Site-builder perk: shown once an admin unlocks it, until the site is
-          actually live — a delightful bonus, not a blocker, so it sits below
-          the verification/profile nudges rather than above them. Once a
-          draft exists, this mirrors the profile-completion banner above:
-          a percent, a bar, and what's still missing — the same "how much of
-          this have I actually filled in" signal, for the site instead of
-          the account. */}
-      {profile?.siteBuilderEnabled && !mySite?.published && (
+      {/* Site-builder perk: shown for as long as an admin has it unlocked —
+          not just pre-publish, since a published site can still be filled in
+          further, and the recruiter should still be able to see/reach it
+          from here. Mirrors the profile-completion banner above: a percent,
+          a bar, and what's still missing, for the site instead of the
+          account. */}
+      {profile?.siteBuilderEnabled && (
         <div className="mb-5 rounded-2xl border border-sage/50 bg-sage-soft p-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex min-w-0 items-start gap-3">
@@ -160,12 +159,30 @@ export default function DashboardOverview() {
               </span>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-ink">
-                  {mySite ? `Your website is ${siteMeter.percent}% complete` : "You've unlocked your free recruiter website"}
+                  {mySite?.published
+                    ? "Your website is live"
+                    : mySite
+                      ? `Your website is ${siteMeter.percent}% complete`
+                      : "You've unlocked your free recruiter website"}
                 </p>
                 <p className="mt-0.5 text-xs text-ink/70">
-                  {mySite
-                    ? `Finish it up and publish to go live at jobfolder.com/sites/${mySite.slug}.`
-                    : "Build a one-page site with your story and track record — free, hosted by us."}
+                  {mySite?.published ? (
+                    <>
+                      Live at{" "}
+                      <a
+                        href={`/sites/${mySite.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold underline decoration-ink/30 underline-offset-2 hover:decoration-ink"
+                      >
+                        jobfolder.com/sites/{mySite.slug}
+                      </a>
+                    </>
+                  ) : mySite ? (
+                    `Finish it up and publish to go live at jobfolder.com/sites/${mySite.slug}.`
+                  ) : (
+                    "Build a one-page site with your story and track record — free, hosted by us."
+                  )}
                 </p>
               </div>
             </div>
@@ -173,7 +190,7 @@ export default function DashboardOverview() {
               href="/dashboard/career-site"
               className="shrink-0 rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:border-primary hover:text-primary"
             >
-              {mySite ? "Finish & publish" : "Build your site"}
+              {mySite?.published ? "Manage site" : mySite ? "Finish & publish" : "Build your site"}
             </Link>
           </div>
 
