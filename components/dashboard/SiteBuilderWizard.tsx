@@ -71,6 +71,11 @@ export function SiteBuilderWizard() {
   const [loaded, setLoaded] = useState(false);
   const [existing, setExisting] = useState<RecruiterSite | null>(null);
   const [step, setStep] = useState<Step>(1);
+  // How far the recruiter has actually progressed — steps beyond this aren't
+  // clickable yet. Someone editing an already-built site starts with every
+  // step unlocked (see the load effect below); a fresh site is locked to
+  // step-by-step progression via Continue.
+  const [maxStep, setMaxStep] = useState<Step>(1);
   const [draft, setDraft] = useState<Draft>({
     slug: "",
     template: "classic",
@@ -97,6 +102,7 @@ export function SiteBuilderWizard() {
         if (site) {
           setExisting(site);
           setDraft(draftFromSite(site));
+          setMaxStep(5); // already built — every step is fair game to jump to
         } else if (profile?.name) {
           setDraft((d) => ({ ...d, slug: slugify(profile.name) }));
         }
@@ -113,6 +119,28 @@ export function SiteBuilderWizard() {
 
   function patch(p: Partial<Draft>) {
     setDraft((d) => ({ ...d, ...p }));
+  }
+
+  function goNext() {
+    // Only step 1 has anything to actually validate — every later step is
+    // optional content. Blocking there for a genuinely optional field would
+    // fight the whole "everything falls back to your profile" design.
+    if (step === 1) {
+      const slugIssue = slugProblem(draft.slug);
+      if (slugIssue) {
+        setError(slugIssue);
+        return;
+      }
+    }
+    setError(null);
+    const next = Math.min(5, step + 1) as Step;
+    setStep(next);
+    setMaxStep((m) => (next > m ? next : m));
+  }
+
+  function goBack() {
+    setError(null);
+    setStep((s) => Math.max(1, s - 1) as Step);
   }
 
   async function save(publish: boolean) {
@@ -182,7 +210,7 @@ export function SiteBuilderWizard() {
           </div>
         )}
 
-        <Stepper current={step} onSelect={setStep} />
+        <Stepper current={step} maxStep={maxStep} onSelect={setStep} />
 
         {step === 1 && (
           <div className="mt-5 space-y-6">
@@ -338,6 +366,15 @@ export function SiteBuilderWizard() {
         )}
 
         <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-line pt-5">
+          {step > 1 && (
+            <button
+              type="button"
+              onClick={goBack}
+              className="rounded-pill border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:bg-cream"
+            >
+              Back
+            </button>
+          )}
           <button
             type="button"
             onClick={() => save(false)}
@@ -346,14 +383,24 @@ export function SiteBuilderWizard() {
           >
             {saving === "draft" ? "Saving…" : "Save draft"}
           </button>
-          <button
-            type="button"
-            onClick={() => save(true)}
-            disabled={saving !== null}
-            className="rounded-pill bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
-          >
-            {saving === "publish" ? "Publishing…" : existing?.published ? "Save & keep live" : "Publish site"}
-          </button>
+          {step < 5 ? (
+            <button
+              type="button"
+              onClick={goNext}
+              className="rounded-pill bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+            >
+              Continue
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => save(true)}
+              disabled={saving !== null}
+              className="rounded-pill bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60"
+            >
+              {saving === "publish" ? "Publishing…" : existing?.published ? "Save & keep live" : "Publish site"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -393,30 +440,47 @@ export function SiteBuilderWizard() {
   );
 }
 
-function Stepper({ current, onSelect }: { current: Step; onSelect: (s: Step) => void }) {
+function Stepper({
+  current, maxStep, onSelect,
+}: { current: Step; maxStep: Step; onSelect: (s: Step) => void }) {
   return (
     <div className="flex items-center border-b border-line pb-4">
-      {STEPS.map((s, i) => (
-        <div key={s.n} className="flex items-center">
-          <button
-            type="button"
-            onClick={() => onSelect(s.n)}
-            className="flex items-center gap-1.5"
-          >
-            <span
-              className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
-                current === s.n ? "bg-primary text-white" : "border border-line text-muted"
-              }`}
+      {STEPS.map((s, i) => {
+        const reached = s.n <= maxStep;
+        const done = s.n < current;
+        return (
+          <div key={s.n} className="flex items-center">
+            <button
+              type="button"
+              onClick={() => reached && onSelect(s.n)}
+              disabled={!reached}
+              className={`flex items-center gap-1.5 ${reached ? "" : "cursor-not-allowed opacity-50"}`}
             >
-              {s.n}
-            </span>
-            <span className={`text-sm font-semibold ${current >= s.n ? "text-ink" : "text-muted"}`}>
-              {s.label}
-            </span>
-          </button>
-          {i < STEPS.length - 1 && <span className="mx-2.5 h-px w-6 bg-line sm:w-10" aria-hidden />}
-        </div>
-      ))}
+              <span
+                className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                  done
+                    ? "bg-sage text-white"
+                    : current === s.n
+                      ? "bg-primary text-white"
+                      : "border border-line text-muted"
+                }`}
+              >
+                {done ? (
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+                    <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  s.n
+                )}
+              </span>
+              <span className={`text-sm font-semibold ${current >= s.n ? "text-ink" : "text-muted"}`}>
+                {s.label}
+              </span>
+            </button>
+            {i < STEPS.length - 1 && <span className="mx-2.5 h-px w-6 bg-line sm:w-10" aria-hidden />}
+          </div>
+        );
+      })}
     </div>
   );
 }
