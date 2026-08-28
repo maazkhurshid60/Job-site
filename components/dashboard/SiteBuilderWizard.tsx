@@ -193,7 +193,7 @@ export function SiteBuilderWizard() {
   };
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_420px]">
+    <div className="grid gap-5 xl:grid-cols-[1fr_600px]">
       <div className="rounded-2xl border border-line bg-white p-6">
         {existing?.published && (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sage/50 bg-sage-soft px-4 py-2.5">
@@ -405,7 +405,7 @@ export function SiteBuilderWizard() {
       </div>
 
       {/* live preview */}
-      <div className="lg:sticky lg:top-6 lg:self-start">
+      <div className="xl:sticky xl:top-6 xl:self-start">
         <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">Live preview</p>
         <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
           <div className="flex items-center gap-2 border-b border-line bg-cream/60 px-3.5 py-2">
@@ -416,7 +416,7 @@ export function SiteBuilderWizard() {
               jobfolder.com/sites/{draft.slug || "…"}
             </span>
           </div>
-          <div className="h-160 overflow-y-auto">
+          <div className="h-192 overflow-x-hidden overflow-y-auto">
             <RecruiterSiteView
               site={{
                 template: draft.template,

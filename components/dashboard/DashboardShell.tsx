@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { listOpenJobs } from "@/lib/jobs";
 import { profileCompletion } from "@/lib/profileCompletion";
+import { getMySite, type RecruiterSite } from "@/lib/recruiterSite";
 
 const topNav = { label: "Overview", href: "/dashboard", icon: "M4 9l6-5 6 5v7H4z" };
 
@@ -60,6 +61,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
      it's known — a badge reading "0" while still loading would tell recruiters
      there's no work, which is the one wrong thing it could say. */
   const [openJobs, setOpenJobs] = useState<number | null>(null);
+  const [mySite, setMySite] = useState<RecruiterSite | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -70,6 +72,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       active = false;
     };
   }, []);
+
+  // Only fetched once the perk is unlocked — powers the "View live site" link
+  // under the Career site nav item once something's actually published.
+  useEffect(() => {
+    if (!profile?.siteBuilderEnabled) return;
+    let active = true;
+    getMySite()
+      .then((site) => active && setMySite(site))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [profile?.siteBuilderEnabled]);
 
   const completion = profileCompletion(profile);
 
@@ -112,7 +127,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </p>
             <nav className="space-y-1">
               {group.items.map((item) => (
-                <SidebarLink key={item.href} item={item} active={isActive(item.href)} badge={badgeFor(item.href)} />
+                <div key={item.href}>
+                  <SidebarLink item={item} active={isActive(item.href)} badge={badgeFor(item.href)} />
+                  {item.href === "/dashboard/career-site" && mySite?.published && (
+                    <a
+                      href={`/sites/${mySite.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-0.5 flex items-center gap-1 px-3 py-1 pl-9 text-[11px] font-medium text-white/50 hover:text-lime"
+                    >
+                      View live site
+                      <svg width="10" height="10" viewBox="0 0 20 20" fill="none" aria-hidden>
+                        <path d="M7 13L13 7M13 7H8M13 7v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
               ))}
             </nav>
           </div>
