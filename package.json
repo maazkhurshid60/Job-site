@@ -10,7 +10,8 @@
     "lint": "eslint",
     "db:check": "node --env-file=.env.local scripts/db-check.mjs",
     "db:apply": "node --env-file=.env.local scripts/db-apply.mjs",
-    "db:migrate": "node --env-file=.env.local scripts/migrate-firestore.mjs"
+    "db:migrate": "node --env-file=.env.local scripts/migrate-firestore.mjs",
+    "scrape:topechelon": "node --env-file=.env.local scripts/scrape-topechelon-jobs.mjs"
   },
   "dependencies": {
     "firebase": "^12.15.0",
