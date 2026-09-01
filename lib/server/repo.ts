@@ -144,7 +144,7 @@ export type JobWrite = {
   status: JobStatus;
 };
 
-export async function createJob(input: JobWrite, id = newId()): Promise<string> {
+export async function createJob(input: JobWrite, id: string = newId()): Promise<string> {
   await execute(
     `INSERT INTO jobs
        (id, title, company, category, location, remote, employment_type,

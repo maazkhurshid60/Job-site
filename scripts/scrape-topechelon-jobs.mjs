@@ -4,6 +4,10 @@
  *   node --env-file=.env.local scripts/scrape-topechelon-jobs.mjs
  *   node --env-file=.env.local scripts/scrape-topechelon-jobs.mjs --publish
  *
+ * The scraping/parsing itself lives in scripts/topechelon-scrape.mjs, shared
+ * with lib/server/topechelon.ts — the same logic backs the admin console's
+ * "Sync Top Echelon" button, so a fix here doesn't have to be made twice.
+ *
  * Each Top Echelon job has a stable UUID; we store it as `te-<uuid>` (see
  * newId() in lib/server/repo.ts, which accepts a caller-supplied id), so
  * re-running this script is safe — an id already in the table is skipped,
@@ -18,111 +22,13 @@
  */
 
 import mysql from "mysql2/promise";
+import {
+  EMPLOYMENT_TYPE_MAP,
+  fetchJobIds,
+  fetchJobPosting,
+} from "./topechelon-scrape.mjs";
 
-const PORTAL_URL = "https://careers.topechelon.com/portals/3a7f6fd3-7cf7-447c-a20f-2354eb2031df";
 const PUBLISH = process.argv.includes("--publish");
-
-// ------------------------------------------------------------- category map
-
-// Checked in order — first match wins. Built from the actual job titles on
-// Metro's portal; extend this if a future title doesn't match anything and
-// falls through to "Other".
-const CATEGORY_RULES = [
-  [/inspect/i, "CEI / Inspection"],
-  [/bridge|structural/i, "Structural Engineering"],
-  [/transportation|roadway|traffic|dot\b|ctdot|indot|ridot|txdot|adot/i, "Transportation / DOT"],
-  [/mechanical.*plumbing|\bmep\b/i, "MEP Engineering"],
-  [/electrical/i, "Electrical Engineering"],
-  [/mechanical/i, "Mechanical Engineering"],
-  [/water|hydrology|wastewater/i, "Water / Hydrology"],
-  [/civil|land development|land surveyor|site (civil|engineer)/i, "Civil Engineering"],
-  [/project manager|program manager/i, "Project Management"],
-  [/architect/i, "Architecture (AEC)"],
-];
-
-function guessCategory(title) {
-  for (const [pattern, category] of CATEGORY_RULES) {
-    if (pattern.test(title)) return category;
-  }
-  return "Other";
-}
-
-const EMPLOYMENT_TYPE_MAP = {
-  "Direct Hire": "Full-time",
-  "Full-time": "Full-time",
-  "Part-time": "Part-time",
-  Contract: "Contract",
-  Temporary: "Temporary",
-  Internship: "Internship",
-};
-
-// ---------------------------------------------------------- HTML -> text
-
-/** The JobPosting `description` is a small, well-formed HTML fragment (p/ul/
- *  li/h3/strong) — not arbitrary markup — so a handful of targeted
- *  replacements is enough; no HTML-parser dependency needed for this. */
-function htmlToText(html) {
-  return html
-    .replace(/<h3[^>]*>/gi, "\n\n### ")
-    .replace(/<\/h3>/gi, " ###\n")
-    .replace(/<li[^>]*>/gi, "- ")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&nbsp;/g, " ")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-// --------------------------------------------------------------- scraping
-
-async function fetchJobIds() {
-  const res = await fetch(PORTAL_URL);
-  if (!res.ok) throw new Error(`Portal fetch failed: ${res.status}`);
-  const html = await res.text();
-  const ids = [...html.matchAll(/\/jobs\/([a-f0-9-]{36})/g)].map((m) => m[1]);
-  return [...new Set(ids)];
-}
-
-async function fetchJobPosting(teId) {
-  const url = `${PORTAL_URL}/jobs/${teId}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.warn(`  skip ${teId}: detail fetch ${res.status}`);
-    return null;
-  }
-  const html = await res.text();
-  const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-  if (!match) {
-    console.warn(`  skip ${teId}: no JobPosting JSON-LD found`);
-    return null;
-  }
-
-  let posting;
-  try {
-    posting = JSON.parse(match[1]);
-  } catch (err) {
-    console.warn(`  skip ${teId}: JSON-LD parse failed (${err.message})`);
-    return null;
-  }
-
-  const addr = posting.jobLocation?.address ?? {};
-  const location = [addr.addressLocality, addr.addressRegion].filter(Boolean).join(", ");
-
-  return {
-    teId,
-    title: posting.title ?? "Untitled role",
-    company: posting.hiringOrganization?.name || "Metro Associates",
-    category: guessCategory(posting.title ?? ""),
-    location,
-    description: htmlToText(posting.description ?? ""),
-  };
-}
-
-// -------------------------------------------------------------------- db
 
 async function main() {
   const conn = await mysql.createConnection({
@@ -158,6 +64,7 @@ async function main() {
 
       const job = await fetchJobPosting(teId);
       if (!job) {
+        console.warn(`  skip ${teId}: fetch or parse failed`);
         failed++;
         continue;
       }

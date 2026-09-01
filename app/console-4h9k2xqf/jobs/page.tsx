@@ -6,8 +6,10 @@ import Link from "next/link";
 import {
   listJobs,
   deleteJob,
+  syncTopEchelonJobs,
   type Job,
   type JobStatus,
+  type TopEchelonSyncResult,
 } from "@/lib/jobs";
 import { getCategories, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { getBoardFilters, DEFAULT_FILTERS, type BoardFilters } from "@/lib/boardFilters";
@@ -59,6 +61,9 @@ function JobsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<TopEchelonSyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // filters (search seeded from the header search's ?q=)
   const [q, setQ] = useState(searchParams.get("q") ?? "");
@@ -87,6 +92,21 @@ function JobsList() {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function onSync() {
+    setSyncing(true);
+    setSyncError(null);
+    setSyncResult(null);
+    try {
+      const result = await syncTopEchelonJobs();
+      setSyncResult(result);
+      if (result.added > 0) await load();
+    } catch (err) {
+      setSyncError(errorMessage(err, "Could not sync Top Echelon jobs."));
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function onDelete(job: Job) {
     if (!confirm(`Delete “${job.title}”? This cannot be undone.`)) return;
@@ -142,13 +162,41 @@ function JobsList() {
               : `${filtered.length} of ${jobs.length} role${jobs.length === 1 ? "" : "s"}`}
           </p>
         </div>
-        <Link
-          href={adminRoutes.newJob}
-          className="rounded-pill bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-dark"
-        >
-          + Post a job
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onSync}
+            disabled={syncing}
+            className="rounded-pill border border-line px-4 py-2 text-xs font-semibold text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {syncing ? "Syncing…" : "Sync Top Echelon"}
+          </button>
+          <Link
+            href={adminRoutes.newJob}
+            className="rounded-pill bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-dark"
+          >
+            + Post a job
+          </Link>
+        </div>
       </div>
+
+      {syncError && (
+        <div className="mb-5 rounded-2xl border border-coral/40 bg-coral-soft px-4 py-3 text-sm text-coral">
+          {syncError}
+        </div>
+      )}
+
+      {syncResult && (
+        <div className="mb-5 rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink">
+          <p>
+            <span className="font-semibold">Top Echelon sync done:</span>{" "}
+            {syncResult.added} added, {syncResult.skipped} already imported
+            {syncResult.failed > 0 ? `, ${syncResult.failed} failed` : ""}
+            {" "}(of {syncResult.found} on the portal).
+            {syncResult.added > 0 && " New jobs are drafts — review them below before publishing."}
+          </p>
+        </div>
+      )}
 
       {!loading && jobs.length > 0 && (
         <div className="mb-5 grid gap-3 sm:grid-cols-3">

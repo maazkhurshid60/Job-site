@@ -150,3 +150,20 @@ export async function deleteJob(id: string): Promise<void> {
     auth: true,
   });
 }
+
+export type TopEchelonSyncResult = {
+  found: number;
+  added: number;
+  skipped: number;
+  failed: number;
+  addedJobs: { title: string; location: string; category: string }[];
+};
+
+/** Admin: pull Metro's live Top Echelon postings into the board as drafts.
+    Same as running `npm run scrape:topechelon`, from the console instead. */
+export function syncTopEchelonJobs(): Promise<TopEchelonSyncResult> {
+  return apiFetch<TopEchelonSyncResult>("/api/admin/jobs/sync-topechelon", {
+    method: "POST",
+    auth: true,
+  });
+}

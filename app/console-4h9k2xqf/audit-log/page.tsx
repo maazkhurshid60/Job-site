@@ -19,6 +19,7 @@ const ACTION_LABEL: Record<AdminAuditAction, string> = {
   site_builder_unlocked: "Site builder unlocked",
   site_builder_locked: "Site builder locked",
   job_deleted: "Job deleted",
+  jobs_synced: "Jobs synced",
   submission_status_changed: "Status changed",
   profile_reminder_sent: "Reminder sent",
 };
@@ -36,6 +37,7 @@ const ACTION_STYLE: Record<AdminAuditAction, string> = {
   site_builder_unlocked: "bg-primary-soft text-primary",
   site_builder_locked: "bg-cream text-muted",
   job_deleted: "bg-coral-soft text-coral",
+  jobs_synced: "bg-primary-soft text-primary",
   submission_status_changed: "bg-primary-soft text-primary",
   profile_reminder_sent: "bg-cream text-muted",
 };
@@ -55,6 +57,7 @@ const ACTION_VERB: Partial<Record<AdminAuditAction, string>> = {
   site_builder_unlocked: "had the website builder unlocked",
   site_builder_locked: "had the website builder locked",
   job_deleted: "was deleted",
+  jobs_synced: "was synced",
   submission_status_changed: "'s status was changed",
   profile_reminder_sent: "was sent a profile reminder",
 };

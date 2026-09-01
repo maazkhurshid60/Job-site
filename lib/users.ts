@@ -78,6 +78,7 @@ export type AdminAuditAction =
   | "site_builder_unlocked"
   | "site_builder_locked"
   | "job_deleted"
+  | "jobs_synced"
   | "submission_status_changed"
   | "profile_reminder_sent";
 
