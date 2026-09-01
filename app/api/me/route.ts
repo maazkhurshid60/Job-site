@@ -1,7 +1,7 @@
-import { handle, ok, jsonBody, str } from "@/lib/server/respond";
+import { handle, ok, jsonBody, str, BadRequest } from "@/lib/server/respond";
 import {
   getUserProfile, createUserProfile, ensureUserProfile, updateUserProfile,
-  claimAdminInvite, touchAdminActivity,
+  claimAdminInvite, touchAdminActivity, ownsVideoFile,
 } from "@/lib/server/repo";
 import { requireUid, requireIdentity, isAdmin } from "@/lib/server/auth";
 
@@ -62,6 +62,25 @@ export function PUT(req: Request) {
   return handle(async () => {
     const uid = await requireUid(req);
     const body = await jsonBody(req);
+
+    /* Three states, not two: key absent = leave the saved video untouched
+       (e.g. a photo-only save from SiteBuilderWizard); explicit null = clear
+       it; a string = set it, but only after confirming it's actually a video
+       this uid uploaded — the id alone isn't proof of ownership, since it's
+       not treated as secret (the signed URL is what protects reading it). */
+    let verificationVideoId: string | null | undefined;
+    if ("verificationVideoId" in body) {
+      if (body.verificationVideoId === null) {
+        verificationVideoId = null;
+      } else {
+        const id = str(body.verificationVideoId, "verificationVideoId", { max: 36, required: true });
+        if (!(await ownsVideoFile(id, uid))) {
+          throw new BadRequest("That video wasn't found on your account.");
+        }
+        verificationVideoId = id;
+      }
+    }
+
     await updateUserProfile(uid, {
       name: str(body.name, "name", { max: 255 }),
       phone: str(body.phone, "phone", { max: 64 }),
@@ -75,6 +94,7 @@ export function PUT(req: Request) {
       instagram: str(body.instagram, "instagram", { max: 512 }),
       bio: str(body.bio, "bio"),
       photoURL: str(body.photoURL, "photoURL", { max: 1024 }),
+      verificationVideoId,
     });
     return ok(await getUserProfile(uid));
   });

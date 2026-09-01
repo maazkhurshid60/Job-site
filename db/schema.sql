@@ -45,6 +45,12 @@ CREATE TABLE users (
   instagram   VARCHAR(512) NOT NULL DEFAULT '',
   bio         TEXT,
   photo_url   VARCHAR(1024) NOT NULL DEFAULT '',
+  -- Recruiter-submitted short (~10s) intro video, so an admin has something
+  -- to actually look at before flipping `verified` below — evidence for that
+  -- toggle, not itself a gate. NULL until they upload one. References
+  -- files.id; the FK is added further down (after ---- files, since this
+  -- table is created first and can't forward-reference it inline).
+  verification_video_id CHAR(36) NULL,
   -- Admin-set: shows this recruiter on the Metro Associates "Meet Our Team"
   -- page via the public /api/team endpoint. Off by default — every recruiter
   -- signs up self-serve, so this is what turns "has an account" into "admin
@@ -76,7 +82,8 @@ CREATE TABLE users (
   updated_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
                            ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (uid),
-  KEY idx_users_email (email)
+  KEY idx_users_email (email),
+  KEY idx_users_verification_video (verification_video_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Admin allow-list. Membership alone grants console access, so writes to this
@@ -135,19 +142,22 @@ CREATE TABLE admin_audit_log (
 
 -- ---------------------------------------------------------------- files
 
--- Uploaded bytes: candidate CVs and recruiter avatars.
+-- Uploaded bytes: candidate CVs, recruiter avatars, and recruiter
+-- verification videos.
 --
 -- MEDIUMBLOB holds 16 MB, comfortably above the 10 MB CV cap. The server's
 -- max_allowed_packet is 1000 MB, so the wire protocol is not a constraint
 -- either. LONGBLOB would allow 4 GB rows and only invites trouble on a shared
--- host with a 4 GB account-wide quota.
+-- host with a 4 GB account-wide quota. (Videos are capped much lower than
+-- that at the application layer — see MAX_VIDEO_BYTES in lib/server/files.ts,
+-- driven by Vercel's request-body limit, not this column.)
 --
 -- IDs are UUIDs rather than sequential: a file's URL should not be guessable
--- by counting. CV downloads additionally require a signed URL (see
+-- by counting. CV and video downloads additionally require a signed URL (see
 -- lib/server/files.ts) — the UUID alone is not treated as the secret.
 CREATE TABLE files (
   id           CHAR(36)     NOT NULL,
-  kind         ENUM('cv','avatar') NOT NULL,
+  kind         ENUM('cv','avatar','video') NOT NULL,
   filename     VARCHAR(255) NOT NULL DEFAULT '',
   content_type VARCHAR(128) NOT NULL DEFAULT 'application/octet-stream',
   byte_size    INT UNSIGNED NOT NULL DEFAULT 0,
@@ -161,6 +171,12 @@ CREATE TABLE files (
   CONSTRAINT fk_files_owner FOREIGN KEY (owner_uid)
     REFERENCES users (uid) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Deferred from the `users` table above: it references files.id, but users is
+-- created first and can't forward-reference a table that doesn't exist yet.
+ALTER TABLE users
+  ADD CONSTRAINT fk_users_verification_video FOREIGN KEY (verification_video_id)
+    REFERENCES files (id) ON DELETE SET NULL;
 
 -- ---------------------------------------------------------------- jobs
 

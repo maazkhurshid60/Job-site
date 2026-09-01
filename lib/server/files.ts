@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual, randomUUID } from "node:crypto";
 import { ConfigError } from "./respond";
 
-/* Signed, expiring URLs for CV downloads.
+/* Signed, expiring URLs for CV and verification-video downloads.
 
    Why this exists: a CV is candidate PII — name, address, employment history.
    The old Firebase Storage rule was `allow read: if true`, protected only by an
@@ -11,11 +11,14 @@ import { ConfigError } from "./respond";
 
    Here the file id is a UUID *and* the URL carries an expiry plus an HMAC over
    (id, expiry). Links are minted server-side only when returning a submission
-   the caller was already allowed to read, so the ability to download a CV
-   follows the ability to see the submission, and it lapses on its own.
+   or recruiter profile the caller was already allowed to read, so the ability
+   to download a CV or watch a verification video follows the ability to see
+   that record, and it lapses on its own.
 
    Avatars are not signed: they are low-sensitivity profile photos that have to
-   render in an <img> tag, which cannot send an Authorization header. */
+   render in an <img> tag, which cannot send an Authorization header. A
+   verification video is a recruiter's face and voice, not a public profile
+   photo, so it gets the CV treatment instead. */
 
 const TTL_SECONDS = 60 * 60; // 1 hour — long enough to read, short enough to rot
 
@@ -40,13 +43,13 @@ function sign(id: string, expiresAt: number): string {
     .digest("hex");
 }
 
-/** A relative, time-limited download URL for a CV. */
+/** A relative, time-limited download URL for a CV or verification video. */
 export function signedFileUrl(id: string): string {
   const expiresAt = Math.floor(Date.now() / 1000) + TTL_SECONDS;
   return `/api/files/${id}?exp=${expiresAt}&sig=${sign(id, expiresAt)}`;
 }
 
-/** Verify the exp/sig pair on an incoming CV download request. */
+/** Verify the exp/sig pair on an incoming CV/video download request. */
 export function verifyFileUrl(
   id: string,
   exp: string | null,
@@ -73,6 +76,9 @@ export function verifyFileUrl(
    Keep in sync with lib/cv.ts, the client-side copy of this same limit. */
 export const MAX_CV_BYTES = 4 * 1024 * 1024; // 4 MB
 export const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
+// Same 4 MB ceiling as CVs, for the same reason (Vercel's ~4.5 MB request-body
+// limit) — a short (~10s) phone video at modest resolution fits comfortably.
+export const MAX_VIDEO_BYTES = 4 * 1024 * 1024; // 4 MB
 
 export const ACCEPTED_CV_TYPES = [
   "application/pdf",
@@ -82,26 +88,54 @@ export const ACCEPTED_CV_TYPES = [
 
 export const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
+export const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+
 export const newFileId = () => randomUUID();
+
+export type FileKind = "cv" | "avatar" | "video";
+
+const KIND_RULES: Record<
+  FileKind,
+  { types: string[]; max: number; label: string }
+> = {
+  cv: {
+    types: ACCEPTED_CV_TYPES,
+    max: MAX_CV_BYTES,
+    label: "CV must be a PDF or Word document.",
+  },
+  avatar: {
+    types: ACCEPTED_AVATAR_TYPES,
+    max: MAX_AVATAR_BYTES,
+    label: "Image must be a JPG, PNG, or WebP.",
+  },
+  video: {
+    types: ACCEPTED_VIDEO_TYPES,
+    max: MAX_VIDEO_BYTES,
+    label: "Video must be MP4, WebM, or MOV.",
+  },
+};
+
+/** The upload-route recheck (actual bytes received vs. the declared max)
+    needs to know which cap applies to which kind — see app/api/files/route.ts. */
+export function maxBytesFor(kind: FileKind): number {
+  return KIND_RULES[kind].max;
+}
 
 /* Content-Type is attacker-controlled, so it decides nothing on its own — the
    download route always serves CVs as an attachment. This is a UX filter, not
    a security boundary. */
 export function validateUpload(
-  kind: "cv" | "avatar",
+  kind: FileKind,
   contentType: string,
   size: number,
 ): string | null {
-  const [types, max, label] =
-    kind === "cv"
-      ? [ACCEPTED_CV_TYPES, MAX_CV_BYTES, "CV must be a PDF or Word document."]
-      : [ACCEPTED_AVATAR_TYPES, MAX_AVATAR_BYTES, "Image must be a JPG, PNG, or WebP."];
+  const { types, max, label } = KIND_RULES[kind];
 
   if (size <= 0) return "File is empty.";
-  if (size > (max as number)) {
-    return `File is larger than ${Math.round((max as number) / 1048576)} MB.`;
+  if (size > max) {
+    return `File is larger than ${Math.round(max / 1048576)} MB.`;
   }
-  if (!(types as string[]).includes(contentType)) return label as string;
+  if (!types.includes(contentType)) return label;
   return null;
 }
 

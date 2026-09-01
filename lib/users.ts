@@ -23,6 +23,15 @@ export type UserProfile = {
   instagram: string;
   bio: string;
   photoURL: string;
+  /** Raw file id of the recruiter's submitted verification video, or null.
+      Set via uploadVerificationVideo() + updateUserProfile(); read back only
+      to detect whether one is on file (compare against null), never rendered
+      directly — use verificationVideoUrl for that. */
+  verificationVideoId: string | null;
+  /** Signed, time-limited URL to stream the verification video — freshly
+      minted on every profile fetch (see toUserProfile in lib/server/repo.ts),
+      so it always works when non-null but shouldn't be cached across loads. */
+  verificationVideoUrl: string | null;
   /** Admin-set: shows this recruiter on Metro Associates' public team page. */
   metroTeamMember: boolean;
   /** Admin-set: whether this recruiter has been vetted. An unverified
@@ -116,6 +125,7 @@ export type UserProfileInput = {
   instagram: string;
   bio: string;
   photoURL: string;
+  verificationVideoId: string | null;
 };
 
 /** What GET /api/me returns: the profile plus the caller's admin status. */
@@ -161,6 +171,26 @@ export async function uploadAvatar(_uid: string, file: File): Promise<string> {
   const { url } = await uploadFile(file, "avatar");
   if (!url) throw new Error("Upload succeeded but returned no URL.");
   return url;
+}
+
+/* Recruiter action: upload a short verification video and return its file
+   id. Unlike uploadAvatar, this returns an id, not a URL — the video is
+   private (like a CV), so it's only ever streamed via a signed link minted
+   fresh on each profile read (verificationVideoUrl), not a permanent one
+   handed back at upload time. */
+const MAX_VIDEO_BYTES = 4 * 1024 * 1024; // 4 MB — see lib/server/files.ts
+const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+
+export async function uploadVerificationVideo(file: File): Promise<string> {
+  // Checked again server-side; this is just a fast, friendly failure.
+  if (file.size > MAX_VIDEO_BYTES)
+    throw new Error("Video is larger than 4 MB — try a shorter or lower-resolution clip.");
+  if (!ACCEPTED_VIDEO_TYPES.includes(file.type))
+    throw new Error("Video must be MP4, WebM, or MOV.");
+
+  const { id } = await uploadFile(file, "video");
+  if (!id) throw new Error("Upload succeeded but returned no file id.");
+  return id;
 }
 
 /* True when the signed-in user is on the admin allow-list. Always asks about

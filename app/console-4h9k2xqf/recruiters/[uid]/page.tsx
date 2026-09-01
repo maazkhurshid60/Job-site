@@ -293,6 +293,21 @@ export default function RecruiterDetailPage() {
 
         <div className="mt-5 border-t border-line pt-4">
           <p className="text-xs font-bold uppercase tracking-wider text-muted">
+            Verification video
+          </p>
+          {user.verificationVideoUrl ? (
+            // Fresh signed URL from this page load — the video element's own
+            // fetch happens right away, well inside the link's 1-hour TTL.
+            <video controls src={user.verificationVideoUrl} className="mt-2 h-44 rounded-xl bg-ink" />
+          ) : (
+            <p className="mt-1.5 text-sm text-muted">
+              No video submitted yet — nothing to review before verifying.
+            </p>
+          )}
+        </div>
+
+        <div className="mt-5 border-t border-line pt-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">
             Account controls
           </p>
           <div className="mt-1 divide-y divide-line">

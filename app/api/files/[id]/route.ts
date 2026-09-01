@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type FileRow = {
-  kind: "cv" | "avatar";
+  kind: "cv" | "avatar" | "video";
   filename: string;
   content_type: string;
   byte_size: number;
@@ -21,9 +21,10 @@ type FileRow = {
    Avatars are public — they render in <img> tags, which cannot send an
    Authorization header, and a profile photo is low-sensitivity.
 
-   CVs require a valid signature and expiry. Those links are minted only when
-   returning a submission the caller was already entitled to read, so download
-   rights follow read rights and expire on their own. */
+   CVs and verification videos require a valid signature and expiry. Those
+   links are minted only when returning a submission or recruiter profile the
+   caller was already entitled to read, so download rights follow read rights
+   and expire on their own. */
 export function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -39,7 +40,7 @@ export function GET(
 
     const url = new URL(req.url);
 
-    if (row.kind === "cv") {
+    if (row.kind === "cv" || row.kind === "video") {
       const valid = verifyFileUrl(
         id,
         url.searchParams.get("exp"),
@@ -107,7 +108,7 @@ export function GET(
       "Content-Length": String(row.byte_size),
       "Content-Disposition": disposition,
       "X-Content-Type-Options": "nosniff",
-      // Avatars are immutable once uploaded; CV links expire, so never cache.
+      // Avatars are immutable once uploaded; CV/video links expire, so never cache.
       "Cache-Control":
         row.kind === "avatar"
           ? "public, max-age=31536000, immutable"

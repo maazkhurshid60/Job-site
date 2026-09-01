@@ -66,7 +66,7 @@ export async function apiFetch<T>(
    Requires a signed-in user; the server records them as the uploader. */
 export async function uploadFile(
   file: File,
-  kind: "cv" | "avatar",
+  kind: "cv" | "avatar" | "video",
 ): Promise<{ id: string; filename: string; size: number; url?: string }> {
   const form = new FormData();
   form.append("kind", kind);

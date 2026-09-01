@@ -664,6 +664,7 @@ type UserRow = {
   instagram: string;
   bio: string | null;
   photo_url: string;
+  verification_video_id: string | null;
   metro_team_member: number;
   verified: number;
   suspended: number;
@@ -688,6 +689,11 @@ function toUserProfile(r: UserRow): UserProfile {
     instagram: r.instagram,
     bio: r.bio ?? "",
     photoURL: r.photo_url,
+    // Minted fresh on every read rather than stored — same reasoning as CV
+    // links (lib/server/files.ts): access follows "can you currently see this
+    // profile", not a permanent URL that outlives that.
+    verificationVideoId: r.verification_video_id,
+    verificationVideoUrl: r.verification_video_id ? signedFileUrl(r.verification_video_id) : null,
     metroTeamMember: Boolean(r.metro_team_member),
     verified: Boolean(r.verified),
     suspended: Boolean(r.suspended),
@@ -699,7 +705,8 @@ function toUserProfile(r: UserRow): UserProfile {
 
 const USER_COLUMNS = `
   uid, name, email, phone, company, headline, location, linkedin, website,
-  twitter, facebook, instagram, bio, photo_url, metro_team_member, verified,
+  twitter, facebook, instagram, bio, photo_url, verification_video_id,
+  metro_team_member, verified,
   suspended, site_builder_enabled, profile_reminder_sent_at, created_at`;
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
@@ -779,6 +786,11 @@ export type ProfileWrite = {
   instagram: string;
   bio: string;
   photoURL: string;
+  /** undefined = leave whatever video is already saved untouched (an update
+      that didn't touch the video, e.g. SiteBuilderWizard's photo-only save);
+      null = clear it; a string = set it. Same convention as
+      CandidateWrite.cvFileId above. */
+  verificationVideoId?: string | null;
 };
 
 /* Note the columns absent here: uid, email and created_at. Those are identity
@@ -788,18 +800,36 @@ export async function updateUserProfile(
   uid: string,
   input: ProfileWrite,
 ): Promise<void> {
-  await execute(
-    `UPDATE users SET
-       name = ?, phone = ?, company = ?, headline = ?, location = ?,
-       linkedin = ?, website = ?, twitter = ?, facebook = ?, instagram = ?,
-       bio = ?, photo_url = ?
-     WHERE uid = ?`,
-    [
-      input.name, input.phone, input.company, input.headline, input.location,
-      input.linkedin, input.website, input.twitter, input.facebook, input.instagram,
-      input.bio, input.photoURL, uid,
-    ],
+  const sets = [
+    "name = ?", "phone = ?", "company = ?", "headline = ?", "location = ?",
+    "linkedin = ?", "website = ?", "twitter = ?", "facebook = ?", "instagram = ?",
+    "bio = ?", "photo_url = ?",
+  ];
+  const args: (string | null)[] = [
+    input.name, input.phone, input.company, input.headline, input.location,
+    input.linkedin, input.website, input.twitter, input.facebook, input.instagram,
+    input.bio, input.photoURL,
+  ];
+  if (input.verificationVideoId !== undefined) {
+    sets.push("verification_video_id = ?");
+    args.push(input.verificationVideoId);
+  }
+  args.push(uid);
+
+  await execute(`UPDATE users SET ${sets.join(", ")} WHERE uid = ?`, args);
+}
+
+/** True when `id` is a video file this uid actually uploaded. Guards
+    PUT /api/me: without this, a recruiter could point verification_video_id
+    at any existing file id (including someone else's video) since the id
+    alone isn't treated as secret — the signed URL is what protects reading
+    it, not the id's unguessability. */
+export async function ownsVideoFile(id: string, uid: string): Promise<boolean> {
+  const row = await queryOne<{ id: string }>(
+    "SELECT id FROM files WHERE id = ? AND owner_uid = ? AND kind = 'video'",
+    [id, uid],
   );
+  return row !== null;
 }
 
 /** Admin action: mark a recruiter as vetted, or reverse that. An unverified

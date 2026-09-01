@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { updateUserProfile, uploadAvatar } from "@/lib/users";
+import { updateUserProfile, uploadAvatar, uploadVerificationVideo } from "@/lib/users";
 import { profileCompletion } from "@/lib/profileCompletion";
 import { ProfileMeter } from "@/components/dashboard/parts";
 import { SOCIAL_FIELDS, SocialIcon, type SocialKind } from "@/components/SocialLinks";
@@ -24,11 +24,27 @@ export default function ProfilePage() {
     bio: "",
     photoURL: "",
   });
+  const [verificationVideoId, setVerificationVideoId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  // The just-picked file, kept around purely so the local blob URL below can
+  // preview it immediately — the video is private (like a CV), so unlike the
+  // avatar there's no server URL to preview from until the next profile load.
+  const [pickedVideo, setPickedVideo] = useState<File | null>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+  const pickedVideoUrl = useMemo(
+    () => (pickedVideo ? URL.createObjectURL(pickedVideo) : null),
+    [pickedVideo],
+  );
+  useEffect(() => {
+    return () => { if (pickedVideoUrl) URL.revokeObjectURL(pickedVideoUrl); };
+  }, [pickedVideoUrl]);
 
   // Hydrate the form from the loaded profile.
   useEffect(() => {
@@ -47,6 +63,7 @@ export default function ProfilePage() {
       bio: profile.bio ?? "",
       photoURL: profile.photoURL ?? "",
     });
+    setVerificationVideoId(profile.verificationVideoId ?? null);
   }, [profile]);
 
   function set(key: keyof typeof form, value: string) {
@@ -70,13 +87,65 @@ export default function ProfilePage() {
     }
   }
 
+  const MAX_VIDEO_SECONDS = 30;
+
+  /** Reads a video's duration client-side via a throwaway <video> element —
+      a UX nicety (fail fast with a specific reason) rather than a real limit;
+      the 4 MB size cap (lib/server/files.ts) is what actually bounds it. */
+  function readVideoDuration(file: File): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const el = document.createElement("video");
+      el.preload = "metadata";
+      el.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(el.duration);
+      };
+      el.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Could not read video metadata."));
+      };
+      el.src = url;
+    });
+  }
+
+  async function onPickVideo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setVideoError(null);
+    setVideoUploading(true);
+    try {
+      const duration = await readVideoDuration(file).catch(() => null);
+      if (duration !== null && duration > MAX_VIDEO_SECONDS) {
+        throw new Error(
+          `Keep it under ${MAX_VIDEO_SECONDS} seconds — this one is ${Math.round(duration)}s.`,
+        );
+      }
+      const id = await uploadVerificationVideo(file);
+      setVerificationVideoId(id);
+      setPickedVideo(file);
+      setSaved(false);
+    } catch (err) {
+      setVideoError(err instanceof Error ? err.message : "Could not upload video.");
+    } finally {
+      setVideoUploading(false);
+      if (videoRef.current) videoRef.current.value = "";
+    }
+  }
+
+  function onRemoveVideo() {
+    setVerificationVideoId(null);
+    setPickedVideo(null);
+    setSaved(false);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
     setError(null);
     setSaving(true);
     try {
-      await updateUserProfile(user.uid, form);
+      await updateUserProfile(user.uid, { ...form, verificationVideoId });
       await refreshProfile();
       setSaved(true);
     } catch (err) {
@@ -253,6 +322,71 @@ export default function ProfilePage() {
           </Field>
         </div>
 
+        <div className="mt-6 border-t border-line pt-5">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
+            Verification video
+          </p>
+          <p className="mt-1 text-[11px] text-muted">
+            A short (~10 second) video of yourself introducing who you are —
+            our team reviews this before verifying your account, which is
+            what lets you submit candidates.
+          </p>
+
+          {(pickedVideoUrl || profile?.verificationVideoUrl) && (
+            <video
+              key={pickedVideoUrl ?? profile?.verificationVideoUrl}
+              src={pickedVideoUrl ?? profile?.verificationVideoUrl ?? undefined}
+              controls
+              className="mt-3 h-40 rounded-xl bg-ink"
+            />
+          )}
+
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => videoRef.current?.click()}
+              disabled={videoUploading}
+              className="rounded-pill border border-line px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-cream/60 disabled:opacity-60"
+            >
+              {videoUploading
+                ? "Uploading…"
+                : verificationVideoId
+                  ? "Replace video"
+                  : "Upload video"}
+            </button>
+            {verificationVideoId && !videoUploading && (
+              <button
+                type="button"
+                onClick={onRemoveVideo}
+                className="text-xs font-semibold text-coral hover:opacity-80"
+              >
+                Remove
+              </button>
+            )}
+            <input
+              ref={videoRef}
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime"
+              className="hidden"
+              onChange={onPickVideo}
+            />
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted">
+            MP4, WebM, or MOV · max 4 MB · under {MAX_VIDEO_SECONDS} seconds
+          </p>
+          {videoError && (
+            <p className="mt-2 rounded-lg bg-coral-soft px-3 py-2 text-xs text-coral">
+              {videoError}
+            </p>
+          )}
+          {verificationVideoId && !videoError && (
+            <p className="mt-2 text-[11px] text-muted">
+              Remember to save below — the video isn&apos;t attached to your
+              profile until you do.
+            </p>
+          )}
+        </div>
+
         {error && (
           <p className="mt-3 rounded-lg bg-coral-soft px-3 py-2 text-xs text-coral">
             {error}
@@ -266,7 +400,7 @@ export default function ProfilePage() {
 
         <button
           type="submit"
-          disabled={saving || uploading}
+          disabled={saving || uploading || videoUploading}
           className="mt-5 w-full rounded-pill bg-primary px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-primary-dark disabled:opacity-60 sm:w-auto"
         >
           {saving ? "Saving…" : "Save profile"}
