@@ -159,7 +159,12 @@ export default function ProfilePage() {
 
   /* Measured against the form, not the saved profile, so the bar moves as they
      type instead of only after a save. */
-  const completion = profileCompletion(profile ? { ...profile, ...form } : null);
+  // verificationVideoId is its own state, not part of `form`, so it has to be
+  // folded back in here — otherwise the meter ignores a video they just
+  // picked and only catches up after a save.
+  const completion = profileCompletion(
+    profile ? { ...profile, ...form, verificationVideoId } : null,
+  );
 
   return (
     <div className="mx-auto max-w-2xl">
