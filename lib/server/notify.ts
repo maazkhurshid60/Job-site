@@ -80,6 +80,11 @@ export async function notifyProfileReminder(input: {
   const apiKey = requireEnv("BREVO_API_KEY");
   const senderEmail = requireEnv("BREVO_SENDER_EMAIL");
   const senderName = process.env.BREVO_SENDER_NAME ?? "JobFolder";
+  /* We send from noreply@jobfolder.com, which nobody reads. A recruiter who
+     replies to ask "which bit is missing?" would otherwise be writing into a
+     void, so point replies at a real inbox. Unset = no replyTo, which is the
+     old behaviour rather than a broken header. */
+  const replyTo = process.env.BREVO_REPLY_TO_EMAIL;
 
   const missingList = input.missingLabels.map((l) => `<li>${escapeHtml(l)}</li>`).join("");
 
@@ -99,6 +104,7 @@ export async function notifyProfileReminder(input: {
     body: JSON.stringify({
       sender: { email: senderEmail, name: senderName },
       to: [{ email: input.email, name: input.name || input.email }],
+      ...(replyTo ? { replyTo: { email: replyTo, name: senderName } } : {}),
       subject: "Finish setting up your JobFolder profile",
       htmlContent: html,
     }),
