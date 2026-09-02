@@ -100,7 +100,7 @@ function JobsList() {
     try {
       const result = await syncTopEchelonJobs();
       setSyncResult(result);
-      if (result.added > 0) await load();
+      if (result.added > 0 || result.closed > 0) await load();
     } catch (err) {
       setSyncError(errorMessage(err, "Could not sync Top Echelon jobs."));
     } finally {
@@ -191,9 +191,11 @@ function JobsList() {
           <p>
             <span className="font-semibold">Top Echelon sync done:</span>{" "}
             {syncResult.added} added, {syncResult.skipped} already imported
+            {syncResult.closed > 0 ? `, ${syncResult.closed} closed` : ""}
             {syncResult.failed > 0 ? `, ${syncResult.failed} failed` : ""}
             {" "}(of {syncResult.found} on the portal).
             {syncResult.added > 0 && " New jobs are drafts — review them below before publishing."}
+            {syncResult.closed > 0 && " Closed roles are no longer listed on the portal."}
           </p>
         </div>
       )}

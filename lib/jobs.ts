@@ -156,7 +156,10 @@ export type TopEchelonSyncResult = {
   added: number;
   skipped: number;
   failed: number;
+  /** Imported roles no longer listed on the portal — set back to `closed`. */
+  closed: number;
   addedJobs: { title: string; location: string; category: string }[];
+  closedJobs: { title: string; location: string }[];
 };
 
 /** Admin: pull Metro's live Top Echelon postings into the board as drafts.

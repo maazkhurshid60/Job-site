@@ -1,5 +1,5 @@
 import "server-only";
-import { query } from "@/lib/db";
+import { query, execute } from "@/lib/db";
 import { createJob } from "@/lib/server/repo";
 import {
   EMPLOYMENT_TYPE_MAP,
@@ -31,13 +31,26 @@ export type TopEchelonSyncResult = {
   added: number;
   skipped: number;
   failed: number;
+  closed: number;
   addedJobs: { title: string; location: string; category: string }[];
+  closedJobs: { title: string; location: string }[];
 };
 
 export async function runTopEchelonSync(
   { publish = false }: { publish?: boolean } = {},
 ): Promise<TopEchelonSyncResult> {
   const teIds: string[] = await fetchJobIds();
+
+  /* Guard the close-out step below. An empty list is never a legitimate
+     "Metro has no open roles" signal — the portal has always listed dozens —
+     so it means the fetch returned an error page or the markup changed.
+     Closing every imported job on the back of that would take the whole
+     board down, so refuse to act on it at all. */
+  if (teIds.length === 0) {
+    throw new Error(
+      "Top Echelon returned no jobs — treating that as a failed fetch rather than an empty portal. Nothing was changed.",
+    );
+  }
 
   const existingRows = await query<{ id: string }>(
     `SELECT id FROM jobs WHERE id LIKE 'te-%'`,
@@ -83,5 +96,33 @@ export async function runTopEchelonSync(
     addedJobs.push({ title: job.title, location: job.location, category: job.category });
   }
 
-  return { found: teIds.length, added: addedJobs.length, skipped, failed, addedJobs };
+  /* Close out roles Metro has taken down. Without this the sync only ever
+     grows the board: a filled role vanishes from the portal but stays
+     'open' here forever, so people keep applying to it.
+
+     Closed rather than deleted — a job row may already have submissions
+     hanging off it, and an admin can reopen one if it comes back. Drafts
+     get closed too, not just open roles: a draft whose source posting is
+     already gone should not be sitting in the review queue waiting to be
+     published. */
+  const livePortalIds = new Set(teIds.map((teId) => `te-${teId}`));
+  const goneRows = await query<{ id: string; title: string; location: string }>(
+    `SELECT id, title, location FROM jobs
+      WHERE id LIKE 'te-%' AND status <> 'closed'`,
+  );
+  const gone = goneRows.filter((r) => !livePortalIds.has(r.id));
+
+  for (const row of gone) {
+    await execute(`UPDATE jobs SET status = 'closed' WHERE id = ?`, [row.id]);
+  }
+
+  return {
+    found: teIds.length,
+    added: addedJobs.length,
+    skipped,
+    failed,
+    closed: gone.length,
+    addedJobs,
+    closedJobs: gone.map((r) => ({ title: r.title, location: r.location })),
+  };
 }

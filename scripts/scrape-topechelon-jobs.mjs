@@ -46,6 +46,15 @@ async function main() {
     const teIds = await fetchJobIds();
     console.log(`Found ${teIds.length} postings on the portal.`);
 
+    /* Same guard as lib/server/topechelon.ts: an empty list means the fetch
+       failed, not that Metro has no roles — never close the whole board on
+       the back of it. */
+    if (teIds.length === 0) {
+      throw new Error(
+        "Top Echelon returned no jobs — treating that as a failed fetch. Nothing was changed.",
+      );
+    }
+
     const [existingRows] = await conn.query(
       `SELECT id FROM jobs WHERE id LIKE 'te-%'`,
     );
@@ -89,8 +98,20 @@ async function main() {
       added++;
     }
 
+    /* Close out roles Metro has taken down — see the same step in
+       lib/server/topechelon.ts for why closed rather than deleted. */
+    const live = new Set(teIds.map((teId) => `te-${teId}`));
+    const [openRows] = await conn.query(
+      `SELECT id, title, location FROM jobs WHERE id LIKE 'te-%' AND status <> 'closed'`,
+    );
+    const gone = openRows.filter((r) => !live.has(r.id));
+    for (const row of gone) {
+      await conn.execute(`UPDATE jobs SET status = 'closed' WHERE id = ?`, [row.id]);
+      console.log(`  - ${row.title} — ${row.location} (gone from portal, closed)`);
+    }
+
     console.log(
-      `\nDone. ${added} added, ${skipped} already imported, ${failed} failed.` +
+      `\nDone. ${added} added, ${skipped} already imported, ${gone.length} closed, ${failed} failed.` +
       (added > 0 && !PUBLISH ? "\nNew jobs are drafts — review and publish them from the admin console." : ""),
     );
   } finally {
