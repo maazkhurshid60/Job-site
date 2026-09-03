@@ -10,7 +10,7 @@
    alone rather than auto-migrated to a tier — they simply show no fee badge
    until an admin sets one. */
 
-export type FeeTier = "standard" | "professional" | "specialized";
+export type FeeTier = "standard" | "general" | "professional" | "specialized";
 
 export interface FeeTierMeta {
   value: FeeTier;
@@ -27,6 +27,12 @@ export const FEE_TIERS: FeeTierMeta[] = [
     blurb: "Good candidate availability, less specialized requirements, or higher-volume positions.",
   },
   {
+    value: "general",
+    amount: 1500,
+    label: "General Search",
+    blurb: "Roles where the client hasn't published a salary range. Our default fee until the role is triaged.",
+  },
+  {
     value: "professional",
     amount: 2000,
     label: "Professional Search",
@@ -39,6 +45,28 @@ export const FEE_TIERS: FeeTierMeta[] = [
     blurb: "Highly specialized, difficult-to-fill, leadership, licensed engineering, defense, clearance, or other priority positions.",
   },
 ];
+
+/* Which tier a role lands in, from the salary the client published.
+ *
+ * Two things to know before changing the thresholds. They read salary_max
+ * (the top of the range) because that's what signals seniority — a
+ * 90k-160k posting is competing for the same people as a 150k one. And the
+ * no-salary case is "general", not "standard": most roles here arrive with
+ * no range at all, and defaulting them to the cheapest fee would advertise
+ * $1,000 on work that is usually professional-level.
+ *
+ * This is only a starting point. An admin can move any job to another tier
+ * in the wizard, and that choice survives re-imports. */
+export function feeTierForSalary(
+  salaryMin: number | null,
+  salaryMax: number | null,
+): FeeTier {
+  const top = salaryMax ?? salaryMin;
+  if (top === null) return "general";
+  if (top < 120_000) return "standard";
+  if (top < 170_000) return "professional";
+  return "specialized";
+}
 
 export function feeTierMeta(tier: string | null | undefined): FeeTierMeta | null {
   return FEE_TIERS.find((t) => t.value === tier) ?? null;

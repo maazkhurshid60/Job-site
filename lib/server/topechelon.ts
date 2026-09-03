@@ -1,6 +1,7 @@
 import "server-only";
 import { query, execute } from "@/lib/db";
 import { createJob } from "@/lib/server/repo";
+import { feeTierForSalary } from "@/lib/feeTiers";
 import {
   EMPLOYMENT_TYPE_MAP,
   fetchJobIds,
@@ -82,7 +83,13 @@ export async function runTopEchelonSync(
         salaryMin: null,
         salaryMax: null,
         bounty: null,
-        feeTier: null,
+        /* Top Echelon doesn't publish a salary range, so this always resolves
+           to the "no range published" tier. Derived rather than hardcoded so
+           that if the parser ever starts picking up a range, the fee follows
+           it without a second change here. Imported jobs used to land with
+           feeTier: null, which showed recruiters a role with no fee at all —
+           the one number that makes them act. */
+        feeTier: feeTierForSalary(null, null),
         description: job.description,
         responsibilities: "",
         requirements: "",

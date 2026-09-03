@@ -195,7 +195,7 @@ CREATE TABLE jobs (
   -- Recruiter-facing fee tier (see lib/feeTiers.ts). NULL means this job
   -- predates the tier system and shows no fee badge until an admin sets one
   -- — existing jobs are deliberately left alone, not auto-migrated.
-  fee_tier         ENUM('standard','professional','specialized') NULL,
+  fee_tier         ENUM('standard','general','professional','specialized') NULL,
   description      MEDIUMTEXT,              -- the "Job Brief"
   responsibilities MEDIUMTEXT,
   requirements     MEDIUMTEXT,
@@ -252,7 +252,7 @@ CREATE TABLE submissions (
   -- bounty above: what the recruiter earns must not change if the job's
   -- tier is edited later. This is what the recruiter dashboard/earnings are
   -- computed from — bounty is the client-facing figure and must never be.
-  fee_tier        ENUM('standard','professional','specialized') NULL,
+  fee_tier        ENUM('standard','general','professional','specialized') NULL,
   status          ENUM('submitted','screening','approved','client_review','hired','rejected')
                                NOT NULL DEFAULT 'submitted',
   created_at      DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

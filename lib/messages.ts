@@ -28,3 +28,8 @@ export async function sendMessage(input: ContactInput): Promise<void> {
 export function listMessages(): Promise<ContactMessage[]> {
   return apiFetch<ContactMessage[]>("/api/messages", { auth: true });
 }
+
+/** Admin: tick an enquiry off as dealt with, or put it back in the pile. */
+export async function setMessageHandled(id: number, handled: boolean): Promise<void> {
+  await apiFetch(`/api/messages/${id}`, { method: "PATCH", body: { handled }, auth: true });
+}

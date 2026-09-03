@@ -1135,6 +1135,13 @@ export async function listMessages(): Promise<ContactMessage[]> {
   }));
 }
 
+/** Mark an enquiry as dealt with, or reopen it. Returns false when the row
+    is gone, so the caller can 404 rather than reporting a phantom success. */
+export async function setMessageHandled(id: number, handled: boolean): Promise<boolean> {
+  const result = await execute("UPDATE messages SET handled = ? WHERE id = ?", [handled, id]);
+  return result.affectedRows > 0;
+}
+
 /* -------------------------------------------------------------- settings */
 
 export async function getSetting<T>(key: string, fallback: T): Promise<T> {

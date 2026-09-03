@@ -13,6 +13,7 @@ export const adminRoutes = {
   newJob: `${ADMIN_BASE}/jobs/new`,
   editJob: (id: string) => `${ADMIN_BASE}/jobs/${id}/edit`,
   submissions: `${ADMIN_BASE}/submissions`,
+  messages: `${ADMIN_BASE}/messages`,
   recruiters: `${ADMIN_BASE}/recruiters`,
   categories: `${ADMIN_BASE}/categories`,
   admins: `${ADMIN_BASE}/admins`,

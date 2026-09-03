@@ -88,7 +88,11 @@ async function main() {
         [
           id, job.title, job.company, job.category, job.location,
           false, EMPLOYMENT_TYPE_MAP["Direct Hire"],
-          null, null, null, null,
+          // salary_min, salary_max, bounty, then fee_tier: 'general' is
+          // what feeTierForSalary(null, null) returns in lib/feeTiers.ts.
+          // Duplicated as a literal because this is a plain .mjs script and
+          // can't import the TypeScript module — keep the two in step.
+          null, null, null, "general",
           job.description, "", "",
           JSON.stringify([]), JSON.stringify([]), JSON.stringify([]),
           PUBLISH ? "open" : "draft",
