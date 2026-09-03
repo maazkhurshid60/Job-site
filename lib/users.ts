@@ -277,6 +277,33 @@ export async function sendProfileReminder(uid: string): Promise<void> {
   });
 }
 
+/** What a bulk reminder sweep actually did. Broken down by reason because a
+    bare "sent 3" reads as a failure until you can see that the other 17 were
+    skipped deliberately. */
+export type BulkReminderResult = {
+  sent: number;
+  /** Names (or emails) of everyone emailed, for the confirmation message. */
+  sentTo: string[];
+  failed: number;
+  skippedComplete: number;
+  skippedSuspended: number;
+  /** Already reminded inside the cooldown window. */
+  skippedRecent: number;
+  /** Left unsent because the request ran out of time — run it again. */
+  remaining: number;
+  cooldownDays: number;
+};
+
+/** Admin action: email every recruiter with an unfinished profile. Skips
+    complete profiles, suspended accounts, and anyone already reminded in the
+    last cooldownDays. */
+export function sendProfileReminderToAll(): Promise<BulkReminderResult> {
+  return apiFetch<BulkReminderResult>("/api/admin/recruiters/remind-all", {
+    method: "POST",
+    auth: true,
+  });
+}
+
 /** Bootstrap the first admin (used by the /setup page). */
 export async function bootstrapAdmin(): Promise<void> {
   await apiFetch("/api/admin/bootstrap", { method: "POST", auth: true });

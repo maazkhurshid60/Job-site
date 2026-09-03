@@ -13,15 +13,19 @@ export const PORTAL_URL = "https://careers.topechelon.com/portals/3a7f6fd3-7cf7-
 // Metro's portal; extend this if a future title doesn't match anything and
 // falls through to "Other".
 export const CATEGORY_RULES = [
-  [/inspect/i, "CEI / Inspection"],
+  // A resident engineer runs construction oversight on site — inspection
+  // work under a different title, and the portal uses both.
+  [/inspect|resident engineer/i, "CEI / Inspection"],
   [/bridge|structural/i, "Structural Engineering"],
-  [/transportation|roadway|traffic|dot\b|ctdot|indot|ridot|txdot|adot/i, "Transportation / DOT"],
+  [/transportation|roadway|highway|traffic|dot\b|ctdot|indot|ridot|txdot|adot/i, "Transportation / DOT"],
   [/mechanical.*plumbing|\bmep\b/i, "MEP Engineering"],
   [/electrical/i, "Electrical Engineering"],
-  [/mechanical/i, "Mechanical Engineering"],
+  [/mechanical|refrigeration|hvac/i, "Mechanical Engineering"],
   [/water|hydrology|wastewater/i, "Water / Hydrology"],
   [/civil|land development|land surveyor|site (civil|engineer)/i, "Civil Engineering"],
-  [/project manager|program manager/i, "Project Management"],
+  // "Project engineer" and estimating both sit under delivery management in
+  // this taxonomy; neither has a category of its own.
+  [/project manager|program manager|project engineer|estimat/i, "Project Management"],
   [/architect/i, "Architecture (AEC)"],
 ];
 
