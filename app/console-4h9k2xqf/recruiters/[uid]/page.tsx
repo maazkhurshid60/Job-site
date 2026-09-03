@@ -19,10 +19,11 @@ import {
 import { money } from "@/components/dashboard/parts";
 import { feeTierAmount } from "@/lib/feeTiers";
 import { Loader } from "@/components/Loader";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { SubmissionDetail } from "@/components/admin/SubmissionDetail";
 import { adminRoutes } from "@/lib/routes";
-import { formatDate } from "@/lib/dates";
+import { formatDate, timeAgo } from "@/lib/dates";
 import { SocialLinkList } from "@/components/SocialLinks";
 
 /* One recruiter, in full: their profile as they filled it in, and every
@@ -47,7 +48,13 @@ export default function RecruiterDetailPage() {
   const [togglingSuspended, setTogglingSuspended] = useState(false);
   const [togglingSiteBuilder, setTogglingSiteBuilder] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
-  const [reminderNotice, setReminderNotice] = useState<string | null>(null);
+  /* Success and failure are tracked apart rather than as one notice string.
+     A successful send is already visible in the "last reminded" line below —
+     it flips to "just now" — so it only needs a tone change there, not a
+     second sentence repeating the same fact. A failure has nowhere else to
+     show, so it keeps a line of its own. */
+  const [justSent, setJustSent] = useState(false);
+  const [reminderError, setReminderError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -99,11 +106,37 @@ export default function RecruiterDetailPage() {
 
   const open = subs.find((s) => s.id === openId) ?? null;
 
+  /* Every action below changes what this recruiter is allowed to do, so each
+     one goes through the same confirm step — including the grants, which used
+     to apply on a single click with nothing to catch a misclick on the wrong
+     recruiter's page. */
+  const { confirm, dialog } = useConfirm();
+
   /* Optimistic, with rollback on failure — same pattern as changeStatus
      above. This is the one field on a recruiter the console can write. */
   async function toggleMetroTeam() {
     if (!user) return;
     const next = !user.metroTeamMember;
+    const who = user.name || "this recruiter";
+    if (
+      !(await confirm(
+        next
+          ? {
+              title: "Mark as Metro Associates team?",
+              message: `${who} will be treated as internal Metro staff rather than an external recruiter.`,
+              note: "Internal team members are handled differently across the platform.",
+              confirmLabel: "Mark as team",
+            }
+          : {
+              title: "Remove Metro Associates team status?",
+              message: `${who} will be treated as an external recruiter again.`,
+              tone: "danger",
+              confirmLabel: "Remove status",
+            },
+      ))
+    ) {
+      return;
+    }
     setUser({ ...user, metroTeamMember: next });
     setTogglingMetro(true);
     try {
@@ -119,9 +152,30 @@ export default function RecruiterDetailPage() {
   async function toggleVerified() {
     if (!user) return;
     const next = !user.verified;
-    if (!next && !confirm(
-      `Un-verify ${user.name || "this recruiter"}? They won't be able to submit new candidates until re-verified.`,
-    )) {
+    const who = user.name || "this recruiter";
+    /* Verifying is the one grant that says "we know who this person is", and
+       the video is the only evidence we ask for — so if there isn't one on
+       file, say so here rather than letting it be ticked unknowingly. */
+    const noVideo = !user.verificationVideoUrl;
+    if (
+      !(await confirm(
+        next
+          ? {
+              title: `Verify ${who}?`,
+              message: "They'll be able to submit candidates against live roles.",
+              note: noVideo
+                ? "No verification video on file. You're vouching for them without one."
+                : undefined,
+              confirmLabel: "Verify recruiter",
+            }
+          : {
+              title: `Un-verify ${who}?`,
+              message: "They won't be able to submit new candidates until re-verified.",
+              tone: "danger",
+              confirmLabel: "Un-verify",
+            },
+      ))
+    ) {
       return;
     }
     setUser({ ...user, verified: next });
@@ -139,10 +193,27 @@ export default function RecruiterDetailPage() {
   async function toggleSuspended() {
     if (!user) return;
     const next = !user.suspended;
-    const warning = next
-      ? `Suspend ${user.name || "this recruiter"}? They'll be blocked from submitting candidates, saving candidates, sending messages, and uploading files — but can still sign in and see their dashboard.`
-      : `Reinstate ${user.name || "this recruiter"}? They'll be able to act on the platform again.`;
-    if (!confirm(warning)) return;
+    const who = user.name || "this recruiter";
+    if (
+      !(await confirm(
+        next
+          ? {
+              title: `Suspend ${who}?`,
+              message:
+                "They'll be blocked from submitting candidates, saving candidates, sending messages and uploading files.",
+              note: "They can still sign in and see their dashboard.",
+              tone: "danger",
+              confirmLabel: "Suspend",
+            }
+          : {
+              title: `Reinstate ${who}?`,
+              message: "They'll be able to act on the platform again.",
+              confirmLabel: "Reinstate",
+            },
+      ))
+    ) {
+      return;
+    }
     setUser({ ...user, suspended: next });
     setTogglingSuspended(true);
     try {
@@ -158,9 +229,25 @@ export default function RecruiterDetailPage() {
   async function toggleSiteBuilder() {
     if (!user) return;
     const next = !user.siteBuilderEnabled;
-    if (next && !confirm(
-      `Unlock the free recruiter-website builder for ${user.name || "this recruiter"}?`,
-    )) {
+    const who = user.name || "this recruiter";
+    if (
+      !(await confirm(
+        next
+          ? {
+              title: "Unlock the website builder?",
+              message: `${who} will be able to build and publish their own public recruiter site.`,
+              note: "This perk is normally granted after a first placement.",
+              confirmLabel: "Unlock builder",
+            }
+          : {
+              title: "Lock the website builder?",
+              message: `${who} will lose access to the builder.`,
+              note: "Any site they've already published stays live.",
+              tone: "danger",
+              confirmLabel: "Lock builder",
+            },
+      ))
+    ) {
       return;
     }
     setUser({ ...user, siteBuilderEnabled: next });
@@ -177,15 +264,16 @@ export default function RecruiterDetailPage() {
 
   async function remindProfile() {
     if (!user) return;
-    setReminderNotice(null);
+    setReminderError(null);
     setSendingReminder(true);
     try {
       await sendProfileReminder(user.uid);
       const now = new Date().toISOString();
       setUser({ ...user, profileReminderSentAt: now });
-      setReminderNotice(`Reminder emailed to ${user.email}.`);
+      setJustSent(true);
     } catch (err) {
-      setReminderNotice(
+      setJustSent(false);
+      setReminderError(
         err instanceof Error && err.message ? err.message : "Could not send the reminder.",
       );
     } finally {
@@ -229,6 +317,7 @@ export default function RecruiterDetailPage() {
 
   return (
     <div>
+      {dialog}
       <BackLink />
 
       {/* identity */}
@@ -382,9 +471,27 @@ export default function RecruiterDetailPage() {
                   Missing: {completion.missing.map((f) => f.label).join(", ")}
                 </p>
               )}
+              {/* One line, not three: when it went, the exact date, and who it
+                  reached. "2 days ago" is the part an admin actually reads —
+                  it answers "is it too soon to nudge again?" without doing
+                  date arithmetic — so it leads, with the calendar date kept
+                  alongside for the record. */}
               {user.profileReminderSentAt && (
-                <p className="mt-1 text-[11px] text-muted">
-                  Last reminded {formatDate(user.profileReminderSentAt)}
+                <p
+                  className={`mt-2 inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-pill px-2.5 py-1 text-[11px] ${
+                    justSent ? "bg-sage-soft text-ink" : "bg-cream text-muted"
+                  }`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden>
+                    <path d="M3 5h14v10H3zM3 6l7 5 7-5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                  </svg>
+                  <span className="font-semibold text-ink">
+                    {justSent ? "Reminder sent" : `Reminded ${timeAgo(user.profileReminderSentAt)}`}
+                  </span>
+                  <span aria-hidden className="opacity-40">·</span>
+                  <span>{formatDate(user.profileReminderSentAt)}</span>
+                  <span aria-hidden className="opacity-40">·</span>
+                  <span className="truncate">{user.email}</span>
                 </p>
               )}
             </div>
@@ -404,8 +511,8 @@ export default function RecruiterDetailPage() {
               </button>
             )}
           </div>
-          {reminderNotice && (
-            <p className="mt-2.5 text-xs text-muted">{reminderNotice}</p>
+          {reminderError && (
+            <p className="mt-2.5 text-xs text-coral">{reminderError}</p>
           )}
         </div>
       </div>

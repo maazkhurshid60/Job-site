@@ -10,6 +10,7 @@ import {
 import { adminRoutes } from "@/lib/routes";
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { formatDate, timeAgo } from "@/lib/dates";
 
 export default function AdminAdminsPage() {
@@ -26,6 +27,10 @@ export default function AdminAdminsPage() {
 
   const [removingUid, setRemovingUid] = useState<string | null>(null);
   const [cancellingEmail, setCancellingEmail] = useState<string | null>(null);
+
+  /* Granting or revoking admin is the widest-reaching thing this console can
+     do, so all three actions on this page go through the confirm step. */
+  const { confirm, dialog } = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,9 +61,14 @@ export default function AdminAdminsPage() {
     // this should too. Can't show the matched account's name up front (that
     // requires the lookup this same request performs), so this confirms
     // intent on the email itself.
-    if (!confirm(
-      `Grant admin access to ${trimmed}? If that's an existing account, they'll have full admin control of this console immediately.`,
-    )) {
+    if (
+      !(await confirm({
+        title: "Grant admin access?",
+        message: `${trimmed} will have full admin control of this console — every job, recruiter, submission and admin.`,
+        note: "If they already have an account, it takes effect immediately.",
+        confirmLabel: "Grant admin access",
+      }))
+    ) {
       return;
     }
     setAdding(true);
@@ -82,11 +92,22 @@ export default function AdminAdminsPage() {
   async function onRemove(admin: AdminAccount) {
     const isSelf = admin.uid === user?.uid;
     if (
-      !confirm(
+      !(await confirm(
         isSelf
-          ? "Remove your own admin access? You'll be signed out of the console immediately."
-          : `Remove admin access for ${admin.name || admin.email || admin.uid}?`,
-      )
+          ? {
+              title: "Remove your own admin access?",
+              message: "You'll be signed out of the console immediately.",
+              note: "Only another admin can give it back.",
+              tone: "danger",
+              confirmLabel: "Remove my access",
+            }
+          : {
+              title: "Remove admin access?",
+              message: `${admin.name || admin.email || admin.uid} will lose access to this console.`,
+              tone: "danger",
+              confirmLabel: "Remove access",
+            },
+      ))
     ) {
       return;
     }
@@ -107,7 +128,16 @@ export default function AdminAdminsPage() {
   }
 
   async function onCancelInvite(invite: AdminInvite) {
-    if (!confirm(`Cancel the pending invite for ${invite.email}?`)) return;
+    if (
+      !(await confirm({
+        title: "Cancel this invite?",
+        message: `${invite.email} will no longer get admin access when they sign up.`,
+        tone: "danger",
+        confirmLabel: "Cancel invite",
+      }))
+    ) {
+      return;
+    }
     setCancellingEmail(invite.email);
     try {
       await cancelAdminInvite(invite.email);
@@ -121,6 +151,7 @@ export default function AdminAdminsPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      {dialog}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow uppercase">Access</p>
