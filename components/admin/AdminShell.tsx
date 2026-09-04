@@ -24,7 +24,7 @@ const groups = [
       { label: "Jobs", href: adminRoutes.jobs, icon: "M3 6h14v11H3zM7 6V4h6v2" },
       { label: "Add new job", href: adminRoutes.newJob, icon: "M10 4v12M4 10h12" },
       { label: "Submissions", href: adminRoutes.submissions, icon: "M4 4h12v12H4zM7 8h6M7 11h6" },
-      { label: "Recruiters", href: adminRoutes.recruiters, icon: "M13 13a3 3 0 10-6 0M10 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5M15 13a2.5 2.5 0 00-3-2.4M5 13a2.5 2.5 0 013-2.4" },
+      { label: "Recruiters", href: `${adminRoutes.recruiters}?status=all`, icon: "M13 13a3 3 0 10-6 0M10 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5M15 13a2.5 2.5 0 00-3-2.4M5 13a2.5 2.5 0 013-2.4" },
       { label: "Enquiries", href: adminRoutes.messages, icon: "M3 5h14v10H3zM3 5l7 5 7-5" },
       { label: "Recruiter leads", href: adminRoutes.siteLeads, icon: "M10 2a8 8 0 100 16 8 8 0 000-16zM2 10h16M10 2c2 2.2 3 5 3 8s-1 5.8-3 8c-2-2.2-3-5-3-8s1-5.8 3-8z" },
       { label: "Board filters", href: adminRoutes.categories, icon: "M3 5h6v6H3zM11 5h6v6h-6zM3 13h6v4H3zM11 13h6v4h-6z" },
@@ -76,6 +76,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   function badgeFor(href: string): string | null {
+    // Nav hrefs may carry a query (e.g. Recruiters -> ?status=all); match on
+    // the path half so the badge doesn't silently disappear.
+    href = href.split("?")[0];
     if (href === adminRoutes.jobs) return openJobs === null ? null : String(openJobs);
     if (href === adminRoutes.submissions) return needsScreening ? String(needsScreening) : null;
     if (href === adminRoutes.recruiters) return recruiterCounts?.pending ? String(recruiterCounts.pending) : null;
@@ -83,6 +86,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   function isActive(href: string) {
+    // usePathname() has no query string, so compare against the path half.
+    href = href.split("?")[0];
     if (href === adminRoutes.base) return pathname === adminRoutes.base;
     if (href === adminRoutes.newJob) return pathname === adminRoutes.newJob;
     if (href === adminRoutes.jobs)
@@ -172,7 +177,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   {group.items.map((item) => {
                     const badge = badgeFor(item.href);
                     const active = isActive(item.href);
-                    const isRecruiters = item.href === adminRoutes.recruiters;
+                    const isRecruiters = item.href.split("?")[0] === adminRoutes.recruiters;
                     return (
                       <div key={item.href}>
                         <Link
