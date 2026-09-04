@@ -24,6 +24,20 @@ export const metadata: Metadata = {
   },
 };
 
+/* Rendered per request, not prerendered.
+ *
+ * The page below reads ?q= with useSearchParams. In a statically rendered
+ * route that makes Next bail out of prerendering everything down to the
+ * nearest Suspense boundary — which meant the server HTML for this page
+ * contained no <h1>, no intro copy, nothing. A crawler saw an empty shell on
+ * the site's most important commercial URL.
+ *
+ * Rendering on demand puts the heading and copy back in the HTML. The role
+ * list still arrives client-side (it fetches from /api/jobs), which is
+ * exactly what the /jobs/category and /jobs/state landing pages exist to
+ * cover. */
+export const dynamic = "force-dynamic";
+
 /* The board reads ?q= via useSearchParams, which Next requires to sit inside a
    Suspense boundary so the rest of the tree can still be prerendered. */
 export default function JobsLayout({

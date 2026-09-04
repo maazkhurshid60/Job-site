@@ -41,8 +41,16 @@ export async function generateMetadata({
     job.description || `${job.title} at ${job.company || "a JobFolder client"}.`,
   );
 
+  /* Location, not company.
+   *
+   * Every imported role now carries the same "Confidential Client", so the
+   * company added twenty characters of nothing and left genuinely different
+   * roles sharing one title — two "Bridge Practice Leader at Confidential
+   * Client" pages competing with each other in the index. The location is
+   * what distinguishes them, and "<role> <city>" is what people actually
+   * search. Falls back to the bare title when a role has no location. */
   return {
-    title: `${job.title}${job.company ? ` at ${job.company}` : ""}`,
+    title: `${job.title}${job.location ? ` — ${job.location}` : ""}`,
     description,
     alternates: { canonical: url },
     openGraph: { type: "website", title: job.title, description, url },

@@ -52,7 +52,13 @@ export async function generateMetadata({
   const matching = jobsInCategory(jobs, slug);
   const name = matching[0]?.category ?? titleFromSlug(slug);
 
-  const title = `${name} Jobs — ${matching.length} Open Role${matching.length === 1 ? "" : "s"}`;
+  /* Brand suffix included because these pages are the ones most likely to be
+     a stranger's first contact with JobFolder — and because the count keeps
+     the whole thing comfortably inside the ~60 characters Google will show.
+     The H1 is the same phrase without the suffix: Google discards a title
+     that diverges from the H1 and shows the H1 instead, so they're kept
+     deliberately consistent. */
+  const title = `${name} Jobs — ${matching.length} Open Role${matching.length === 1 ? "" : "s"} | JobFolder`;
   const description = `${matching.length} open ${name.toLowerCase()} role${matching.length === 1 ? "" : "s"} on ${SITE_NAME}. Every posting shows the recruiter fee it pays on a confirmed hire, before you submit anyone.`;
 
   return {

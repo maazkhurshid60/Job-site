@@ -9,7 +9,7 @@ import { SITE_NAME, absoluteUrl } from "@/lib/seo";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Engineering Jobs by State",
+  title: "Engineering Jobs by State | JobFolder",
   description: `Browse open engineering, DOT and infrastructure roles by state on ${SITE_NAME}. Every posting shows the recruiter fee it pays on a confirmed hire.`,
   alternates: { canonical: absoluteUrl("/jobs/state") },
 };

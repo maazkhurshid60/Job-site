@@ -15,7 +15,7 @@ import { SITE_NAME, absoluteUrl } from "@/lib/seo";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Engineering Jobs by Discipline",
+  title: "Engineering Jobs by Discipline | JobFolder",
   description: `Browse open engineering, DOT and infrastructure roles by discipline on ${SITE_NAME} — civil, structural, MEP, transportation, CEI inspection and more.`,
   alternates: { canonical: absoluteUrl("/jobs/category") },
 };
