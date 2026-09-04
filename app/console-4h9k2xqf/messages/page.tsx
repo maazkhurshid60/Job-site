@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listMessages, setMessageHandled, type ContactMessage } from "@/lib/messages";
+import { listMessages, setMessageHandled, replyToMessage, type ContactMessage } from "@/lib/messages";
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { formatDate } from "@/lib/dates";
@@ -33,6 +33,8 @@ export default function AdminMessagesPage() {
   const [tab, setTab] = useState<Tab>("new");
   const [q, setQ] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [replyingId, setReplyingId] = useState<number | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -79,6 +81,19 @@ export default function AdminMessagesPage() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function sendReply(m: ContactMessage, text: string) {
+    const { emailed } = await replyToMessage(m.id, text);
+    setReplyingId(null);
+    /* Replying marks it handled server-side, so reload rather than patching
+       two pieces of state by hand and risking them disagreeing. */
+    await load();
+    setNotice(
+      emailed
+        ? `Reply sent to ${m.email}.`
+        : `Reply saved, but the email to ${m.email} didn't send. Check the Brevo settings.`,
+    );
   }
 
   return (
@@ -135,6 +150,19 @@ export default function AdminMessagesPage() {
         ))}
       </div>
 
+      {notice && (
+        <div className="mb-4 rounded-xl border border-primary/30 bg-primary-soft/50 px-4 py-3 text-sm text-ink">
+          {notice}
+          <button
+            type="button"
+            onClick={() => setNotice(null)}
+            className="ml-3 text-xs font-semibold text-primary hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {error && <LoadError what="enquiries" message={error} onRetry={load} />}
 
       {loading ? (
@@ -182,14 +210,13 @@ export default function AdminMessagesPage() {
                       New
                     </span>
                   )}
-                  <a
-                    href={`mailto:${m.email}?subject=${encodeURIComponent(
-                      `Re: ${m.subject || "your enquiry"}`,
-                    )}`}
+                  <button
+                    type="button"
+                    onClick={() => setReplyingId(replyingId === m.id ? null : m.id)}
                     className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-primary hover:text-primary"
                   >
-                    Reply
-                  </a>
+                    {replyingId === m.id ? "Cancel" : "Reply"}
+                  </button>
                   <button
                     type="button"
                     onClick={() => toggleHandled(m)}
@@ -212,10 +239,88 @@ export default function AdminMessagesPage() {
                   {m.message}
                 </p>
               )}
+
+              {m.replies.length > 0 && (
+                <div className="mt-3 space-y-3 border-t border-line pt-3">
+                  {m.replies.map((r) => (
+                    <div key={r.id} className="rounded-lg bg-primary-soft/50 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                        {r.adminName || "JobFolder"} replied · {formatDate(r.createdAt)}
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">{r.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {replyingId === m.id && (
+                <ReplyBox
+                  onCancel={() => setReplyingId(null)}
+                  onSend={(text) => sendReply(m, text)}
+                />
+              )}
             </li>
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/* Compose box for one enquiry. Local state so typing doesn't re-render the
+   whole list, and the send button is disabled on an empty message — an
+   accidental blank reply still emails the sender. */
+function ReplyBox({
+  onSend,
+  onCancel,
+}: {
+  onSend: (text: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    if (!text.trim() || sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      await onSend(text.trim());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send that reply.");
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 border-t border-line pt-3">
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        autoFocus
+        placeholder="Write your reply — it's emailed to them and kept on this thread."
+        className="input min-h-28 resize-y text-sm"
+      />
+      {error && <p className="mt-2 text-sm text-coral">{error}</p>}
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={sending || !text.trim()}
+          className="rounded-pill bg-primary px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {sending ? "Sending…" : "Send reply"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={sending}
+          className="rounded-pill border border-line px-4 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/25"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

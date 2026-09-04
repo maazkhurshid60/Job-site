@@ -1107,6 +1107,14 @@ export async function upsertRecruiterSite(
 
 /* -------------------------------------------------------------- messages */
 
+/** One admin answer on an enquiry thread. */
+export type EnquiryReply = {
+  id: number;
+  adminName: string;
+  body: string;
+  createdAt: string | null;
+};
+
 export type ContactMessage = {
   id: number;
   name: string;
@@ -1114,6 +1122,10 @@ export type ContactMessage = {
   subject: string;
   message: string;
   handled: boolean;
+  /** Set when a signed-in user sent it; null for an anonymous visitor. */
+  senderUid: string | null;
+  /** Admin answers, oldest first. Empty on reads that don't need the thread. */
+  replies: EnquiryReply[];
   createdAt: string | null;
 };
 
@@ -1123,10 +1135,14 @@ export async function createMessage(input: {
   subject: string;
   message: string;
   ip: string | null;
+  /** The signed-in sender, when there is one. Lets a recruiter see what they
+      sent and read the answer; null for the anonymous public case. */
+  senderUid: string | null;
 }): Promise<void> {
   await execute(
-    `INSERT INTO messages (name, email, subject, message, ip) VALUES (?,?,?,?,?)`,
-    [input.name, input.email, input.subject, input.message, input.ip],
+    `INSERT INTO messages (name, email, subject, message, ip, sender_uid)
+     VALUES (?,?,?,?,?,?)`,
+    [input.name, input.email, input.subject, input.message, input.ip, input.senderUid],
   );
 }
 
@@ -1143,19 +1159,46 @@ export async function countRecentMessagesFromIp(ip: string, windowSeconds: numbe
   return row?.n ?? 0;
 }
 
-export async function listMessages(): Promise<ContactMessage[]> {
-  const rows = await query<{
-    id: number;
-    name: string;
-    email: string;
-    subject: string;
-    message: string | null;
-    handled: number;
-    created_at: string | null;
-  }>(
-    `SELECT id, name, email, subject, message, handled, created_at
-       FROM messages ORDER BY created_at DESC`,
-  );
+type MessageRow = {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string | null;
+  handled: number;
+  sender_uid: string | null;
+  created_at: string | null;
+};
+
+const MESSAGE_COLUMNS = `id, name, email, subject, message, handled, sender_uid, created_at`;
+
+/* Threads are loaded in one extra query for the whole page rather than one
+   per message — a reply-per-enquiry loop is the classic N+1, and this list
+   is unbounded. */
+async function withReplies(rows: MessageRow[]): Promise<ContactMessage[]> {
+  const byMessage = new Map<number, EnquiryReply[]>();
+  if (rows.length > 0) {
+    const ids = rows.map((r) => r.id);
+    const replies = await query<{
+      id: number;
+      message_id: number;
+      admin_name: string;
+      body: string;
+      created_at: string | null;
+    }>(
+      `SELECT id, message_id, admin_name, body, created_at
+         FROM message_replies
+        WHERE message_id IN (${ids.map(() => "?").join(",")})
+        ORDER BY created_at ASC`,
+      ids,
+    );
+    for (const r of replies) {
+      const list = byMessage.get(r.message_id) ?? [];
+      list.push({ id: r.id, adminName: r.admin_name, body: r.body, createdAt: r.created_at });
+      byMessage.set(r.message_id, list);
+    }
+  }
+
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -1163,8 +1206,60 @@ export async function listMessages(): Promise<ContactMessage[]> {
     subject: r.subject,
     message: r.message ?? "",
     handled: Boolean(r.handled),
+    senderUid: r.sender_uid,
+    replies: byMessage.get(r.id) ?? [],
     createdAt: r.created_at,
   }));
+}
+
+export async function listMessages(): Promise<ContactMessage[]> {
+  const rows = await query<MessageRow>(
+    `SELECT ${MESSAGE_COLUMNS} FROM messages ORDER BY created_at DESC`,
+  );
+  return withReplies(rows);
+}
+
+/** Enquiries this signed-in user sent, with whatever we replied. Scoped by
+    uid in SQL so there's no parameter that could be tampered with to read
+    someone else's. */
+export async function listMessagesFromSender(uid: string): Promise<ContactMessage[]> {
+  const rows = await query<MessageRow>(
+    `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE sender_uid = ? ORDER BY created_at DESC`,
+    [uid],
+  );
+  return withReplies(rows);
+}
+
+/** The enquirer's address, for sending them the reply. Null when the
+    enquiry has been deleted. */
+export async function getMessageRecipient(
+  id: number,
+): Promise<{ name: string; email: string; subject: string } | null> {
+  const row = await queryOne<{ name: string; email: string; subject: string }>(
+    "SELECT name, email, subject FROM messages WHERE id = ?",
+    [id],
+  );
+  return row ?? null;
+}
+
+/* Records an admin's answer. Name and email are snapshotted alongside the
+   uid so the thread still reads correctly after that admin leaves. Marking
+   the enquiry handled is part of the same act — replying IS handling it,
+   and leaving that to a second manual click is how threads get answered
+   twice. */
+export async function addMessageReply(input: {
+  messageId: number;
+  adminUid: string;
+  adminName: string;
+  adminEmail: string;
+  body: string;
+}): Promise<void> {
+  await execute(
+    `INSERT INTO message_replies (message_id, admin_uid, admin_name, admin_email, body)
+     VALUES (?,?,?,?,?)`,
+    [input.messageId, input.adminUid, input.adminName, input.adminEmail, input.body],
+  );
+  await execute("UPDATE messages SET handled = TRUE WHERE id = ?", [input.messageId]);
 }
 
 /** Mark an enquiry as dealt with, or reopen it. Returns false when the row

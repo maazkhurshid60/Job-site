@@ -402,6 +402,11 @@ CREATE TABLE messages (
   id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name       VARCHAR(255) NOT NULL DEFAULT '',
   email      VARCHAR(320) NOT NULL DEFAULT '',
+  -- Who sent it, when they were signed in. The form is public, so this is
+  -- usually NULL; when set, the sender can follow the thread and read our
+  -- reply at /dashboard/enquiries. SET NULL on delete: closing an account
+  -- shouldn't discard an enquiry we may still owe someone an answer to.
+  sender_uid VARCHAR(128) NULL,
   subject    VARCHAR(255) NOT NULL DEFAULT '',
   message    MEDIUMTEXT,
   -- Sender's IP, best-effort from the platform's forwarded-for header. Only
@@ -411,7 +416,32 @@ CREATE TABLE messages (
   created_at DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   KEY idx_messages_created (created_at DESC),
-  KEY idx_messages_ip_created (ip, created_at)
+  KEY idx_messages_sender (sender_uid, created_at DESC),
+  KEY idx_messages_ip_created (ip, created_at),
+  CONSTRAINT fk_messages_sender FOREIGN KEY (sender_uid)
+    REFERENCES users(uid) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- What an admin wrote back on an enquiry. Replying used to be a mailto:
+-- link, so the answer left no trace: a second admin couldn't tell whether a
+-- lead had been dealt with or what was said, and the sender had nowhere to
+-- read it.
+CREATE TABLE message_replies (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  message_id  BIGINT UNSIGNED NOT NULL,
+  -- Name and email are snapshotted alongside the uid so the thread still
+  -- reads correctly after that admin's account is gone.
+  admin_uid   VARCHAR(128) NULL,
+  admin_name  VARCHAR(255) NOT NULL DEFAULT '',
+  admin_email VARCHAR(320) NOT NULL DEFAULT '',
+  body        MEDIUMTEXT   NOT NULL,
+  created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_message_replies_message (message_id, created_at),
+  CONSTRAINT fk_replies_message FOREIGN KEY (message_id)
+    REFERENCES messages(id) ON DELETE CASCADE,
+  CONSTRAINT fk_replies_admin FOREIGN KEY (admin_uid)
+    REFERENCES users(uid) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ------------------------------------------------ submission_messages

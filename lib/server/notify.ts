@@ -151,3 +151,26 @@ export async function notifySiteLead(input: {
     },
   });
 }
+
+/** An admin's answer to a contact-form enquiry, sent to whoever wrote in.
+    Reply-to is our monitored inbox (the shared default), so a further reply
+    comes back to the team rather than to the individual admin. */
+export async function notifyEnquiryReply(input: {
+  toName: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  fromName: string;
+}): Promise<void> {
+  await send({
+    to: { email: input.toEmail, name: input.toName || input.toEmail },
+    subject: `Re: ${input.subject || "your enquiry"}`,
+    content: {
+      preheader: `${input.fromName || "JobFolder"} replied to your enquiry.`,
+      greeting: `Hi ${input.toName || "there"},`,
+      paragraphs: [`Thanks for getting in touch with JobFolder — ${input.fromName || "our team"} has replied:`],
+      quote: input.body,
+      footerNote: "You're receiving this because you contacted JobFolder through our website. Reply to this email to continue the conversation.",
+    },
+  });
+}

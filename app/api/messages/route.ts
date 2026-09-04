@@ -1,6 +1,6 @@
 import { handle, ok, jsonBody, str, TooManyRequests } from "@/lib/server/respond";
 import { createMessage, listMessages, countRecentMessagesFromIp } from "@/lib/server/repo";
-import { requireAdmin } from "@/lib/server/auth";
+import { requireAdmin, getUid } from "@/lib/server/auth";
 import { verifyRecaptcha } from "@/lib/server/recaptcha";
 import { notifyNewMessage } from "@/lib/server/notify";
 
@@ -40,7 +40,12 @@ export function POST(req: Request) {
       subject: str(body.subject, "subject", { max: 255 }),
       message: str(body.message, "message", { required: true }),
     };
-    await createMessage({ ...input, ip });
+    /* Optional: the form is public, but when a signed-in recruiter uses it
+       we record who they are so they can follow the thread at
+       /dashboard/enquiries and read our answer. Anonymous senders store
+       null and behave exactly as before. */
+    const senderUid = await getUid(req);
+    await createMessage({ ...input, ip, senderUid });
 
     // Best-effort: the message is already saved above, so a Brevo hiccup
     // shouldn't turn into a failed submission for the sender. Awaited (not
