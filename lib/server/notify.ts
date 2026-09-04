@@ -174,3 +174,34 @@ export async function notifyEnquiryReply(input: {
     },
   });
 }
+
+/** A one-off message an admin wrote to a recruiter from the console. The
+    body is theirs, not a fixed template — only the letterhead is ours.
+    Reply-to falls back to the shared inbox, so an answer reaches the team
+    rather than the individual admin who happened to send it. */
+export async function notifyAdminMessage(input: {
+  toName: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  button?: { label: string; url: string };
+}): Promise<void> {
+  /* Split on blank lines so the admin's paragraphs survive as paragraphs.
+     Passing the whole thing as one string would collapse it into a wall of
+     text in the rendered email. */
+  const paragraphs = input.body
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  await send({
+    to: { email: input.toEmail, name: input.toName || input.toEmail },
+    subject: input.subject,
+    content: {
+      preheader: paragraphs[0]?.slice(0, 120) ?? input.subject,
+      paragraphs,
+      ...(input.button ? { button: input.button } : {}),
+      footerNote: "You're receiving this because you have a recruiter account on JobFolder.",
+    },
+  });
+}

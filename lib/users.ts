@@ -89,7 +89,8 @@ export type AdminAuditAction =
   | "job_deleted"
   | "jobs_synced"
   | "submission_status_changed"
-  | "profile_reminder_sent";
+  | "profile_reminder_sent"
+  | "email_sent";
 
 /** One entry in the admin action history — every sensitive action taken from
     the console, not just changes to the admin allow-list. */
@@ -357,4 +358,17 @@ export async function cancelAdminInvite(email: string): Promise<void> {
 /** Admin action: history of every grant/revoke/invite against the allow-list. */
 export function listAdminAuditLog(): Promise<AdminAuditEntry[]> {
   return apiFetch<AdminAuditEntry[]>("/api/admin/audit-log", { auth: true });
+}
+
+/** Admin action: email one recruiter from the console. Subject and body are
+    whatever the admin wrote; templateId only decides the button, if any. */
+export async function sendRecruiterEmail(
+  uid: string,
+  input: { templateId: string; subject: string; body: string },
+): Promise<void> {
+  await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}/email`, {
+    method: "POST",
+    body: input,
+    auth: true,
+  });
 }

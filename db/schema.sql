@@ -124,7 +124,8 @@ CREATE TABLE admin_audit_log (
     'recruiter_verified','recruiter_unverified',
     'recruiter_suspended','recruiter_reinstated',
     'site_builder_unlocked','site_builder_locked',
-    'job_deleted','jobs_synced','submission_status_changed','profile_reminder_sent'
+    'job_deleted','jobs_synced','submission_status_changed','profile_reminder_sent',
+    'email_sent'
   ) NOT NULL,
   actor_uid    VARCHAR(128) NULL,
   actor_name   VARCHAR(255) NOT NULL DEFAULT '',

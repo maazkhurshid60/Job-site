@@ -8,6 +8,7 @@ import {
   setRecruiterSiteBuilderEnabled, sendProfileReminder, type UserProfile,
 } from "@/lib/users";
 import { profileCompletion } from "@/lib/profileCompletion";
+import { RecruiterEmailComposer } from "@/components/admin/RecruiterEmailComposer";
 import { getRecruiterSiteForAdmin, type RecruiterSite } from "@/lib/recruiterSite";
 import {
   listAllSubmissions,
@@ -55,6 +56,7 @@ export default function RecruiterDetailPage() {
      show, so it keeps a line of its own. */
   const [justSent, setJustSent] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -263,6 +265,7 @@ export default function RecruiterDetailPage() {
   }
 
   async function remindProfile() {
+    setEmailSent(null);
     if (!user) return;
     setReminderError(null);
     setSendingReminder(true);
@@ -495,6 +498,7 @@ export default function RecruiterDetailPage() {
                 </p>
               )}
             </div>
+            <div className="flex shrink-0 items-center gap-2">
             {!completion.isComplete && (
               <button
                 type="button"
@@ -510,7 +514,19 @@ export default function RecruiterDetailPage() {
                     : "Send profile reminder"}
               </button>
             )}
+            <RecruiterEmailComposer
+              uid={user.uid}
+              recruiterName={user.name}
+              recruiterEmail={user.email}
+              onSent={(subject) => setEmailSent(subject)}
+            />
+            </div>
           </div>
+          {emailSent && (
+            <p className="mt-2.5 text-xs font-semibold text-primary">
+              Email sent — &ldquo;{emailSent}&rdquo;
+            </p>
+          )}
           {reminderError && (
             <p className="mt-2.5 text-xs text-coral">{reminderError}</p>
           )}
