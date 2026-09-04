@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Engineering & DOT Jobs — Browse Open Roles",
@@ -30,5 +31,29 @@ export default function JobsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <Suspense>{children}</Suspense>;
+  return (
+    <>
+      <Suspense>{children}</Suspense>
+
+      {/* Outside the boundary on purpose.
+          Everything inside it streams in on the client, so the server HTML
+          for /jobs is an empty shell — which is the whole reason the landing
+          pages exist. Putting these two links in there as well would make
+          them just as invisible. Here they are in the initial HTML, giving a
+          crawler a path from /jobs to every discipline and state page. */}
+      <nav aria-label="Browse jobs by category or location" className="mx-auto max-w-6xl px-6 pb-14">
+        <p className="text-sm text-muted">
+          Browse roles by{" "}
+          <Link href="/jobs/category" className="font-semibold text-primary hover:underline">
+            discipline
+          </Link>{" "}
+          or by{" "}
+          <Link href="/jobs/state" className="font-semibold text-primary hover:underline">
+            state
+          </Link>
+          .
+        </p>
+      </nav>
+    </>
+  );
 }

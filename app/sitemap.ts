@@ -2,7 +2,8 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/seo";
 import { howSteps } from "@/lib/howItWorks";
 import { guides } from "@/lib/hiringGuides";
-import { listOpenJobs } from "@/lib/jobs";
+import { listOpenJobs } from "@/lib/server/repo";
+import { categoryFacets, stateFacets } from "@/lib/jobTaxonomy";
 
 /* Regenerate hourly so newly posted roles reach the sitemap without a redeploy. */
 export const revalidate = 3600;
@@ -12,6 +13,8 @@ type Entry = MetadataRoute.Sitemap[number];
 const staticRoutes: { path: string; priority: number; freq: Entry["changeFrequency"] }[] = [
   { path: "/", priority: 1.0, freq: "weekly" },
   { path: "/jobs", priority: 0.9, freq: "daily" },
+  { path: "/jobs/category", priority: 0.8, freq: "daily" },
+  { path: "/jobs/state", priority: 0.8, freq: "daily" },
   { path: "/how-it-works", priority: 0.8, freq: "monthly" },
   { path: "/recruiters", priority: 0.8, freq: "monthly" },
   { path: "/hiring-guides", priority: 0.7, freq: "monthly" },
@@ -53,16 +56,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  /* Open roles are the highest-churn URLs on the site. A Firestore outage or a
-     missing config must never fail the build, so this is best-effort only. */
+  /* Open roles are the highest-churn URLs on the site, and the landing pages
+     are derived from the same read. A database outage must never fail the
+     build, so the whole block is best-effort: static routes alone still make
+     a valid sitemap.
+
+     Read straight from the repo rather than through /api/jobs — a sitemap
+     generated at build time can't call an HTTP route on a server that isn't
+     listening yet. */
   try {
     const jobs = await listOpenJobs();
+
     for (const job of jobs) {
       entries.push({
         url: `${SITE_URL}/jobs/${job.id}`,
         lastModified: toDate(job.updatedAt) ?? now,
         changeFrequency: "weekly",
         priority: 0.8,
+      });
+    }
+
+    /* Derived from live roles, so a discipline or state only appears while it
+       has something on it. Submitting a URL that 404s is a crawl error, not a
+       missed opportunity. */
+    for (const facet of categoryFacets(jobs)) {
+      entries.push({
+        url: `${SITE_URL}/jobs/category/${facet.slug}`,
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.75,
+      });
+    }
+
+    for (const facet of stateFacets(jobs)) {
+      entries.push({
+        url: `${SITE_URL}/jobs/state/${facet.slug}`,
+        lastModified: now,
+        changeFrequency: "daily",
+        priority: 0.7,
       });
     }
   } catch {
