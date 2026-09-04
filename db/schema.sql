@@ -418,9 +418,13 @@ CREATE TABLE messages (
   PRIMARY KEY (id),
   KEY idx_messages_created (created_at DESC),
   KEY idx_messages_sender (sender_uid, created_at DESC),
-  KEY idx_messages_ip_created (ip, created_at),
-  CONSTRAINT fk_messages_sender FOREIGN KEY (sender_uid)
-    REFERENCES users(uid) ON DELETE SET NULL
+  KEY idx_messages_ip_created (ip, created_at)
+  -- Deliberately NOT a foreign key to users(uid): `admins` and `users` are
+  -- separate tables, so a signed-in admin (or a brand-new account whose
+  -- profile row hasn't been created yet) has no matching row, and the
+  -- constraint would reject a perfectly valid contact-form submission. A uid
+  -- that resolves to nothing just matches no rows when scoping someone's own
+  -- enquiries. Same reasoning as admin_audit_log.actor_uid.
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- What an admin wrote back on an enquiry. Replying used to be a mailto:
@@ -432,6 +436,10 @@ CREATE TABLE message_replies (
   message_id  BIGINT UNSIGNED NOT NULL,
   -- Name and email are snapshotted alongside the uid so the thread still
   -- reads correctly after that admin's account is gone.
+  -- Traceability only, with no foreign key: an admin need not be a
+  -- recruiter, so this uid often has no row in `users`. That is exactly why
+  -- name and email are snapshotted below — the thread has to read correctly
+  -- whether or not the uid still resolves to anyone.
   admin_uid   VARCHAR(128) NULL,
   admin_name  VARCHAR(255) NOT NULL DEFAULT '',
   admin_email VARCHAR(320) NOT NULL DEFAULT '',
@@ -440,9 +448,7 @@ CREATE TABLE message_replies (
   PRIMARY KEY (id),
   KEY idx_message_replies_message (message_id, created_at),
   CONSTRAINT fk_replies_message FOREIGN KEY (message_id)
-    REFERENCES messages(id) ON DELETE CASCADE,
-  CONSTRAINT fk_replies_admin FOREIGN KEY (admin_uid)
-    REFERENCES users(uid) ON DELETE SET NULL
+    REFERENCES messages(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ------------------------------------------------ submission_messages

@@ -44,10 +44,10 @@ try {
   } else {
     await conn.query(`ALTER TABLE messages ADD COLUMN sender_uid VARCHAR(128) NULL AFTER email`);
     await conn.query(`ALTER TABLE messages ADD KEY idx_messages_sender (sender_uid, created_at DESC)`);
-    await conn.query(
-      `ALTER TABLE messages ADD CONSTRAINT fk_messages_sender
-         FOREIGN KEY (sender_uid) REFERENCES users(uid) ON DELETE SET NULL`,
-    );
+    /* No foreign key on purpose — see db-migrate-drop-reply-admin-fk.mjs.
+       `admins` and `users` are separate tables, so an admin using the public
+       contact form has no matching row and the constraint would reject the
+       submission outright. */
     console.log("  messages.sender_uid — added");
   }
 
@@ -73,9 +73,7 @@ try {
         PRIMARY KEY (id),
         KEY idx_message_replies_message (message_id, created_at),
         CONSTRAINT fk_replies_message FOREIGN KEY (message_id)
-          REFERENCES messages(id) ON DELETE CASCADE,
-        CONSTRAINT fk_replies_admin FOREIGN KEY (admin_uid)
-          REFERENCES users(uid) ON DELETE SET NULL
+          REFERENCES messages(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     `);
     console.log("  message_replies — created");
