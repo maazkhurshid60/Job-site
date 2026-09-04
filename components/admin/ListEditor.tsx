@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { textAsc } from "@/lib/sorting";
 
 /* Reorderable list of short strings — job categories and job types both need
    exactly this, and had started to diverge as one grew features the other
@@ -27,6 +28,16 @@ export function ListEditor({
 }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  /* This list is hand-ordered — the numbers are the order candidates see on
+     /jobs — so A–Z is an action that rearranges it, not a view that hides the
+     real order. The arrows keep working afterwards, and nothing is written
+     until Save, so it's undoable by Reset. */
+  const sorted = useMemo(() => [...items].sort(textAsc((x: string) => x)), [items]);
+  const alreadySorted = useMemo(
+    () => items.every((v, i) => v === sorted[i]),
+    [items, sorted],
+  );
 
   function add() {
     const value = draft.trim();
@@ -88,10 +99,28 @@ export function ListEditor({
         </p>
       )}
 
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-xs font-medium text-muted">
           {items.length} {items.length === 1 ? noun : nounPlural ?? `${noun}s`}
         </p>
+        {items.length > 1 && (
+          <button
+            type="button"
+            onClick={() => onChange(sorted)}
+            disabled={alreadySorted}
+            className="inline-flex items-center gap-1.5 rounded-pill border border-line px-3 py-1 text-xs font-semibold text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-line disabled:text-muted/60 disabled:hover:border-line"
+            title={
+              alreadySorted
+                ? "Already in alphabetical order"
+                : "Reorder the whole list alphabetically — takes effect when you save"
+            }
+          >
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden>
+              <path d="M5 3v14M5 17l-2.5-2.5M5 17l2.5-2.5M11 5h6M11 9h5M11 13h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {alreadySorted ? "A–Z" : "Sort A–Z"}
+          </button>
+        )}
       </div>
 
       <ul className="mt-2 space-y-1.5">
