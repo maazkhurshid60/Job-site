@@ -7,6 +7,10 @@
  * have to be made twice.
  */
 
+/* What imported roles show as the employer. See the note in
+   fetchJobPosting below for why this isn't taken from the feed. */
+export const CONFIDENTIAL_CLIENT = "Confidential Client";
+
 export const PORTAL_URL = "https://careers.topechelon.com/portals/3a7f6fd3-7cf7-447c-a20f-2354eb2031df";
 
 // Checked in order — first match wins. Built from the actual job titles on
@@ -94,7 +98,18 @@ export async function fetchJobPosting(teId) {
   return {
     teId,
     title: posting.title ?? "Untitled role",
-    company: posting.hiringOrganization?.name || "Metro Associates",
+    /* Deliberately NOT posting.hiringOrganization.name.
+     *
+     * The source portal lists the recruiting agency as the hiring
+     * organization, so every imported role arrived branded with that
+     * agency's name and put it on the front of the JobFolder board.
+     * JobFolder is its own brand and shouldn't advertise anyone else's.
+     *
+     * "Confidential Client" is also what these postings say about
+     * themselves — most carry a "Confidential search, do not repost" line —
+     * so it's accurate rather than merely anonymous. An admin can set a real
+     * client name per job in the wizard, and that survives re-imports. */
+    company: CONFIDENTIAL_CLIENT,
     category: guessCategory(posting.title ?? ""),
     location,
     description: htmlToText(posting.description ?? ""),
