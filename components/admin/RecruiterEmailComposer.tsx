@@ -36,6 +36,11 @@ export function RecruiterEmailComposer({
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* Both on by default: an admin writing a message wants it seen, not
+     delivered to exactly one place. Email can bounce or be deleted; the
+     dashboard copy is the one that survives and records being read. */
+  const [sendEmail, setSendEmail] = useState(true);
+  const [sendNotify, setSendNotify] = useState(true);
 
   function pickTemplate(id: string) {
     setTemplateId(id);
@@ -50,10 +55,17 @@ export function RecruiterEmailComposer({
 
   async function send() {
     if (!subject.trim() || !body.trim() || sending) return;
+    if (!sendEmail && !sendNotify) return;
     setSending(true);
     setError(null);
     try {
-      await sendRecruiterEmail(uid, { templateId, subject: subject.trim(), body: body.trim() });
+      await sendRecruiterEmail(uid, {
+        templateId,
+        subject: subject.trim(),
+        body: body.trim(),
+        email: sendEmail,
+        notify: sendNotify,
+      });
       onSent(subject.trim());
       setOpen(false);
       setTemplateId("blank");
@@ -129,10 +141,41 @@ export function RecruiterEmailComposer({
         className="input mt-2 min-h-40 resize-y text-sm"
       />
 
+      <fieldset className="mt-3">
+        <legend className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          Send as
+        </legend>
+        <div className="mt-1.5 flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={sendEmail}
+              onChange={(e) => setSendEmail(e.target.checked)}
+              className="h-4 w-4 accent-[var(--color-primary)]"
+            />
+            Email
+          </label>
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={sendNotify}
+              onChange={(e) => setSendNotify(e.target.checked)}
+              className="h-4 w-4 accent-[var(--color-primary)]"
+            />
+            Dashboard alert
+          </label>
+        </div>
+      </fieldset>
+
       <p className="mt-2 text-[11px] text-muted">
-        Sent from <strong>Jobfolder &lt;noreply@jobfolder.com&gt;</strong> on the JobFolder
-        letterhead. {cta ? `Includes a "${cta.label}" button.` : "No button."} Replies come back
-        to the team inbox.
+        {sendEmail && (
+          <>
+            Email goes from <strong>Jobfolder &lt;noreply@jobfolder.com&gt;</strong>;
+            replies reach the team inbox.{" "}
+          </>
+        )}
+        {sendNotify && <>The dashboard alert stays in their account and records when it&rsquo;s read.{" "}</>}
+        {cta ? `Includes a "${cta.label}" link.` : ""}
       </p>
 
       {error && <p className="mt-2 text-xs text-coral">{error}</p>}

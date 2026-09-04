@@ -364,7 +364,14 @@ export function listAdminAuditLog(): Promise<AdminAuditEntry[]> {
     whatever the admin wrote; templateId only decides the button, if any. */
 export async function sendRecruiterEmail(
   uid: string,
-  input: { templateId: string; subject: string; body: string },
+  input: {
+    templateId: string;
+    subject: string;
+    body: string;
+    /** Both default to true server-side; at least one must be set. */
+    email?: boolean;
+    notify?: boolean;
+  },
 ): Promise<void> {
   await apiFetch(`/api/admin/recruiters/${encodeURIComponent(uid)}/email`, {
     method: "POST",

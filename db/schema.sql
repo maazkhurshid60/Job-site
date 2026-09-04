@@ -372,6 +372,36 @@ CREATE TABLE recruiter_sites (
 -- ------------------------------------------------------------- messages
 
 -- Public contact-form enquiries. No FK: senders are anonymous visitors.
+-- Messages shown inside a recruiter's dashboard. Email leaves the product:
+-- it bounces, goes to spam, or is deleted, and nobody can tell afterwards
+-- whether it was read. These sit where the recruiter already signs in.
+CREATE TABLE notifications (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  recipient_uid VARCHAR(128) NOT NULL,
+  title         VARCHAR(200)  NOT NULL,
+  body          MEDIUMTEXT    NOT NULL,
+  -- Optional in-app destination, e.g. /dashboard/jobs. Relative paths only;
+  -- the UI refuses anything else rather than turning a notification into an
+  -- open redirect.
+  link          VARCHAR(512)  NOT NULL DEFAULT '',
+  -- 'admin' today; system-generated alerts get their own values later.
+  -- Deliberately VARCHAR, not ENUM: adding an ENUM value needs a migration
+  -- under STRICT_ALL_TABLES, and forgetting one surfaces as a 500 on an
+  -- action that already half-succeeded.
+  source        VARCHAR(32)   NOT NULL DEFAULT 'admin',
+  -- Snapshotted, with no foreign key: admins live in `admins`, not `users`,
+  -- so a constraint pointing at users(uid) would reject every notification
+  -- an admin sends.
+  author_name   VARCHAR(255)  NOT NULL DEFAULT '',
+  read_at       DATETIME(3)   NULL,
+  created_at    DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  -- Covers both reads: the unread count, and the recipient's list.
+  KEY idx_notifications_recipient (recipient_uid, read_at, created_at DESC),
+  CONSTRAINT fk_notifications_recipient FOREIGN KEY (recipient_uid)
+    REFERENCES users(uid) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- Enquiries sent from a recruiter's public microsite at /sites/[slug].
 -- Distinct from `messages` (the jobfolder.com contact form): a site lead
 -- belongs to one recruiter, and both they and an admin can see it. Before

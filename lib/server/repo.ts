@@ -1382,6 +1382,111 @@ export async function setSiteLeadHandled(
   return result.affectedRows > 0;
 }
 
+/* --------------------------------------------------------- notifications */
+
+/* Messages that appear inside a recruiter's dashboard. Email leaves the
+   product — it bounces, it goes to spam, it gets deleted, and nobody can
+   tell afterwards whether it was read. These sit where the recruiter
+   already signs in, and record when they opened it. */
+
+export type Notification = {
+  id: number;
+  title: string;
+  body: string;
+  /** Relative in-app path, or "" for none. */
+  link: string;
+  source: string;
+  authorName: string;
+  read: boolean;
+  createdAt: string | null;
+};
+
+type NotificationRow = {
+  id: number;
+  title: string;
+  body: string;
+  link: string;
+  source: string;
+  author_name: string;
+  read_at: string | null;
+  created_at: string | null;
+};
+
+function toNotification(r: NotificationRow): Notification {
+  return {
+    id: r.id,
+    title: r.title,
+    body: r.body,
+    link: r.link,
+    source: r.source,
+    authorName: r.author_name,
+    read: r.read_at !== null,
+    createdAt: r.created_at,
+  };
+}
+
+export async function createNotification(input: {
+  recipientUid: string;
+  title: string;
+  body: string;
+  link?: string;
+  source?: string;
+  authorName?: string;
+}): Promise<void> {
+  await execute(
+    `INSERT INTO notifications (recipient_uid, title, body, link, source, author_name)
+     VALUES (?,?,?,?,?,?)`,
+    [
+      input.recipientUid,
+      input.title,
+      input.body,
+      input.link ?? "",
+      input.source ?? "admin",
+      input.authorName ?? "",
+    ],
+  );
+}
+
+/** Newest first, capped — a dashboard list nobody scrolls to the bottom of
+    doesn't need to fetch a thousand rows. */
+export async function listNotifications(uid: string, limit = 50): Promise<Notification[]> {
+  const rows = await query<NotificationRow>(
+    `SELECT id, title, body, link, source, author_name, read_at, created_at
+       FROM notifications WHERE recipient_uid = ?
+      ORDER BY created_at DESC LIMIT ?`,
+    [uid, limit],
+  );
+  return rows.map(toNotification);
+}
+
+export async function countUnreadNotifications(uid: string): Promise<number> {
+  const row = await queryOne<{ n: number }>(
+    "SELECT COUNT(*) AS n FROM notifications WHERE recipient_uid = ? AND read_at IS NULL",
+    [uid],
+  );
+  return row?.n ?? 0;
+}
+
+/* Scoped by uid in the WHERE clause, so a recruiter can only ever mark their
+   own as read — ownership is enforced by the query, not by a check above it
+   that could be skipped. Already-read rows are left alone so the original
+   timestamp survives a second click. */
+export async function markNotificationRead(id: number, uid: string): Promise<boolean> {
+  const result = await execute(
+    "UPDATE notifications SET read_at = CURRENT_TIMESTAMP(3) WHERE id = ? AND recipient_uid = ? AND read_at IS NULL",
+    [id, uid],
+  );
+  return result.affectedRows > 0;
+}
+
+export async function markAllNotificationsRead(uid: string): Promise<number> {
+  const result = await execute(
+    "UPDATE notifications SET read_at = CURRENT_TIMESTAMP(3) WHERE recipient_uid = ? AND read_at IS NULL",
+    [uid],
+  );
+  return result.affectedRows;
+}
+
 /* -------------------------------------------------------------- settings */
 
 export async function getSetting<T>(key: string, fallback: T): Promise<T> {
