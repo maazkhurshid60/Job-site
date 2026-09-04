@@ -910,6 +910,9 @@ type RecruiterSiteRow = {
   experience: unknown;
   cta_label: string;
   cta_url: string;
+  contact_heading: string;
+  contact_message: string;
+  footer_note: string;
   published: number;
   created_at: string | null;
   updated_at: string | null;
@@ -930,6 +933,9 @@ function toRecruiterSite(r: RecruiterSiteRow): RecruiterSite {
     experience: parseJson<RecruiterSite["experience"]>(r.experience, []),
     ctaLabel: r.cta_label,
     ctaUrl: r.cta_url,
+    contactHeading: r.contact_heading,
+    contactMessage: r.contact_message,
+    footerNote: r.footer_note,
     published: Boolean(r.published),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -938,7 +944,8 @@ function toRecruiterSite(r: RecruiterSiteRow): RecruiterSite {
 
 const SITE_COLUMNS = `
   recruiter_id, slug, template, theme, tagline, intro, specialisms,
-  highlights, stats, expertise, experience, cta_label, cta_url, published,
+  highlights, stats, expertise, experience, cta_label, cta_url,
+  contact_heading, contact_message, footer_note, published,
   created_at, updated_at`;
 
 export async function getRecruiterSiteByUid(uid: string): Promise<RecruiterSite | null> {
@@ -979,7 +986,8 @@ export async function getRecruiterSiteBySlug(slug: string): Promise<PublicRecrui
   >>(
     `SELECT rs.recruiter_id, rs.slug, rs.template, rs.theme, rs.tagline, rs.intro,
             rs.specialisms, rs.highlights, rs.stats, rs.expertise, rs.experience,
-            rs.cta_label, rs.cta_url, rs.published, rs.created_at, rs.updated_at,
+            rs.cta_label, rs.cta_url, rs.contact_heading, rs.contact_message, rs.footer_note,
+            rs.published, rs.created_at, rs.updated_at,
             u.name, u.headline, u.bio, u.photo_url, u.phone, u.email, u.location,
             u.linkedin, u.website, u.twitter, u.facebook, u.instagram
        FROM recruiter_sites rs
@@ -1038,6 +1046,9 @@ export type RecruiterSiteWrite = {
   experience: string;  // JSON-encoded [{ role, company, period, current, bullets }]
   ctaLabel: string;
   ctaUrl: string;
+  contactHeading: string;
+  contactMessage: string;
+  footerNote: string;
   published: boolean;
 };
 
@@ -1060,14 +1071,16 @@ export async function upsertRecruiterSite(
   const args = [
     input.slug, input.template, input.theme, input.tagline, input.intro,
     input.specialisms, input.highlights, input.stats, input.expertise, input.experience,
-    input.ctaLabel, input.ctaUrl, input.published,
+    input.ctaLabel, input.ctaUrl, input.contactHeading, input.contactMessage, input.footerNote,
+    input.published,
   ];
   try {
     const updated = await execute(
       `UPDATE recruiter_sites SET
          slug = ?, template = ?, theme = ?, tagline = ?, intro = ?,
          specialisms = ?, highlights = ?, stats = ?, expertise = ?, experience = ?,
-         cta_label = ?, cta_url = ?, published = ?
+         cta_label = ?, cta_url = ?, contact_heading = ?, contact_message = ?, footer_note = ?,
+         published = ?
        WHERE recruiter_id = ?`,
       [...args, uid],
     );
@@ -1075,8 +1088,9 @@ export async function upsertRecruiterSite(
       await execute(
         `INSERT INTO recruiter_sites
            (slug, template, theme, tagline, intro, specialisms, highlights,
-            stats, expertise, experience, cta_label, cta_url, published, recruiter_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            stats, expertise, experience, cta_label, cta_url,
+            contact_heading, contact_message, footer_note, published, recruiter_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [...args, uid],
       );
     }

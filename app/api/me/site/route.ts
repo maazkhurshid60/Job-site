@@ -45,7 +45,7 @@ function statsArray(value: unknown): SiteStat[] {
 function expertiseArray(value: unknown): SiteExpertise[] {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) throw new BadRequest("expertise must be an array.");
-  if (value.length > 8) throw new BadRequest("expertise can have at most 8 entries.");
+  if (value.length > 12) throw new BadRequest("expertise can have at most 12 entries.");
   return value.map((item, i) => {
     if (!item || typeof item !== "object") throw new BadRequest(`expertise[${i}] must be an object.`);
     const v = item as Record<string, unknown>;
@@ -63,7 +63,7 @@ function expertiseArray(value: unknown): SiteExpertise[] {
 function experienceArray(value: unknown): SiteExperience[] {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) throw new BadRequest("experience must be an array.");
-  if (value.length > 6) throw new BadRequest("experience can have at most 6 entries.");
+  if (value.length > 10) throw new BadRequest("experience can have at most 10 entries.");
   return value.map((item, i) => {
     if (!item || typeof item !== "object") throw new BadRequest(`experience[${i}] must be an object.`);
     const v = item as Record<string, unknown>;
@@ -72,7 +72,7 @@ function experienceArray(value: unknown): SiteExperience[] {
       company: str(v.company, `experience[${i}].company`, { max: 120, required: true }),
       period: str(v.period, `experience[${i}].period`, { max: 64 }),
       current: bool(v.current),
-      bullets: strArray(v.bullets, `experience[${i}].bullets`, { max: 8, itemMax: 300 }),
+      bullets: strArray(v.bullets, `experience[${i}].bullets`, { max: 10, itemMax: 300 }),
     };
   });
 }
@@ -114,13 +114,16 @@ export function PUT(req: Request) {
       theme: oneOf(body.theme, THEME_IDS, "theme", "navy"),
       tagline: str(body.tagline, "tagline", { max: 255 }),
       intro: str(body.intro, "intro", { max: 8000 }),
-      specialisms: JSON.stringify(strArray(body.specialisms, "specialisms", { max: 12, itemMax: 60 })),
-      highlights: JSON.stringify(strArray(body.highlights, "highlights", { max: 12, itemMax: 200 })),
+      specialisms: JSON.stringify(strArray(body.specialisms, "specialisms", { max: 20, itemMax: 60 })),
+      highlights: JSON.stringify(strArray(body.highlights, "highlights", { max: 20, itemMax: 200 })),
       stats: JSON.stringify(statsArray(body.stats)),
       expertise: JSON.stringify(expertiseArray(body.expertise)),
       experience: JSON.stringify(experienceArray(body.experience)),
       ctaLabel: str(body.ctaLabel, "ctaLabel", { max: 64 }),
       ctaUrl: str(body.ctaUrl, "ctaUrl", { max: 512 }),
+      contactHeading: str(body.contactHeading, "contactHeading", { max: 60 }),
+      contactMessage: str(body.contactMessage, "contactMessage", { max: 300 }),
+      footerNote: str(body.footerNote, "footerNote", { max: 160 }),
       published: bool(body.published),
     }).catch((err: unknown) => {
       if (err instanceof SlugTakenError) throw new BadRequest(err.message);

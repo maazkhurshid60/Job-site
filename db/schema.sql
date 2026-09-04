@@ -349,6 +349,14 @@ CREATE TABLE recruiter_sites (
   experience   JSON,                 -- [{ role, company, period, current, bullets: [string] }]
   cta_label    VARCHAR(64)  NOT NULL DEFAULT '',
   cta_url      VARCHAR(512) NOT NULL DEFAULT '',
+  -- Optional override for the contact section's heading; falls back to
+  -- "Get in touch" when blank.
+  contact_heading VARCHAR(60)   NOT NULL DEFAULT '',
+  -- Optional short blurb shown above the email/phone in the contact section.
+  contact_message VARCHAR(300)  NOT NULL DEFAULT '',
+  -- Optional custom line shown in the footer, alongside (not replacing) the
+  -- "Site by JobFolder" attribution — e.g. a copyright or closing tagline.
+  footer_note     VARCHAR(160)  NOT NULL DEFAULT '',
   -- A recruiter can draft and preview before the page is publicly reachable.
   published    BOOLEAN NOT NULL DEFAULT FALSE,
   created_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

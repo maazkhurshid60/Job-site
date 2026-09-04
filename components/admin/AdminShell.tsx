@@ -153,8 +153,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="flex flex-1">
-        {/* sidebar */}
-        <aside className="hidden w-56 shrink-0 flex-col bg-blue-brand-dark px-3 py-4 md:flex">
+        {/* sidebar — pinned, not scrolled away with the page.
+
+            The header above is sticky, so the sidebar sticks directly beneath
+            it (top-14 = the header's h-14) and takes the rest of the viewport.
+            The explicit height matters twice: it stops the aside stretching to
+            the full document height (which is what let it scroll off), and it
+            gives overflow-y-auto something to measure, so a nav taller than the
+            screen scrolls inside the sidebar instead of dragging the page. */}
+        <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 flex-col overflow-y-auto bg-blue-brand-dark px-3 py-4 md:flex">
           <div className="flex-1 space-y-5">
             {groups.map((group) => (
               <div key={group.label}>

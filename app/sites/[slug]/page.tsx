@@ -44,5 +44,7 @@ export default async function RecruiterSitePage({
   const found = await loadSite(slug);
   if (!found) notFound();
 
-  return <RecruiterSiteView site={found.site} recruiter={found.recruiter} />;
+  // The slug the visitor arrived on — the lead form posts back to it, and
+  // the route resolves the owner from it server-side.
+  return <RecruiterSiteView site={found.site} recruiter={found.recruiter} leadSlug={slug} />;
 }

@@ -33,6 +33,9 @@ type Draft = {
   experience: SiteExperience[];
   ctaLabel: string;
   ctaUrl: string;
+  contactHeading: string;
+  contactMessage: string;
+  footerNote: string;
 };
 
 function slugify(value: string): string {
@@ -57,6 +60,9 @@ function draftFromSite(site: RecruiterSite): Draft {
     experience: site.experience,
     ctaLabel: site.ctaLabel,
     ctaUrl: site.ctaUrl,
+    contactHeading: site.contactHeading,
+    contactMessage: site.contactMessage,
+    footerNote: site.footerNote,
   };
 }
 
@@ -96,6 +102,9 @@ export function SiteBuilderWizard() {
     experience: [],
     ctaLabel: "Get in touch",
     ctaUrl: "",
+    contactHeading: "",
+    contactMessage: "",
+    footerNote: "",
   });
   const [saving, setSaving] = useState<"draft" | "publish" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -435,14 +444,14 @@ export function SiteBuilderWizard() {
               placeholder="e.g. Structural Engineering"
               items={draft.specialisms}
               onChange={(specialisms) => patch({ specialisms })}
-              max={12}
+              max={20}
             />
             <TagListField
               label="Track record highlights (optional)"
               placeholder="e.g. 50+ engineers placed since 2019"
               items={draft.highlights}
               onChange={(highlights) => patch({ highlights })}
-              max={12}
+              max={20}
               itemMax={200}
             />
             <div className="grid gap-4 sm:grid-cols-2">
@@ -462,6 +471,52 @@ export function SiteBuilderWizard() {
                   placeholder={profile?.email ? `mailto:${profile.email}` : "https://…"}
                 />
               </Field>
+            </div>
+
+            <div className="border-t border-line pt-5">
+              <h3 className="text-lg font-bold text-ink">Contact section</h3>
+              <p className="mt-1 text-sm text-muted">
+                Shown above your email and phone at the bottom of the page.
+              </p>
+              <div className="mt-3 space-y-4">
+                <Field label="Heading (optional)" hint='Defaults to "Get in touch" if left blank.'>
+                  <input
+                    className="input"
+                    value={draft.contactHeading}
+                    onChange={(e) => patch({ contactHeading: e.target.value })}
+                    placeholder="Get in touch"
+                    maxLength={60}
+                  />
+                </Field>
+                <Field label="Message (optional)">
+                  <textarea
+                    className="input min-h-20 resize-y"
+                    value={draft.contactMessage}
+                    onChange={(e) => patch({ contactMessage: e.target.value })}
+                    placeholder="Have a role to fill? I'd love to hear from you."
+                    maxLength={300}
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <div className="border-t border-line pt-5">
+              <h3 className="text-lg font-bold text-ink">Footer</h3>
+              <p className="mt-1 text-sm text-muted">
+                An optional line shown at the very bottom of your page, above
+                the &ldquo;Site by JobFolder&rdquo; credit.
+              </p>
+              <div className="mt-3">
+                <Field label="Footer note (optional)">
+                  <input
+                    className="input"
+                    value={draft.footerNote}
+                    onChange={(e) => patch({ footerNote: e.target.value })}
+                    placeholder="© 2026 Jordan Lee Recruiting"
+                    maxLength={160}
+                  />
+                </Field>
+              </div>
             </div>
           </div>
         )}
@@ -550,6 +605,9 @@ export function SiteBuilderWizard() {
                   experience: draft.experience,
                   ctaLabel: draft.ctaLabel,
                   ctaUrl: draft.ctaUrl,
+                  contactHeading: draft.contactHeading,
+                  contactMessage: draft.contactMessage,
+                  footerNote: draft.footerNote,
                 }}
                 recruiter={previewRecruiter}
               />
@@ -819,7 +877,7 @@ function StatsField({
 
 /** Animated skill bars, e.g. "DOT Recruiting — 90%". */
 function ExpertiseField({
-  items, onChange, max = 8,
+  items, onChange, max = 12,
 }: {
   items: SiteExpertise[];
   onChange: (items: SiteExpertise[]) => void;
@@ -887,7 +945,7 @@ function ExpertiseField({
     small card of its own fields plus a BulletListField for the achievements
     under it. */
 function ExperienceField({
-  items, onChange, max = 6,
+  items, onChange, max = 10,
 }: {
   items: SiteExperience[];
   onChange: (items: SiteExperience[]) => void;
@@ -955,7 +1013,7 @@ function ExperienceField({
               </label>
             </div>
             <div className="mt-3">
-              <BulletListField items={job.bullets} onChange={(bullets) => update(i, { bullets })} max={8} />
+              <BulletListField items={job.bullets} onChange={(bullets) => update(i, { bullets })} max={10} />
             </div>
           </div>
         ))}

@@ -34,6 +34,12 @@ export type RecruiterSite = {
   experience: SiteExperience[];
   ctaLabel: string;
   ctaUrl: string;
+  /** Optional override for the contact section's heading; "Get in touch" when blank. */
+  contactHeading: string;
+  /** Optional short blurb shown above the email/phone in the contact section. */
+  contactMessage: string;
+  /** Optional custom line shown in the footer, alongside the JobFolder attribution. */
+  footerNote: string;
   published: boolean;
   createdAt: string | null;
   updatedAt: string | null;
@@ -52,6 +58,9 @@ export type RecruiterSiteInput = {
   experience: SiteExperience[];
   ctaLabel: string;
   ctaUrl: string;
+  contactHeading: string;
+  contactMessage: string;
+  footerNote: string;
   published: boolean;
 };
 

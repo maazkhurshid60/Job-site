@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { RecruiterSite } from "@/lib/recruiterSite";
 import { siteTheme } from "@/lib/siteThemes";
 import { SocialIcon, type SocialKind } from "@/components/SocialLinks";
+import { SiteLeadForm } from "@/components/site/SiteLeadForm";
 
 /* Renders one recruiter's free one-page site. Used in two places that must
    stay visually identical: the live preview in the site builder wizard, and
@@ -35,14 +36,20 @@ type SiteContent = Pick<
   RecruiterSite,
   | "template" | "theme" | "tagline" | "intro" | "specialisms" | "highlights"
   | "stats" | "expertise" | "experience" | "ctaLabel" | "ctaUrl"
+  | "contactHeading" | "contactMessage" | "footerNote"
 >;
 
 export function RecruiterSiteView({
   site,
   recruiter,
+  leadSlug = null,
 }: {
   site: SiteContent;
   recruiter: SiteRecruiter;
+  /* The published slug, so the contact form knows where to post. Null in the
+     site-builder preview, where the form renders but must not file a real
+     lead against the recruiter who is still editing the page. */
+  leadSlug?: string | null;
 }) {
   const theme = siteTheme(site.theme);
   const name = recruiter.name || "Your name";
@@ -81,6 +88,8 @@ export function RecruiterSiteView({
     { id: "contact", label: "Contact" },
   ].filter((s): s is { id: string; label: string } => Boolean(s));
 
+  const contactHeading = site.contactHeading || "Get in touch";
+
   const layoutProps: LayoutProps = {
     name,
     tagline,
@@ -98,13 +107,16 @@ export function RecruiterSiteView({
     currentJob,
     socials,
     recruiter,
+    contactHeading,
+    contactMessage: site.contactMessage,
+    leadSlug,
   };
 
   return (
     <div id="top" style={vars} className="min-h-screen bg-white">
       <SiteNav name={name} sections={navSections} />
       {site.template === "bold" ? <BoldLayout {...layoutProps} /> : <ClassicLayout {...layoutProps} />}
-      <SiteFooter />
+      <SiteFooter note={site.footerNote} />
     </div>
   );
 }
@@ -156,11 +168,15 @@ type LayoutProps = {
   currentJob: RecruiterSite["experience"][number] | undefined;
   socials: { kind: SocialKind; value: string }[];
   recruiter: SiteRecruiter;
+  contactHeading: string;
+  contactMessage: string;
+  leadSlug: string | null;
 };
 
 function ClassicLayout({
   name, tagline, intro, initial, photoURL, hasCta, ctaLabel, ctaUrl,
   specialisms, highlights, stats, expertise, experience, socials, recruiter,
+  contactHeading, contactMessage, leadSlug,
 }: LayoutProps) {
   return (
     <>
@@ -225,14 +241,19 @@ function ClassicLayout({
       )}
 
       <div id="contact" className="px-6 py-12 text-center">
+        <SectionLabel>{contactHeading}</SectionLabel>
+        {contactMessage && (
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-ink/70">{contactMessage}</p>
+        )}
         {socials.length > 0 && (
-          <div className="flex justify-center">
+          <div className="mt-5 flex justify-center">
             <Socials items={socials} />
           </div>
         )}
         <div className="mt-4 flex justify-center">
           <ContactLines recruiter={recruiter} />
         </div>
+        <SiteLeadForm slug={leadSlug} />
       </div>
     </>
   );
@@ -241,6 +262,7 @@ function ClassicLayout({
 function BoldLayout({
   name, tagline, intro, initial, photoURL, hasCta, ctaLabel, ctaUrl,
   specialisms, highlights, stats, expertise, experience, currentJob, socials, recruiter,
+  contactHeading, contactMessage, leadSlug,
 }: LayoutProps) {
   return (
     <>
@@ -309,10 +331,14 @@ function BoldLayout({
       )}
 
       <div id="contact" className="border-t border-line px-6 py-14 text-center">
-        <SectionLabel>Get in touch</SectionLabel>
+        <SectionLabel>{contactHeading}</SectionLabel>
+        {contactMessage && (
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-ink/70">{contactMessage}</p>
+        )}
         <div className="mt-4">
           <ContactLines recruiter={recruiter} />
         </div>
+        <SiteLeadForm slug={leadSlug} />
       </div>
     </>
   );
@@ -588,18 +614,25 @@ function DarkBand({ title, children, id }: { title: string; children: React.Reac
   );
 }
 
-function SiteFooter() {
+/** The recruiter's own optional note (a tagline, a copyright line, whatever
+    they want) sits ABOVE the JobFolder attribution rather than replacing it —
+    this is a free perk hosted by JobFolder, and that stays visible regardless
+    of what else a recruiter customizes. */
+function SiteFooter({ note }: { note: string }) {
   return (
     <div className="border-t border-line/60 py-6 text-center text-[11px] text-muted">
-      Site by{" "}
-      <a
-        href="https://jobfolder.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-semibold hover:underline"
-      >
-        JobFolder
-      </a>
+      {note && <p className="mb-1.5 text-ink/60">{note}</p>}
+      <p>
+        Site by{" "}
+        <a
+          href="https://jobfolder.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold hover:underline"
+        >
+          JobFolder
+        </a>
+      </p>
     </div>
   );
 }
