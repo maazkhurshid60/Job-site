@@ -5,6 +5,8 @@ import { listMessages, setMessageHandled, replyToMessage, type ContactMessage } 
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { formatDate } from "@/lib/dates";
+import { SortSelect } from "@/components/SortSelect";
+import { applySort, textAsc, textDesc, dateDesc, dateAsc, type SortOption } from "@/lib/sorting";
 
 /* Contact-form enquiries.
  *
@@ -26,12 +28,21 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
+const SORTS: SortOption<ContactMessage>[] = [
+  { value: "newest", label: "Newest first", compare: dateDesc((m) => m.createdAt) },
+  { value: "oldest", label: "Oldest first", compare: dateAsc((m) => m.createdAt) },
+  { value: "az", label: "Subject A–Z", compare: textAsc((m) => m.subject) },
+  { value: "za", label: "Subject Z–A", compare: textDesc((m) => m.subject) },
+  { value: "sender", label: "Sender A–Z", compare: textAsc((m) => m.name) },
+];
+
 export default function AdminMessagesPage() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("new");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState("newest");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [replyingId, setReplyingId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -59,13 +70,14 @@ export default function AdminMessagesPage() {
 
   const shown = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return messages.filter((m) => {
+    const matched = messages.filter((m) => {
       if (tab === "new" && m.handled) return false;
       if (tab === "handled" && !m.handled) return false;
       if (!term) return true;
       return [m.name, m.email, m.subject, m.message].join(" ").toLowerCase().includes(term);
     });
-  }, [messages, tab, q]);
+    return applySort(matched, SORTS, sort);
+  }, [messages, tab, q, sort]);
 
   async function toggleHandled(m: ContactMessage) {
     const next = !m.handled;
@@ -107,6 +119,8 @@ export default function AdminMessagesPage() {
             {counts.new > 0 && ` ${counts.new} still to answer.`}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <SortSelect options={SORTS} value={sort} onChange={setSort} className="h-9" />
         <div className="relative w-full max-w-xs">
           <input
             value={q}
@@ -125,6 +139,7 @@ export default function AdminMessagesPage() {
             <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8" />
             <path d="M14 14l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
+        </div>
         </div>
       </div>
 

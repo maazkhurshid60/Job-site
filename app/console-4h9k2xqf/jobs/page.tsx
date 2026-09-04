@@ -18,6 +18,21 @@ import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { StatCard } from "@/components/dashboard/parts";
 import { isWithinDays } from "@/lib/dates";
+import { SortSelect } from "@/components/SortSelect";
+import { applySort, textAsc, textDesc, dateDesc, dateAsc, numberDesc, type SortOption } from "@/lib/sorting";
+import { feeTierAmount } from "@/lib/feeTiers";
+
+/* Fee sorts read through feeTierAmount rather than the tier string, so
+   "Highest fee" orders by money instead of alphabetically by tier name. */
+const JOB_SORTS: SortOption<Job>[] = [
+  { value: "newest", label: "Newest first", compare: dateDesc((j) => j.createdAt) },
+  { value: "oldest", label: "Oldest first", compare: dateAsc((j) => j.createdAt) },
+  { value: "az", label: "Title A–Z", compare: textAsc((j) => j.title) },
+  { value: "za", label: "Title Z–A", compare: textDesc((j) => j.title) },
+  { value: "company", label: "Company A–Z", compare: textAsc((j) => j.company) },
+  { value: "location", label: "Location A–Z", compare: textAsc((j) => j.location) },
+  { value: "fee", label: "Highest fee", compare: numberDesc((j) => feeTierAmount(j.feeTier) ?? 0) },
+];
 
 const statusStyle: Record<JobStatus, string> = {
   open: "bg-primary-soft text-primary",
@@ -70,6 +85,7 @@ function JobsList() {
   const [status, setStatus] = useState<JobStatus | "all">("all");
   const [category, setCategory] = useState("all");
   const [type, setType] = useState("all");
+  const [sort, setSort] = useState("newest");
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [filters, setFilters] = useState<BoardFilters>(DEFAULT_FILTERS);
   useEffect(() => { getCategories().then(setCategories); }, []);
@@ -129,7 +145,7 @@ function JobsList() {
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return jobs.filter((j) => {
+    const matched = jobs.filter((j) => {
       if (status !== "all" && j.status !== status) return false;
       if (category !== "all" && j.category !== category) return false;
       if (type !== "all" && j.employmentType !== type) return false;
@@ -139,10 +155,11 @@ function JobsList() {
       }
       return true;
     });
-  }, [jobs, q, status, category, type]);
+    return applySort(matched, JOB_SORTS, sort);
+  }, [jobs, q, status, category, type, sort]);
 
   const hasActiveFilters =
-    q.trim() !== "" || status !== "all" || category !== "all" || type !== "all";
+    q.trim() !== "" || status !== "all" || category !== "all" || type !== "all" || sort !== "newest";
 
   const openBountyPool = jobs
     .filter((j) => j.status === "open")
@@ -259,10 +276,13 @@ function JobsList() {
               <option value="all">All types</option>
               {filters.employmentTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
+            <select className="input h-10 w-auto" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort order">
+              {JOB_SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
             {hasActiveFilters && (
               <button
                 type="button"
-                onClick={() => { setQ(""); setStatus("all"); setCategory("all"); setType("all"); }}
+                onClick={() => { setQ(""); setStatus("all"); setCategory("all"); setType("all"); setSort("newest"); }}
                 className="text-sm font-semibold text-coral hover:opacity-80"
               >
                 Clear

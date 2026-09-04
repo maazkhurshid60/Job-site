@@ -14,6 +14,8 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
 import { formatDate } from "@/lib/dates";
 import { profileCompletion } from "@/lib/profileCompletion";
+import { SortSelect } from "@/components/SortSelect";
+import { applySort, textAsc, textDesc, dateDesc, dateAsc, numberAsc, type SortOption } from "@/lib/sorting";
 import {
   RECRUITER_STATUS_TABS as STATUS_TABS, recruitersStatusHref, type RecruiterStatusTab as StatusTab,
 } from "@/lib/recruiterStatus";
@@ -25,6 +27,22 @@ function fmtDate(u: UserProfile): string {
 // 3 columns x 8 rows at the widest breakpoint — a page of cards that fits
 // comfortably without scrolling forever once there are hundreds of recruiters.
 const PAGE_SIZE = 24;
+
+/* "Least complete" is here, not just on the profile meter, because this page
+   is where an admin decides who to chase — sorting by it turns the list into
+   the shortlist for the reminder button above it. */
+const SORTS: SortOption<UserProfile>[] = [
+  { value: "newest", label: "Newest first", compare: dateDesc((u) => u.createdAt) },
+  { value: "oldest", label: "Oldest first", compare: dateAsc((u) => u.createdAt) },
+  { value: "az", label: "Name A–Z", compare: textAsc((u) => u.name) },
+  { value: "za", label: "Name Z–A", compare: textDesc((u) => u.name) },
+  { value: "company", label: "Company A–Z", compare: textAsc((u) => u.company) },
+  {
+    value: "incomplete",
+    label: "Least complete",
+    compare: numberAsc((u) => profileCompletion(u).percent),
+  },
+];
 
 const STATUS_META: Record<
   StatusTab,
@@ -87,6 +105,7 @@ function RecruitersList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const [reminding, setReminding] = useState(false);
   const [reminderResult, setReminderResult] = useState<BulkReminderResult | null>(null);
@@ -157,7 +176,7 @@ function RecruitersList() {
 
   const shown = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return users.filter((u) => {
+    const matched = users.filter((u) => {
       if (status === "pending" && u.verified) return false;
       if (status === "verified" && !u.verified) return false;
       if (status === "suspended" && !u.suspended) return false;
@@ -167,14 +186,15 @@ function RecruitersList() {
         .toLowerCase()
         .includes(term);
     });
-  }, [users, q, status]);
+    return applySort(matched, SORTS, sort);
+  }, [users, q, status, sort]);
 
   // Any change to the search term or status filter invalidates the current
   // page — otherwise "page 3" could silently show nothing after narrowing
   // results. Adjusted during render (same pattern as the recruiter-facing
   // jobs board), not an effect: an effect would render page 3 of the new
   // results for one frame before snapping back to page 1.
-  const filterKey = `${status} ${q}`;
+  const filterKey = `${status} ${q} ${sort}`;
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey);
@@ -212,6 +232,7 @@ function RecruitersList() {
         >
           {reminding ? "Sending…" : `Remind ${incomplete} incomplete`}
         </button>
+        <SortSelect options={SORTS} value={sort} onChange={setSort} className="h-9" />
         <div className="relative w-full max-w-xs">
           <input
             value={q}

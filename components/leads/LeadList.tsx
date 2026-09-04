@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import type { SiteLead } from "@/lib/siteLeads";
 import { formatDate } from "@/lib/dates";
+import { SortSelect } from "@/components/SortSelect";
+import { applySort, textAsc, textDesc, dateDesc, dateAsc, type SortOption } from "@/lib/sorting";
 
 /* The list of microsite enquiries, shared by the admin console and the
    recruiter's own dashboard. The two differ only in whether the recruiter
@@ -15,6 +17,13 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "new", label: "Needs a reply" },
   { value: "handled", label: "Handled" },
   { value: "all", label: "All" },
+];
+
+const SORTS: SortOption<SiteLead>[] = [
+  { value: "newest", label: "Newest first", compare: dateDesc((l) => l.createdAt) },
+  { value: "oldest", label: "Oldest first", compare: dateAsc((l) => l.createdAt) },
+  { value: "az", label: "Name A–Z", compare: textAsc((l) => l.name) },
+  { value: "za", label: "Name Z–A", compare: textDesc((l) => l.name) },
 ];
 
 export function LeadList({
@@ -32,6 +41,7 @@ export function LeadList({
 }) {
   const [tab, setTab] = useState<Tab>("new");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState("newest");
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const counts = useMemo(
@@ -45,7 +55,7 @@ export function LeadList({
 
   const shown = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return leads.filter((l) => {
+    const matched = leads.filter((l) => {
       if (tab === "new" && l.handled) return false;
       if (tab === "handled" && !l.handled) return false;
       if (!term) return true;
@@ -54,7 +64,8 @@ export function LeadList({
         .toLowerCase()
         .includes(term);
     });
-  }, [leads, tab, q]);
+    return applySort(matched, SORTS, sort);
+  }, [leads, tab, q, sort]);
 
   async function toggle(lead: SiteLead) {
     setBusyId(lead.id);
@@ -89,6 +100,8 @@ export function LeadList({
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-2">
+        <SortSelect options={SORTS} value={sort} onChange={setSort} className="h-9" />
         <div className="relative w-full max-w-xs">
           <input
             value={q}
@@ -107,6 +120,7 @@ export function LeadList({
             <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8" />
             <path d="M14 14l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
+        </div>
         </div>
       </div>
 
