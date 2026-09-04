@@ -1007,6 +1007,24 @@ export async function getRecruiterSiteBySlug(slug: string): Promise<PublicRecrui
   };
 }
 
+/** Who owns the published site at this slug. Used by the microsite's lead
+    form, which knows the slug from the URL and nothing else — and which must
+    not accept a recruiter id from the client, or anyone could post leads
+    against any recruiter. Unpublished sites return null, so a lead can't be
+    filed against a site that isn't live. */
+export async function getPublishedSiteOwner(
+  slug: string,
+): Promise<{ uid: string; name: string; email: string } | null> {
+  const row = await queryOne<{ uid: string; name: string; email: string }>(
+    `SELECT u.uid, u.name, u.email
+       FROM recruiter_sites rs
+       JOIN users u ON u.uid = rs.recruiter_id
+      WHERE rs.slug = ? AND rs.published = TRUE`,
+    [slug],
+  );
+  return row ?? null;
+}
+
 export type RecruiterSiteWrite = {
   slug: string;
   template: string;
@@ -1139,6 +1157,119 @@ export async function listMessages(): Promise<ContactMessage[]> {
     is gone, so the caller can 404 rather than reporting a phantom success. */
 export async function setMessageHandled(id: number, handled: boolean): Promise<boolean> {
   const result = await execute("UPDATE messages SET handled = ? WHERE id = ?", [handled, id]);
+  return result.affectedRows > 0;
+}
+
+/* ------------------------------------------------------- recruiter leads */
+
+/* Enquiries captured by a recruiter's public microsite. Kept apart from
+   `messages` (the jobfolder.com contact form) because these belong to a
+   specific recruiter: they show on that recruiter's own dashboard as well as
+   in the admin console, and the notification goes to them, not to us. */
+
+export type SiteLead = {
+  id: number;
+  recruiterId: string;
+  /** Only set by the admin-facing read — the recruiter already knows who they are. */
+  recruiterName?: string;
+  recruiterEmail?: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  handled: boolean;
+  createdAt: string | null;
+};
+
+type SiteLeadRow = {
+  id: number;
+  recruiter_id: string;
+  recruiter_name?: string;
+  recruiter_email?: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string | null;
+  handled: number;
+  created_at: string | null;
+};
+
+function toSiteLead(r: SiteLeadRow): SiteLead {
+  return {
+    id: r.id,
+    recruiterId: r.recruiter_id,
+    ...(r.recruiter_name === undefined ? {} : { recruiterName: r.recruiter_name }),
+    ...(r.recruiter_email === undefined ? {} : { recruiterEmail: r.recruiter_email }),
+    name: r.name,
+    email: r.email,
+    phone: r.phone,
+    message: r.message ?? "",
+    handled: Boolean(r.handled),
+    createdAt: r.created_at,
+  };
+}
+
+export async function createSiteLead(input: {
+  recruiterId: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  ip: string | null;
+}): Promise<void> {
+  await execute(
+    `INSERT INTO site_leads (recruiter_id, name, email, phone, message, ip)
+     VALUES (?,?,?,?,?,?)`,
+    [input.recruiterId, input.name, input.email, input.phone, input.message, input.ip],
+  );
+}
+
+/** Same shape of backstop as the contact form: caps how often one IP can post
+    while the site form has no captcha of its own. */
+export async function countRecentSiteLeadsFromIp(ip: string, windowSeconds: number): Promise<number> {
+  const row = await queryOne<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM site_leads
+      WHERE ip = ? AND created_at > (NOW() - INTERVAL ? SECOND)`,
+    [ip, windowSeconds],
+  );
+  return row?.n ?? 0;
+}
+
+/** Admin: every lead, across all recruiters, with whose site caught it. */
+export async function listSiteLeads(): Promise<SiteLead[]> {
+  const rows = await query<SiteLeadRow>(
+    `SELECT l.id, l.recruiter_id, l.name, l.email, l.phone, l.message,
+            l.handled, l.created_at,
+            u.name AS recruiter_name, u.email AS recruiter_email
+       FROM site_leads l
+       JOIN users u ON u.uid = l.recruiter_id
+      ORDER BY l.created_at DESC`,
+  );
+  return rows.map(toSiteLead);
+}
+
+/** A recruiter's own leads. Scoped by uid in SQL, not filtered afterwards, so
+    a bad caller can't read someone else's. */
+export async function listSiteLeadsForRecruiter(uid: string): Promise<SiteLead[]> {
+  const rows = await query<SiteLeadRow>(
+    `SELECT id, recruiter_id, name, email, phone, message, handled, created_at
+       FROM site_leads WHERE recruiter_id = ? ORDER BY created_at DESC`,
+    [uid],
+  );
+  return rows.map(toSiteLead);
+}
+
+/** Tick a lead off. `uid` scopes the write to its owner; pass null for an
+    admin, who may update any of them. Returns false when nothing matched,
+    which covers both "gone" and "not yours". */
+export async function setSiteLeadHandled(
+  id: number,
+  handled: boolean,
+  uid: string | null,
+): Promise<boolean> {
+  const result = uid
+    ? await execute("UPDATE site_leads SET handled = ? WHERE id = ? AND recruiter_id = ?", [handled, id, uid])
+    : await execute("UPDATE site_leads SET handled = ? WHERE id = ?", [handled, id]);
   return result.affectedRows > 0;
 }
 

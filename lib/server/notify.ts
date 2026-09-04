@@ -120,3 +120,34 @@ export async function notifyProfileReminder(input: {
     },
   });
 }
+
+/** Someone contacted a recruiter through their microsite. Goes TO the
+    recruiter — they own the relationship, so the lead should reach them
+    directly rather than sitting in our console waiting to be forwarded.
+    Reply-to is the enquirer, so hitting "reply" answers them. */
+export async function notifySiteLead(input: {
+  recruiterName: string;
+  recruiterEmail: string;
+  lead: { name: string; email: string; phone: string; message: string };
+}): Promise<void> {
+  const { lead } = input;
+  const who = lead.name || lead.email;
+
+  await send({
+    to: { email: input.recruiterEmail, name: input.recruiterName || input.recruiterEmail },
+    subject: `New enquiry from your JobFolder site: ${who}`,
+    replyTo: { email: lead.email, name: lead.name || lead.email },
+    content: {
+      preheader: `${who} got in touch through your recruiter site.`,
+      greeting: `Hi ${input.recruiterName || "there"},`,
+      paragraphs: ["Someone used the contact form on your JobFolder recruiter site."],
+      fields: [
+        { label: "Name", value: lead.name || "(not given)" },
+        { label: "Email", value: lead.email },
+        ...(lead.phone ? [{ label: "Phone", value: lead.phone }] : []),
+      ],
+      quote: lead.message,
+      footerNote: "Reply to this email to answer them directly. This enquiry is also saved on your JobFolder dashboard.",
+    },
+  });
+}

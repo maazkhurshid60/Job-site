@@ -22,6 +22,11 @@ const navGroups = [
         icon: "M6 3h6l4 4v10H6zM12 3v4h4",
       },
       {
+        label: "Enquiries",
+        href: "/dashboard/leads",
+        icon: "M3 5h14v10H3zM3 5l7 5 7-5",
+      },
+      {
         label: "Career site",
         href: "/dashboard/career-site",
         icon: "M10 2a8 8 0 100 16 8 8 0 000-16zM2 10h16M10 2c2 2.2 3 5 3 8s-1 5.8-3 8c-2-2.2-3-5-3-8s1-5.8 3-8z",

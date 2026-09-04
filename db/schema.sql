@@ -363,6 +363,33 @@ CREATE TABLE recruiter_sites (
 -- ------------------------------------------------------------- messages
 
 -- Public contact-form enquiries. No FK: senders are anonymous visitors.
+-- Enquiries sent from a recruiter's public microsite at /sites/[slug].
+-- Distinct from `messages` (the jobfolder.com contact form): a site lead
+-- belongs to one recruiter, and both they and an admin can see it. Before
+-- this table the microsite's contact section was a mailto: link, so an
+-- enquiry left no record with anyone.
+CREATE TABLE site_leads (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  recruiter_id VARCHAR(128) NOT NULL,
+  name         VARCHAR(255) NOT NULL DEFAULT '',
+  email        VARCHAR(320) NOT NULL DEFAULT '',
+  phone        VARCHAR(64)  NOT NULL DEFAULT '',
+  message      MEDIUMTEXT,
+  -- Sender's IP, best-effort from the platform's forwarded-for header. Only
+  -- used server-side, to rate-limit repeat posts — never shown to anyone.
+  ip           VARCHAR(64)  NULL,
+  handled      BOOLEAN      NOT NULL DEFAULT FALSE,
+  created_at   DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  KEY idx_site_leads_recruiter (recruiter_id, created_at DESC),
+  KEY idx_site_leads_created (created_at DESC),
+  KEY idx_site_leads_ip_created (ip, created_at),
+  -- A lead belongs to the recruiter whose site captured it; there is no other
+  -- party it could sensibly belong to, so it goes when the account does.
+  CONSTRAINT fk_site_leads_recruiter FOREIGN KEY (recruiter_id)
+    REFERENCES users(uid) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE messages (
   id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name       VARCHAR(255) NOT NULL DEFAULT '',

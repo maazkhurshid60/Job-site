@@ -14,6 +14,7 @@ export const adminRoutes = {
   editJob: (id: string) => `${ADMIN_BASE}/jobs/${id}/edit`,
   submissions: `${ADMIN_BASE}/submissions`,
   messages: `${ADMIN_BASE}/messages`,
+  siteLeads: `${ADMIN_BASE}/site-leads`,
   recruiters: `${ADMIN_BASE}/recruiters`,
   categories: `${ADMIN_BASE}/categories`,
   admins: `${ADMIN_BASE}/admins`,
