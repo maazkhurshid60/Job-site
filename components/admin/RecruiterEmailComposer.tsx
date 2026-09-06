@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { sendRecruiterEmail } from "@/lib/users";
+import { listCustomTemplates } from "@/lib/messageTemplates";
 import {
   ADMIN_EMAIL_TEMPLATES,
-  adminEmailTemplate,
+  allTemplates,
   fillTemplate,
+  type CustomTemplate,
 } from "@/lib/adminEmailTemplates";
 
 /* Compose an email to one recruiter, sent from noreply@jobfolder.com on the
@@ -42,9 +45,26 @@ export function RecruiterEmailComposer({
   const [sendEmail, setSendEmail] = useState(true);
   const [sendNotify, setSendNotify] = useState(true);
 
+  /* Fetched only once the box is open. Most visits to a recruiter's page
+     never message them, and this is a settings read that shouldn't happen on
+     every page load. A failure is silent: the built-ins still work, and an
+     error banner about templates would be noise over a message the admin can
+     still write by hand. */
+  const [custom, setCustom] = useState<CustomTemplate[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    listCustomTemplates().then(setCustom).catch(() => {});
+  }, [open]);
+
+  const templates = useMemo(() => allTemplates(custom), [custom]);
+  const template = useMemo(
+    () => templates.find((t) => t.id === templateId) ?? null,
+    [templates, templateId],
+  );
+
   function pickTemplate(id: string) {
     setTemplateId(id);
-    const t = adminEmailTemplate(id);
+    const t = templates.find((x) => x.id === id);
     if (!t) return;
     /* Overwrites whatever is in the box. Switching template is an explicit
        act, and silently merging the two would produce a message that is
@@ -92,8 +112,6 @@ export function RecruiterEmailComposer({
     );
   }
 
-  const cta = adminEmailTemplate(templateId)?.cta;
-
   return (
     <div className="mt-3 w-full rounded-xl border border-line bg-cream/40 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -118,14 +136,23 @@ export function RecruiterEmailComposer({
           onChange={(e) => pickTemplate(e.target.value)}
           className="input mt-1 h-9 text-sm"
         >
-          {ADMIN_EMAIL_TEMPLATES.map((t) => (
+          {templates.map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
+              {ADMIN_EMAIL_TEMPLATES.some((b) => b.id === t.id) ? "" : " (yours)"}
             </option>
           ))}
         </select>
       </label>
-      <p className="mt-1 text-[11px] text-muted">{adminEmailTemplate(templateId)?.hint}</p>
+      <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-muted">
+        <span>{template?.hint}</span>
+        <Link
+          href="/console-4h9k2xqf/templates"
+          className="font-semibold text-primary hover:underline"
+        >
+          Manage templates
+        </Link>
+      </p>
 
       <input
         value={subject}
@@ -175,7 +202,7 @@ export function RecruiterEmailComposer({
           </>
         )}
         {sendNotify && <>The dashboard alert stays in their account and records when it&rsquo;s read.{" "}</>}
-        {cta ? `Includes a "${cta.label}" link.` : ""}
+        {template?.cta ? `Includes a "${template.cta.label}" link.` : ""}
       </p>
 
       {error && <p className="mt-2 text-xs text-coral">{error}</p>}

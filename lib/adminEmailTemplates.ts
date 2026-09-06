@@ -92,3 +92,76 @@ export function fillTemplate(text: string, recruiterName: string): string {
   const first = recruiterName.trim().split(/\s+/)[0] || "there";
   return text.replace(/\{name\}/g, first);
 }
+
+/* ------------------------------------------------- admin-authored templates */
+
+/* Where a template's button may point.
+ *
+ * A fixed allowlist rather than a free URL field. These land in emails and in
+ * dashboard alerts, so an arbitrary destination would make every template an
+ * open redirect off the platform — and a typo'd path a dead end for whoever
+ * clicks it. Every entry here is a real page in the recruiter's dashboard. */
+export const CTA_DESTINATIONS = [
+  { path: "", label: "No button" },
+  { path: "/dashboard/profile", label: "Their profile" },
+  { path: "/dashboard/jobs", label: "Open roles" },
+  { path: "/dashboard/submissions", label: "Their candidates" },
+  { path: "/dashboard/career-site", label: "Their career site" },
+  { path: "/dashboard/leads", label: "Their site enquiries" },
+  { path: "/dashboard/notifications", label: "Their alerts" },
+] as const;
+
+export function isAllowedCtaPath(path: string): boolean {
+  return CTA_DESTINATIONS.some((d) => d.path === path);
+}
+
+/** Templates an admin wrote in the console, stored as JSON in `settings`. */
+export type CustomTemplate = {
+  id: string;
+  label: string;
+  hint: string;
+  subject: string;
+  body: string;
+  /** "" means no button. Always one of CTA_DESTINATIONS. */
+  ctaPath: string;
+};
+
+export const TEMPLATE_LIMITS = {
+  label: 60,
+  hint: 120,
+  subject: 255,
+  body: 20000,
+  /** Enough for any realistic workflow; stops the settings row growing without bound. */
+  count: 40,
+} as const;
+
+/* Built-ins first, then the admin's own.
+ *
+ * Built-ins aren't editable or deletable on purpose: they're the ones the
+ * product references elsewhere ("send them the verification-video template"),
+ * and a half-deleted set is worse than a fixed one. Anything an admin wants
+ * to change, they add alongside. */
+export function allTemplates(custom: CustomTemplate[]): AdminEmailTemplate[] {
+  return [
+    ...ADMIN_EMAIL_TEMPLATES,
+    ...custom.map((t) => ({
+      id: t.id,
+      label: t.label,
+      hint: t.hint,
+      subject: t.subject,
+      body: t.body,
+      ...(t.ctaPath && isAllowedCtaPath(t.ctaPath)
+        ? {
+            cta: {
+              label: CTA_DESTINATIONS.find((d) => d.path === t.ctaPath)?.label ?? "Open",
+              path: t.ctaPath,
+            },
+          }
+        : {}),
+    })),
+  ];
+}
+
+export function findTemplate(id: string, custom: CustomTemplate[]): AdminEmailTemplate | null {
+  return allTemplates(custom).find((t) => t.id === id) ?? null;
+}

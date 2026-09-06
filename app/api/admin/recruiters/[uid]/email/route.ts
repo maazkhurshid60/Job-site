@@ -1,8 +1,8 @@
 import { handle, ok, jsonBody, str, bool, NotFound, BadRequest } from "@/lib/server/respond";
-import { getUserProfile, logAdminAction, createNotification } from "@/lib/server/repo";
+import { getUserProfile, logAdminAction, createNotification, getSetting } from "@/lib/server/repo";
 import { requireAdminIdentity } from "@/lib/server/auth";
 import { notifyAdminMessage } from "@/lib/server/notify";
-import { adminEmailTemplate, fillTemplate } from "@/lib/adminEmailTemplates";
+import { findTemplate, fillTemplate, type CustomTemplate } from "@/lib/adminEmailTemplates";
 import { SITE_URL } from "@/lib/seo";
 
 export const runtime = "nodejs";
@@ -47,7 +47,12 @@ export function POST(req: Request, { params }: { params: Promise<{ uid: string }
     // Unknown ids are ignored rather than rejected: the CTA is the only thing
     // the template still controls at this point, and a missing one is not a
     // reason to refuse an email the admin has already written.
-    const template = adminEmailTemplate(str(body.templateId, "templateId", { max: 64 }));
+    /* Built-ins plus whatever the admin has written in the console. Only the
+       button is read from the template — the subject and body arrive edited
+       from the compose box, so a stale template can't override what the
+       admin actually typed. */
+    const custom = await getSetting<CustomTemplate[]>("admin_message_templates", []);
+    const template = findTemplate(str(body.templateId, "templateId", { max: 64 }), custom);
 
     /* The notification is written first. It's the durable half — if Brevo is
        down, the recruiter still gets the message where they'll see it, and

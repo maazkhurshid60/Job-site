@@ -15,6 +15,7 @@ export const adminRoutes = {
   submissions: `${ADMIN_BASE}/submissions`,
   messages: `${ADMIN_BASE}/messages`,
   siteLeads: `${ADMIN_BASE}/site-leads`,
+  templates: `${ADMIN_BASE}/templates`,
   recruiters: `${ADMIN_BASE}/recruiters`,
   categories: `${ADMIN_BASE}/categories`,
   admins: `${ADMIN_BASE}/admins`,

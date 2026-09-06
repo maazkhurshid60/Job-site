@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { listOpenJobs } from "@/lib/jobs";
+import { listMyNotifications } from "@/lib/notifications";
 import { profileCompletion } from "@/lib/profileCompletion";
 import { getMySite, type RecruiterSite } from "@/lib/recruiterSite";
 
@@ -77,12 +78,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
      there's no work, which is the one wrong thing it could say. */
   const [openJobs, setOpenJobs] = useState<number | null>(null);
   const [mySite, setMySite] = useState<RecruiterSite | null>(null);
+  /* Unread alerts. An alert nobody notices is just a row in a table, so the
+     count is the whole point of having sent one. */
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
 
   useEffect(() => {
     let active = true;
     listOpenJobs()
       .then((jobs) => active && setOpenJobs(jobs.length))
       .catch(() => {}); // a missing badge is fine; a broken sidebar is not
+    listMyNotifications()
+      .then((feed) => active && setUnreadAlerts(feed.unread))
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -105,6 +112,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   function badgeFor(href: string): string | null {
     if (href === "/dashboard/jobs") return openJobs === null ? null : String(openJobs);
+    if (href === "/dashboard/notifications") return unreadAlerts ? String(unreadAlerts) : null;
     if (href === "/dashboard/profile" && !completion.isComplete)
       return `${completion.percent}%`;
     return null;
