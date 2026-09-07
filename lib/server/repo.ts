@@ -1125,6 +1125,9 @@ export type ContactMessage = {
   subject: string;
   message: string;
   handled: boolean;
+  /** Parked by an admin: out of both working lists, nothing deleted. Wakes
+      by itself when the sender replies. */
+  sleeping: boolean;
   /** Set when a signed-in user sent it; null for an anonymous visitor. */
   senderUid: string | null;
   /** Admin answers, oldest first. Empty on reads that don't need the thread. */
@@ -1169,11 +1172,12 @@ type MessageRow = {
   subject: string;
   message: string | null;
   handled: number;
+  sleeping: number;
   sender_uid: string | null;
   created_at: string | null;
 };
 
-const MESSAGE_COLUMNS = `id, name, email, subject, message, handled, sender_uid, created_at`;
+const MESSAGE_COLUMNS = `id, name, email, subject, message, handled, sleeping, sender_uid, created_at`;
 
 /* Threads are loaded in one extra query for the whole page rather than one
    per message — a reply-per-enquiry loop is the classic N+1, and this list
@@ -1216,6 +1220,7 @@ async function withReplies(rows: MessageRow[]): Promise<ContactMessage[]> {
     subject: r.subject,
     message: r.message ?? "",
     handled: Boolean(r.handled),
+    sleeping: Boolean(r.sleeping),
     senderUid: r.sender_uid,
     replies: byMessage.get(r.id) ?? [],
     createdAt: r.created_at,
@@ -1238,6 +1243,19 @@ export async function listMessagesFromSender(uid: string): Promise<ContactMessag
     [uid],
   );
   return withReplies(rows);
+}
+
+/* One enquiry with its whole thread, for the console's detail page.
+   Goes through the same withReplies() as the list so a thread can't render
+   differently depending on which page you opened it from. */
+export async function getMessage(id: number): Promise<ContactMessage | null> {
+  const rows = await query<MessageRow>(
+    `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE id = ?`,
+    [id],
+  );
+  if (rows.length === 0) return null;
+  const [message] = await withReplies(rows);
+  return message ?? null;
 }
 
 /** The enquirer's address, for sending them the reply. Null when the
@@ -1329,13 +1347,28 @@ export async function addInboundReply(input: {
      VALUES (?, NULL, ?, ?, ?, 'in')`,
     [input.messageId, input.fromName || input.fromEmail, input.fromEmail, input.body],
   );
-  await execute("UPDATE messages SET handled = FALSE WHERE id = ?", [input.messageId]);
+  /* Wakes it too. Someone parked this thread on the understanding that
+     nothing was happening on it — that stopped being true the moment they
+     wrote back, and a reply that stayed asleep would be a reply nobody
+     ever sees. */
+  await execute(
+    "UPDATE messages SET handled = FALSE, sleeping = FALSE WHERE id = ?",
+    [input.messageId],
+  );
 }
 
 /** Mark an enquiry as dealt with, or reopen it. Returns false when the row
     is gone, so the caller can 404 rather than reporting a phantom success. */
 export async function setMessageHandled(id: number, handled: boolean): Promise<boolean> {
   const result = await execute("UPDATE messages SET handled = ? WHERE id = ?", [handled, id]);
+  return result.affectedRows > 0;
+}
+
+/** Park an enquiry, or bring it back. Nothing is deleted: the row and every
+    reply on it stay exactly as they were, and the sender's own copy at
+    /dashboard/enquiries is untouched — sleeping is our filing, not theirs. */
+export async function setMessageSleeping(id: number, sleeping: boolean): Promise<boolean> {
+  const result = await execute("UPDATE messages SET sleeping = ? WHERE id = ?", [sleeping, id]);
   return result.affectedRows > 0;
 }
 

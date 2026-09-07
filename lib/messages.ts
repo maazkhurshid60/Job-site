@@ -15,6 +15,9 @@ export type ContactMessage = {
   subject: string;
   message: string;
   handled: boolean;
+  /** Parked by an admin: out of both working lists, nothing deleted. Wakes
+      by itself when the sender replies. */
+  sleeping: boolean;
   /** Set when a signed-in user sent it; null for an anonymous visitor. */
   senderUid: string | null;
   /** Our answers, oldest first. */
@@ -43,9 +46,20 @@ export function listMessages(): Promise<ContactMessage[]> {
   return apiFetch<ContactMessage[]>("/api/messages", { auth: true });
 }
 
+/** Admin: read one enquiry and its whole thread. */
+export function getMessage(id: number): Promise<ContactMessage> {
+  return apiFetch<ContactMessage>(`/api/messages/${id}`, { auth: true });
+}
+
 /** Admin: tick an enquiry off as dealt with, or put it back in the pile. */
 export async function setMessageHandled(id: number, handled: boolean): Promise<void> {
   await apiFetch(`/api/messages/${id}`, { method: "PATCH", body: { handled }, auth: true });
+}
+
+/** Admin: park an enquiry, or bring it back. Nothing is deleted — the thread
+    and the sender's own copy of it are untouched. */
+export async function setMessageSleeping(id: number, sleeping: boolean): Promise<void> {
+  await apiFetch(`/api/messages/${id}`, { method: "PATCH", body: { sleeping }, auth: true });
 }
 
 /** Admin: answer an enquiry from inside JobFolder. Also marks it handled.

@@ -1,9 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listMessages, setMessageHandled, replyToMessage, type ContactMessage } from "@/lib/messages";
+import Link from "next/link";
+import {
+  listMessages, setMessageHandled, setMessageSleeping, replyToMessage, type ContactMessage,
+} from "@/lib/messages";
 import { Loader } from "@/components/Loader";
 import { LoadError, errorMessage } from "@/components/admin/LoadError";
+import { ReplyBox } from "@/components/admin/ReplyBox";
+import { adminRoutes } from "@/lib/routes";
 import { formatDate } from "@/lib/dates";
 import { SortSelect } from "@/components/SortSelect";
 import { applySort, textAsc, textDesc, dateDesc, dateAsc, type SortOption } from "@/lib/sorting";
@@ -20,11 +25,15 @@ import { applySort, textAsc, textDesc, dateDesc, dateAsc, type SortOption } from
  * the notification email worked or not.
  */
 
-type Tab = "new" | "handled" | "all";
+type Tab = "new" | "handled" | "sleeping" | "all";
 
+/* Sleeping is its own tab rather than a filter on the other two: the whole
+   point of parking a thread is that it leaves the working lists, so it has
+   to be somewhere you only look when you go looking. */
 const TABS: { value: Tab; label: string }[] = [
   { value: "new", label: "Needs a reply" },
   { value: "handled", label: "Handled" },
+  { value: "sleeping", label: "Sleeping" },
   { value: "all", label: "All" },
 ];
 
@@ -61,8 +70,9 @@ export default function AdminMessagesPage() {
 
   const counts = useMemo(
     () => ({
-      new: messages.filter((m) => !m.handled).length,
-      handled: messages.filter((m) => m.handled).length,
+      new: messages.filter((m) => !m.handled && !m.sleeping).length,
+      handled: messages.filter((m) => m.handled && !m.sleeping).length,
+      sleeping: messages.filter((m) => m.sleeping).length,
       all: messages.length,
     }),
     [messages],
@@ -71,8 +81,9 @@ export default function AdminMessagesPage() {
   const shown = useMemo(() => {
     const term = q.trim().toLowerCase();
     const matched = messages.filter((m) => {
-      if (tab === "new" && m.handled) return false;
-      if (tab === "handled" && !m.handled) return false;
+      if (tab === "new" && (m.handled || m.sleeping)) return false;
+      if (tab === "handled" && (!m.handled || m.sleeping)) return false;
+      if (tab === "sleeping" && !m.sleeping) return false;
       if (!term) return true;
       return [m.name, m.email, m.subject, m.message].join(" ").toLowerCase().includes(term);
     });
@@ -89,6 +100,23 @@ export default function AdminMessagesPage() {
       await setMessageHandled(m.id, next);
     } catch (err) {
       setMessages((list) => list.map((x) => (x.id === m.id ? { ...x, handled: !next } : x)));
+      setError(errorMessage(err, "Could not update that enquiry."));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  /* Park a thread, or bring it back. Nothing is deleted — the row, its
+     replies and the sender's own copy at /dashboard/enquiries all stay, and
+     an inbound reply wakes it by itself (see addInboundReply). */
+  async function toggleSleeping(m: ContactMessage) {
+    const next = !m.sleeping;
+    setMessages((list) => list.map((x) => (x.id === m.id ? { ...x, sleeping: next } : x)));
+    setBusyId(m.id);
+    try {
+      await setMessageSleeping(m.id, next);
+    } catch (err) {
+      setMessages((list) => list.map((x) => (x.id === m.id ? { ...x, sleeping: !next } : x)));
       setError(errorMessage(err, "Could not update that enquiry."));
     } finally {
       setBusyId(null);
@@ -201,14 +229,17 @@ export default function AdminMessagesPage() {
             <li
               key={m.id}
               className={`rounded-xl border bg-white p-4 transition-colors ${
-                m.handled ? "border-line" : "border-primary/30"
+                m.sleeping ? "border-line opacity-70" : m.handled ? "border-line" : "border-primary/30"
               }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[15px] font-semibold text-ink">
+                  <Link
+                    href={adminRoutes.message(m.id)}
+                    className="block truncate text-[15px] font-semibold text-ink transition-colors hover:text-primary"
+                  >
                     {m.subject || "(no subject)"}
-                  </p>
+                  </Link>
                   <p className="mt-0.5 truncate text-xs text-muted">
                     {m.name || "(no name)"}
                     {" · "}
@@ -220,11 +251,22 @@ export default function AdminMessagesPage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {!m.handled && (
+                  {m.sleeping && (
+                    <span className="rounded-pill bg-cream px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">
+                      Asleep
+                    </span>
+                  )}
+                  {!m.handled && !m.sleeping && (
                     <span className="rounded-pill bg-primary-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
                       New
                     </span>
                   )}
+                  <Link
+                    href={adminRoutes.message(m.id)}
+                    className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-primary hover:text-primary"
+                  >
+                    Open
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setReplyingId(replyingId === m.id ? null : m.id)}
@@ -243,6 +285,14 @@ export default function AdminMessagesPage() {
                     }`}
                   >
                     {m.handled ? "Reopen" : "Mark handled"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleSleeping(m)}
+                    disabled={busyId === m.id}
+                    className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:border-ink/25 hover:text-ink disabled:opacity-50"
+                  >
+                    {m.sleeping ? "Wake" : "Sleep"}
                   </button>
                 </div>
               </div>
@@ -287,73 +337,17 @@ export default function AdminMessagesPage() {
               )}
 
               {replyingId === m.id && (
-                <ReplyBox
-                  onCancel={() => setReplyingId(null)}
-                  onSend={(text) => sendReply(m, text)}
-                />
+                <div className="mt-3 border-t border-line pt-3">
+                  <ReplyBox
+                    onCancel={() => setReplyingId(null)}
+                    onSend={(text) => sendReply(m, text)}
+                  />
+                </div>
               )}
             </li>
           ))}
         </ul>
       )}
-    </div>
-  );
-}
-
-/* Compose box for one enquiry. Local state so typing doesn't re-render the
-   whole list, and the send button is disabled on an empty message — an
-   accidental blank reply still emails the sender. */
-function ReplyBox({
-  onSend,
-  onCancel,
-}: {
-  onSend: (text: string) => Promise<void>;
-  onCancel: () => void;
-}) {
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit() {
-    if (!text.trim() || sending) return;
-    setSending(true);
-    setError(null);
-    try {
-      await onSend(text.trim());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send that reply.");
-      setSending(false);
-    }
-  }
-
-  return (
-    <div className="mt-3 border-t border-line pt-3">
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        autoFocus
-        placeholder="Write your reply — it's emailed to them and kept on this thread."
-        className="input min-h-28 resize-y text-sm"
-      />
-      {error && <p className="mt-2 text-sm text-coral">{error}</p>}
-      <div className="mt-2 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={sending || !text.trim()}
-          className="rounded-pill bg-primary px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {sending ? "Sending…" : "Send reply"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={sending}
-          className="rounded-pill border border-line px-4 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-ink/25"
-        >
-          Cancel
-        </button>
-      </div>
     </div>
   );
 }

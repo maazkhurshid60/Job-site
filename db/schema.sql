@@ -444,6 +444,12 @@ CREATE TABLE messages (
   -- used server-side, to rate-limit repeat posts — never shown to anyone.
   ip         VARCHAR(64)  NULL,
   handled    BOOLEAN      NOT NULL DEFAULT FALSE,
+  -- Parked, not deleted. A thread nobody should be looking at right now
+  -- leaves both working lists but keeps every reply on it, and wakes by
+  -- itself when the sender writes back (see addInboundReply). Separate from
+  -- `handled` because the two answer different questions: "have we replied?"
+  -- and "are we looking at this now?" — a thread can be both.
+  sleeping   BOOLEAN      NOT NULL DEFAULT FALSE,
   created_at DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   KEY idx_messages_created (created_at DESC),
