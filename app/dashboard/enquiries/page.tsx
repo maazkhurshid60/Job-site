@@ -94,9 +94,22 @@ export default function MyEnquiriesPage() {
               )}
 
               {m.replies.map((r) => (
-                <div key={r.id} className="mt-3 rounded-lg bg-primary-soft/50 p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-                    {r.adminName || "JobFolder"} replied · {formatDate(r.createdAt)}
+                <div
+                  key={r.id}
+                  className={
+                    r.direction === "in"
+                      ? "mt-3 rounded-lg border border-line bg-cream/50 p-3"
+                      : "mt-3 rounded-lg bg-primary-soft/50 p-3"
+                  }
+                >
+                  <p
+                    className={`text-[11px] font-semibold uppercase tracking-wide ${
+                      r.direction === "in" ? "text-muted" : "text-primary"
+                    }`}
+                  >
+                    {r.direction === "in" ? "You replied" : `${r.adminName || "JobFolder"} replied`}
+                    {" · "}
+                    {formatDate(r.createdAt)}
                   </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">
                     {r.body}

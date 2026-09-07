@@ -161,10 +161,18 @@ export async function notifyEnquiryReply(input: {
   subject: string;
   body: string;
   fromName: string;
+  /* Per-thread address, so their reply comes back into the thread instead of
+     dying in a shared mailbox. Undefined when no inbound domain is
+     configured, which falls back to the old shared reply-to — the email still
+     sends, it just can't be threaded. */
+  replyToAddress?: string;
 }): Promise<void> {
   await send({
     to: { email: input.toEmail, name: input.toName || input.toEmail },
     subject: `Re: ${input.subject || "your enquiry"}`,
+    ...(input.replyToAddress
+      ? { replyTo: { email: input.replyToAddress, name: "JobFolder" } }
+      : {}),
     content: {
       preheader: `${input.fromName || "JobFolder"} replied to your enquiry.`,
       greeting: `Hi ${input.toName || "there"},`,

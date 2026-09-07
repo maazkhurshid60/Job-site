@@ -257,10 +257,28 @@ export default function AdminMessagesPage() {
 
               {m.replies.length > 0 && (
                 <div className="mt-3 space-y-3 border-t border-line pt-3">
+                  {/* Ours sit indented and tinted; theirs stay flush left
+                      against a neutral ground, so the direction of a thread
+                      is readable at a glance rather than by reading names. */}
                   {m.replies.map((r) => (
-                    <div key={r.id} className="rounded-lg bg-primary-soft/50 p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-                        {r.adminName || "JobFolder"} replied · {formatDate(r.createdAt)}
+                    <div
+                      key={r.id}
+                      className={
+                        r.direction === "in"
+                          ? "rounded-lg border border-line bg-cream/50 p-3"
+                          : "ml-6 rounded-lg bg-primary-soft/50 p-3"
+                      }
+                    >
+                      <p
+                        className={`text-[11px] font-semibold uppercase tracking-wide ${
+                          r.direction === "in" ? "text-muted" : "text-primary"
+                        }`}
+                      >
+                        {r.direction === "in"
+                          ? `${r.adminName || "They"} replied`
+                          : `${r.adminName || "JobFolder"} replied`}
+                        {" · "}
+                        {formatDate(r.createdAt)}
                       </p>
                       <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">{r.body}</p>
                     </div>

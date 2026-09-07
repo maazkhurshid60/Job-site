@@ -1107,11 +1107,14 @@ export async function upsertRecruiterSite(
 
 /* -------------------------------------------------------------- messages */
 
-/** One admin answer on an enquiry thread. */
+/** One message on an enquiry thread, in either direction. */
 export type EnquiryReply = {
   id: number;
+  /** Who wrote it — an admin's name outbound, the enquirer's inbound. */
   adminName: string;
   body: string;
+  /** "out" = we sent it. "in" = they replied to it by email. */
+  direction: "out" | "in";
   createdAt: string | null;
 };
 
@@ -1184,9 +1187,10 @@ async function withReplies(rows: MessageRow[]): Promise<ContactMessage[]> {
       message_id: number;
       admin_name: string;
       body: string;
+      direction: string;
       created_at: string | null;
     }>(
-      `SELECT id, message_id, admin_name, body, created_at
+      `SELECT id, message_id, admin_name, body, direction, created_at
          FROM message_replies
         WHERE message_id IN (${ids.map(() => "?").join(",")})
         ORDER BY created_at ASC`,
@@ -1194,7 +1198,13 @@ async function withReplies(rows: MessageRow[]): Promise<ContactMessage[]> {
     );
     for (const r of replies) {
       const list = byMessage.get(r.message_id) ?? [];
-      list.push({ id: r.id, adminName: r.admin_name, body: r.body, createdAt: r.created_at });
+      list.push({
+        id: r.id,
+        adminName: r.admin_name,
+        body: r.body,
+        direction: r.direction === "in" ? "in" : "out",
+        createdAt: r.created_at,
+      });
       byMessage.set(r.message_id, list);
     }
   }
@@ -1255,11 +1265,71 @@ export async function addMessageReply(input: {
   body: string;
 }): Promise<void> {
   await execute(
-    `INSERT INTO message_replies (message_id, admin_uid, admin_name, admin_email, body)
-     VALUES (?,?,?,?,?)`,
+    `INSERT INTO message_replies (message_id, admin_uid, admin_name, admin_email, body, direction)
+     VALUES (?,?,?,?,?,'out')`,
     [input.messageId, input.adminUid, input.adminName, input.adminEmail, input.body],
   );
   await execute("UPDATE messages SET handled = TRUE WHERE id = ?", [input.messageId]);
+}
+
+/** The addressing secret for a thread, used to build its reply-to address. */
+export async function getMessageReplyToken(id: number): Promise<string | null> {
+  const row = await queryOne<{ reply_token: string }>(
+    "SELECT reply_token FROM messages WHERE id = ?",
+    [id],
+  );
+  return row?.reply_token || null;
+}
+
+/* Finds the thread an inbound email belongs to.
+ *
+ * Both the id and the token must match. Anyone can email the inbound
+ * address, so matching on the id alone would let someone walk sequential
+ * numbers and post into other people's conversations. */
+export async function findMessageByReplyToken(
+  id: number,
+  token: string,
+): Promise<{ id: number; email: string; name: string } | null> {
+  if (!token) return null;
+  const row = await queryOne<{ id: number; email: string; name: string }>(
+    "SELECT id, email, name FROM messages WHERE id = ? AND reply_token = ?",
+    [id, token],
+  );
+  return row ?? null;
+}
+
+/* Fallback for a mail client that dropped our addressed reply-to and
+   answered the plain address instead — common enough to be worth handling.
+   Matches the sender's most recent thread. Ambiguous if they have several,
+   which is why it's the fallback and not the primary route. */
+export async function findLatestMessageFromSender(
+  email: string,
+): Promise<{ id: number; email: string; name: string } | null> {
+  const row = await queryOne<{ id: number; email: string; name: string }>(
+    "SELECT id, email, name FROM messages WHERE email = ? ORDER BY created_at DESC LIMIT 1",
+    [email],
+  );
+  return row ?? null;
+}
+
+/* Records a reply that came back by email.
+ *
+ * Reopens the thread: someone has answered and is waiting, so it belongs in
+ * "Needs a reply" again rather than staying ticked off from the last time an
+ * admin wrote. That reopening is the whole point of the feature — without
+ * it, an answered thread stays invisible. */
+export async function addInboundReply(input: {
+  messageId: number;
+  fromName: string;
+  fromEmail: string;
+  body: string;
+}): Promise<void> {
+  await execute(
+    `INSERT INTO message_replies (message_id, admin_uid, admin_name, admin_email, body, direction)
+     VALUES (?, NULL, ?, ?, ?, 'in')`,
+    [input.messageId, input.fromName || input.fromEmail, input.fromEmail, input.body],
+  );
+  await execute("UPDATE messages SET handled = FALSE WHERE id = ?", [input.messageId]);
 }
 
 /** Mark an enquiry as dealt with, or reopen it. Returns false when the row

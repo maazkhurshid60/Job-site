@@ -25,8 +25,11 @@ export type ContactMessage = {
 
 export type EnquiryReply = {
   id: number;
+  /** An admin's name outbound; the enquirer's inbound. */
   adminName: string;
   body: string;
+  /** "out" = we sent it. "in" = they replied by email. */
+  direction: "out" | "in";
   createdAt: string | null;
 };
 

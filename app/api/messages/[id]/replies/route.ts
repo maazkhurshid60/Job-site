@@ -1,5 +1,6 @@
 import { handle, ok, jsonBody, str, BadRequest, NotFound } from "@/lib/server/respond";
-import { addMessageReply, getMessageRecipient } from "@/lib/server/repo";
+import { addMessageReply, getMessageRecipient, getMessageReplyToken } from "@/lib/server/repo";
+import { threadReplyAddress } from "@/lib/server/inboundAddress";
 import { requireAdminIdentity } from "@/lib/server/auth";
 import { notifyEnquiryReply } from "@/lib/server/notify";
 
@@ -46,12 +47,14 @@ export function POST(req: Request, { params }: { params: Promise<{ id: string }>
        their dashboard if they have an account. */
     let emailed = true;
     try {
+      const token = await getMessageReplyToken(messageId);
       await notifyEnquiryReply({
         toName: recipient.name,
         toEmail: recipient.email,
         subject: recipient.subject,
         body: text,
         fromName: actor.name,
+        ...(token ? { replyToAddress: threadReplyAddress(messageId, token) ?? undefined } : {}),
       });
     } catch (err) {
       console.error("[enquiry-reply] notification email failed:", err);
