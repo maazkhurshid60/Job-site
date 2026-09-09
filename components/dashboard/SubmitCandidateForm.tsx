@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WORK_AUTHORIZATION } from "@/lib/workAuthorization";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -19,6 +20,7 @@ type CandidateDraft = {
   candidateEmail: string;
   candidatePhone: string;
   candidateLinkedin: string;
+  workAuthorization: string;
   notes: string;
   cv: File | null;
   photo: File | null;
@@ -27,7 +29,7 @@ type CandidateDraft = {
 function emptyDraft(): CandidateDraft {
   return {
     candidateName: "", candidateEmail: "", candidatePhone: "", candidateLinkedin: "",
-    notes: "", cv: null, photo: null,
+    workAuthorization: "", notes: "", cv: null, photo: null,
   };
 }
 
@@ -124,6 +126,9 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
     if (!d.candidateName.trim()) return "Candidate name is required.";
     if (!d.candidateEmail.trim()) return "Candidate email is required.";
     if (!d.candidatePhone.trim()) return "Candidate phone is required.";
+    /* Asked here rather than later because it can make the whole submission
+       moot: a role that cannot sponsor is a no regardless of the CV. */
+    if (!d.workAuthorization) return "Please select the candidate's work authorisation.";
     return null;
   }
 
@@ -539,6 +544,27 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
                   placeholder="+44 7700 900000"
                 />
               </Field>
+              <Field label="Right to work in the US" className="sm:col-span-2">
+                <select
+                  className="input"
+                  required
+                  value={draft.workAuthorization}
+                  onChange={(e) => updateDraft({ workAuthorization: e.target.value })}
+                >
+                  <option value="" disabled>
+                    Select the candidate&rsquo;s status
+                  </option>
+                  {WORK_AUTHORIZATION.map((o) => (
+                    <option key={o.code} value={o.code}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-xs text-muted">
+                  Many roles cannot sponsor. Getting this wrong costs the candidate
+                  an interview and you a placement, so ask rather than assume.
+                </p>
+              </Field>
             </div>
 
             {error && (
@@ -650,6 +676,13 @@ export function SubmitCandidateForm({ job }: { job: Job }) {
                   <ReviewRow label="Full name" value={draft.candidateName} />
                   <ReviewRow label="Email address" value={draft.candidateEmail} />
                   <ReviewRow label="Phone number" value={draft.candidatePhone} />
+                  <ReviewRow
+                    label="Right to work"
+                    value={
+                      WORK_AUTHORIZATION.find((o) => o.code === draft.workAuthorization)?.label ??
+                      "No answer"
+                    }
+                  />
                 </dl>
               </div>
               <div className="p-4">

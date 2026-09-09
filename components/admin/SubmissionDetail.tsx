@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/dates";
 import { CvPreview } from "./CvPreview";
 import { SocialLinkList } from "@/components/SocialLinks";
 import { MessageThread } from "@/components/dashboard/MessageThread";
+import { workAuthorizationLabel } from "@/lib/workAuthorization";
 
 /* Full detail for one submission: the candidate, the CV itself, and the
    recruiter who referred them — the three things needed to screen someone
@@ -132,6 +133,9 @@ export function SubmissionDetail({
               <Row label="Name" value={s.candidateName} />
               <Row label="Email" value={s.candidateEmail} href={`mailto:${s.candidateEmail}`} />
               <Row label="Phone" value={s.candidatePhone} href={`tel:${s.candidatePhone}`} />
+              {/* Directly under the contact details, because it is the first
+                  thing that decides whether the rest of the CV matters. */}
+              <Row label="Right to work" value={workAuthorizationLabel(s.workAuthorization)} />
               {s.candidateLinkedin && (
                 <Row label="LinkedIn" value={s.candidateLinkedin} href={s.candidateLinkedin} external />
               )}

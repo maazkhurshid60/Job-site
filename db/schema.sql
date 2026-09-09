@@ -243,6 +243,10 @@ CREATE TABLE submissions (
   -- sensitive the way a CV is, and it needs to work in a plain <img> tag.
   candidate_linkedin VARCHAR(512)  NOT NULL DEFAULT '',
   candidate_photo_url VARCHAR(1024) NOT NULL DEFAULT '',
+  -- Right to work in the US. Codes from lib/workAuthorization.ts. '' means
+  -- the submission predates this field, which is NOT the same as the
+  -- candidate declining to answer ('prefer_not_to_say').
+  work_authorization VARCHAR(48) NOT NULL DEFAULT '',
   notes           MEDIUMTEXT,
   -- The CV itself lives in `files`. RESTRICT, not CASCADE: deleting a CV row
   -- out from under a live submission would silently destroy the only copy of

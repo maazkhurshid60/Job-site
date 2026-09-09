@@ -6,6 +6,7 @@ import {
   cvFileIsAvailable, getCandidate, cloneFile,
 } from "@/lib/server/repo";
 import { requireUid, requireVerifiedUid, isAdmin, AuthError } from "@/lib/server/auth";
+import { isWorkAuthorization } from "@/lib/workAuthorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -112,6 +113,18 @@ export function POST(req: Request) {
       candidatePhotoUrl = str(body.candidatePhotoUrl, "candidatePhotoUrl", { max: 1024 });
     }
 
+    /* Required, and checked against the list rather than stored as free
+       text — the whole point is being able to filter on it later. Rejected
+       with a message naming the field, since a recruiter with a stale form
+       open is the one case that can hit this. */
+    const workAuthorization = str(body.workAuthorization, "workAuthorization", {
+      max: 48,
+      required: true,
+    });
+    if (!isWorkAuthorization(workAuthorization) || !workAuthorization) {
+      throw new BadRequest("Select the candidate's right to work in the US.");
+    }
+
     const id = await createSubmission({
       jobId: job.id,
       jobTitle: job.title,
@@ -123,6 +136,7 @@ export function POST(req: Request) {
       candidatePhone,
       candidateLinkedin,
       candidatePhotoUrl,
+      workAuthorization,
       notes: str(body.notes, "notes"),
       cvFileId,
       bounty: job.bounty,

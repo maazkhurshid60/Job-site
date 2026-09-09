@@ -47,6 +47,7 @@ export type Submission = {
   candidatePhone: string;
   /** Both optional — "" means none on file. */
   candidateLinkedin: string;
+  workAuthorization: string;
   candidatePhotoUrl: string;
   notes: string;
   /* A signed, one-hour download link minted by the server each time this
@@ -97,6 +98,7 @@ export type SubmissionInput = {
   candidatePhone: string;
   /** Both optional. */
   candidateLinkedin: string;
+  workAuthorization: string;
   notes: string;
 };
 
@@ -145,6 +147,7 @@ export async function createSubmission(
       candidateEmail: input.candidateEmail,
       candidatePhone: input.candidatePhone,
       candidateLinkedin: input.candidateLinkedin,
+      workAuthorization: input.workAuthorization,
       candidatePhotoUrl,
       notes: input.notes,
       cvFileId,

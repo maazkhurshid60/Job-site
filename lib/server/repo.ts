@@ -199,6 +199,7 @@ type SubmissionRow = {
   candidate_email: string;
   candidate_phone: string;
   candidate_linkedin: string;
+  work_authorization: string;
   candidate_photo_url: string;
   notes: string | null;
   cv_file_id: string | null;
@@ -244,6 +245,7 @@ function toSubmission(r: SubmissionRow): Submission {
     candidateEmail: r.candidate_email,
     candidatePhone: r.candidate_phone,
     candidateLinkedin: r.candidate_linkedin ?? "",
+    workAuthorization: r.work_authorization ?? "",
     candidatePhotoUrl: r.candidate_photo_url ?? "",
     notes: r.notes ?? "",
     cvUrl: r.cv_file_id ? signedFileUrl(r.cv_file_id) : "",
@@ -288,7 +290,7 @@ function toSubmission(r: SubmissionRow): Submission {
 const SUB_COLUMNS = `
   s.id, s.job_id, s.job_title, s.company, s.recruiter_id, s.recruiter_name,
   s.candidate_name, s.candidate_email, s.candidate_phone,
-  s.candidate_linkedin, s.candidate_photo_url, s.notes,
+  s.candidate_linkedin, s.candidate_photo_url, s.work_authorization, s.notes,
   s.cv_file_id, f.filename AS cv_name, f.content_type AS cv_type,
   f.byte_size AS cv_size, s.bounty, s.fee_tier, s.status, s.created_at`;
 
@@ -348,6 +350,8 @@ export type SubmissionWrite = {
   /** Both optional — "" means "none on file". */
   candidateLinkedin: string;
   candidatePhotoUrl: string;
+  /** Code from lib/workAuthorization.ts; "" when not asked. */
+  workAuthorization: string;
   notes: string;
   cvFileId: string;
   bounty: number | null;
@@ -362,14 +366,14 @@ export async function createSubmission(
     `INSERT INTO submissions
        (id, job_id, job_title, company, recruiter_id, recruiter_name,
         candidate_name, candidate_email, candidate_phone,
-        candidate_linkedin, candidate_photo_url, notes,
+        candidate_linkedin, candidate_photo_url, work_authorization, notes,
         cv_file_id, bounty, fee_tier, status)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'submitted')`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'submitted')`,
     [
       id, input.jobId, input.jobTitle, input.company, input.recruiterId,
       input.recruiterName, input.candidateName, input.candidateEmail,
       input.candidatePhone, input.candidateLinkedin, input.candidatePhotoUrl,
-      input.notes, input.cvFileId, input.bounty, input.feeTier,
+      input.workAuthorization, input.notes, input.cvFileId, input.bounty, input.feeTier,
     ],
   );
   return id;
