@@ -7,9 +7,21 @@ import { useEffect, useRef, useState } from "react";
  * Three formats, three mechanisms, because browsers can only render one of
  * them natively and the other two need converting first:
  *
- *  - PDF  -> the browser's own viewer in an <iframe>. The server serves it with
- *            `Content-Security-Policy: sandbox` and only after checking the
- *            bytes really start with %PDF-, so it lands in an opaque origin.
+ *  - PDF  -> drawn to a <canvas> by pdf.js, in this tab.
+ *
+ *            It used to be an <iframe> pointing at the file, leaving the
+ *            rendering to the browser's built-in PDF viewer. That works until
+ *            it doesn't: Chrome set to "Download PDFs" instead of "Open PDFs
+ *            in Chrome" — a per-machine setting, and one some IT policies set
+ *            centrally — refuses to render inside a frame and substitutes a
+ *            grey download stub showing the file's UUID. The reviewer sees a
+ *            broken preview of a file that is perfectly intact; verified in
+ *            this case, the stored bytes were a valid %PDF-1.7 of 130,155
+ *            bytes and rendered fine on another machine.
+ *
+ *            pdf.js removes the dependency on that setting entirely. It also
+ *            keeps the privacy property below, since it runs here in the tab
+ *            rather than shipping the file anywhere.
  *  - DOCX -> converted to HTML in this browser tab by mammoth, then rendered
  *            inside a sandboxed iframe.
  *  - DOC  -> pre-2007's OLE compound-file binary format, which has no
@@ -42,16 +54,7 @@ export function CvPreview({
   contentType: string;
   filename: string;
 }) {
-  if (contentType === PDF) {
-    return (
-      <iframe
-        // inline=1 is honoured only for verified PDFs; anything else downloads.
-        src={`${url}&inline=1`}
-        title={`Preview of ${filename}`}
-        className="h-full w-full rounded-xl border border-line bg-white"
-      />
-    );
-  }
+  if (contentType === PDF) return <PdfPreview url={url} filename={filename} />;
 
   if (contentType === DOCX) return <DocxPreview url={url} filename={filename} />;
   if (contentType === DOC) return <DocPreview url={url} filename={filename} />;
@@ -218,6 +221,111 @@ function Unavailable({ url, reason }: { url: string; reason: string }) {
           Download the CV
         </a>
       </div>
+    </div>
+  );
+}
+
+/* PDF rendered here in the tab, not by the browser's viewer.
+ *
+ * Every page is drawn to its own <canvas> at the container's width, so a CV
+ * is read by scrolling rather than by fighting a nested scrollbar. Rendering
+ * is sequential and cancellable: closing the drawer mid-render aborts rather
+ * than drawing into canvases React has already unmounted.
+ *
+ * The worker is imported as a URL so the bundler emits it as an asset and it
+ * is served from our own origin — no CDN, which matters because the alternative
+ * would put a candidate's CV through a third party's script. */
+function PdfPreview({ url, filename }: { url: string; filename: string }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pages, setPages] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const canvases: HTMLCanvasElement[] = [];
+
+    (async () => {
+      try {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+          "pdfjs-dist/build/pdf.worker.min.mjs",
+          import.meta.url,
+        ).toString();
+
+        /* Fetched rather than handed the URL, so one signed link is used once
+           and the bytes are already here if a re-render is needed. */
+        const res = await fetch(`${url}&inline=1`);
+        if (!res.ok) throw new Error(`Could not fetch the file (${res.status}).`);
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        if (cancelled) return;
+
+        const doc = await pdfjs.getDocument({ data: bytes }).promise;
+        if (cancelled) return;
+        setPages(doc.numPages);
+
+        const host = hostRef.current;
+        if (!host) return;
+        host.replaceChildren();
+
+        const width = host.clientWidth || 720;
+        for (let n = 1; n <= doc.numPages; n++) {
+          if (cancelled) return;
+          const page = await doc.getPage(n);
+          const base = page.getViewport({ scale: 1 });
+          /* Scale to the column, then multiply by DPR so the text is sharp on
+             the high-density screens most of this is reviewed on. */
+          const scale = (width / base.width) * Math.min(window.devicePixelRatio || 1, 2);
+          const viewport = page.getViewport({ scale });
+
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.width = "100%";
+          canvas.style.height = "auto";
+          canvas.className = "mb-3 rounded-lg border border-line bg-white shadow-sm";
+          canvas.setAttribute("role", "img");
+          canvas.setAttribute("aria-label", `${filename}, page ${n} of ${doc.numPages}`);
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("This browser could not open a canvas to draw on.");
+          host.append(canvas);
+          canvases.push(canvas);
+          await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Could not render this PDF.",
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      for (const c of canvases) c.remove();
+    };
+  }, [url, filename]);
+
+  if (error) return <Unavailable url={url} reason={error} />;
+
+  return (
+    <div className="flex h-full flex-col rounded-xl border border-line bg-paper">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-3 py-2">
+        <p className="truncate text-xs text-muted">
+          {pages === null ? `Opening ${filename}…` : `${filename} · ${pages} page${pages === 1 ? "" : "s"}`}
+        </p>
+        {/* Always available, whatever the browser is set to do with PDFs. */}
+        <a
+          href={`${url}&inline=1`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 text-xs font-semibold text-accent underline underline-offset-2"
+        >
+          Open in a new tab
+        </a>
+      </div>
+      <div ref={hostRef} className="min-h-0 flex-1 overflow-y-auto p-3" />
     </div>
   );
 }
