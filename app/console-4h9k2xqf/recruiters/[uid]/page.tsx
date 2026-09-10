@@ -390,7 +390,20 @@ export default function RecruiterDetailPage() {
           {user.verificationVideoUrl ? (
             // Fresh signed URL from this page load — the video element's own
             // fetch happens right away, well inside the link's 1-hour TTL.
-            <video controls src={user.verificationVideoUrl} className="mt-2 h-44 rounded-xl bg-ink" />
+            //
+            // Sized by max-height with width auto rather than a fixed height,
+            // so it works for whichever way the recruiter held their phone: a
+            // portrait clip fills the height and stays narrow, a landscape one
+            // is bounded by the column instead. This is the screen where
+            // somebody decides whether a face matches a name, and at h-44 it
+            // was a 176px thumbnail — too small to do that honestly.
+            <video
+              controls
+              playsInline
+              preload="metadata"
+              src={user.verificationVideoUrl}
+              className="mt-3 max-h-[32rem] w-auto max-w-full rounded-xl bg-ink"
+            />
           ) : (
             <p className="mt-1.5 text-sm text-muted">
               No video submitted yet — nothing to review before verifying.

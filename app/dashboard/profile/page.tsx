@@ -342,7 +342,11 @@ export default function ProfilePage() {
               key={pickedVideoUrl ?? profile?.verificationVideoUrl}
               src={pickedVideoUrl ?? profile?.verificationVideoUrl ?? undefined}
               controls
-              className="mt-3 h-40 rounded-xl bg-ink"
+              playsInline
+              preload="metadata"
+              // Same sizing rule as the admin review screen, so a recruiter
+              // sees their clip at roughly the size the reviewer will.
+              className="mt-3 max-h-[26rem] w-auto max-w-full rounded-xl bg-ink"
             />
           )}
 
