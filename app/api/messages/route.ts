@@ -3,12 +3,13 @@ import { createMessage, listMessages, countRecentMessagesFromIp } from "@/lib/se
 import { requireAdmin, getUid } from "@/lib/server/auth";
 import { verifyRecaptcha } from "@/lib/server/recaptcha";
 import { notifyNewMessage } from "@/lib/server/notify";
+import { scoreMessage } from "@/lib/server/spamScore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const RATE_LIMIT_WINDOW_SECONDS = 600; // 10 minutes
-const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_MAX = 3;
 
 /** Vercel (and most reverse proxies) set x-forwarded-for to
     "client, proxy1, proxy2" — the first entry is the real client. Falls back
@@ -45,16 +46,39 @@ export function POST(req: Request) {
        /dashboard/enquiries and read our answer. Anonymous senders store
        null and behave exactly as before. */
     const senderUid = await getUid(req);
-    await createMessage({ ...input, ip, senderUid });
 
-    // Best-effort: the message is already saved above, so a Brevo hiccup
-    // shouldn't turn into a failed submission for the sender. Awaited (not
-    // fire-and-forget) since a serverless function can be frozen the moment
-    // it returns, which would silently drop an un-awaited request.
-    try {
-      await notifyNewMessage(input);
-    } catch (err) {
-      console.error("[contact] notification email failed:", err);
+    /* Scored, not rejected.
+     *
+     * A signed-in sender is never scored: they cleared email verification to
+     * exist at all, and a recruiter writing in about a submission is exactly
+     * who must never be filtered.
+     *
+     * For everyone else the verdict decides one thing: whether this sends an
+     * email. The row is written either way and appears in the console either
+     * way. That is deliberate — the client is deleting spam by the hundred,
+     * and the fix for that is his inbox going quiet, not enquiries silently
+     * failing to arrive. */
+    const verdict = senderUid ? null : scoreMessage(input);
+    await createMessage({
+      ...input,
+      ip,
+      senderUid,
+      spam: verdict?.isSpam ?? false,
+      spamReason: verdict?.isSpam ? verdict.reasons.join("; ").slice(0, 255) : null,
+    });
+
+    if (verdict?.isSpam) {
+      console.warn("[contact] scored as spam, not notifying:", verdict.score, verdict.reasons);
+    } else {
+      // Best-effort: the message is already saved above, so a Brevo hiccup
+      // shouldn't turn into a failed submission for the sender. Awaited (not
+      // fire-and-forget) since a serverless function can be frozen the moment
+      // it returns, which would silently drop an un-awaited request.
+      try {
+        await notifyNewMessage(input);
+      } catch (err) {
+        console.error("[contact] notification email failed:", err);
+      }
     }
 
     // No echo of the stored row: nothing here is useful to the sender.

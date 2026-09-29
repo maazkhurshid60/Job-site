@@ -25,7 +25,7 @@ import { applySort, textAsc, textDesc, dateDesc, dateAsc, type SortOption } from
  * the notification email worked or not.
  */
 
-type Tab = "new" | "handled" | "sleeping" | "all";
+type Tab = "new" | "handled" | "sleeping" | "spam" | "all";
 
 /* Sleeping is its own tab rather than a filter on the other two: the whole
    point of parking a thread is that it leaves the working lists, so it has
@@ -34,6 +34,10 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "new", label: "Needs a reply" },
   { value: "handled", label: "Handled" },
   { value: "sleeping", label: "Sleeping" },
+  /* Scored at intake, never emailed onward, and kept out of every other tab.
+     It is a tab rather than a delete because the scoring is a heuristic: a
+     false positive has to be recoverable by looking, not lost. */
+  { value: "spam", label: "Spam" },
   { value: "all", label: "All" },
 ];
 
@@ -70,9 +74,10 @@ export default function AdminMessagesPage() {
 
   const counts = useMemo(
     () => ({
-      new: messages.filter((m) => !m.handled && !m.sleeping).length,
-      handled: messages.filter((m) => m.handled && !m.sleeping).length,
-      sleeping: messages.filter((m) => m.sleeping).length,
+      new: messages.filter((m) => !m.handled && !m.sleeping && !m.spam).length,
+      handled: messages.filter((m) => m.handled && !m.sleeping && !m.spam).length,
+      sleeping: messages.filter((m) => m.sleeping && !m.spam).length,
+      spam: messages.filter((m) => m.spam).length,
       all: messages.length,
     }),
     [messages],
@@ -81,9 +86,12 @@ export default function AdminMessagesPage() {
   const shown = useMemo(() => {
     const term = q.trim().toLowerCase();
     const matched = messages.filter((m) => {
+      // Spam is excluded from every working tab, and only visible in its own.
+      if (tab !== "spam" && tab !== "all" && m.spam) return false;
       if (tab === "new" && (m.handled || m.sleeping)) return false;
       if (tab === "handled" && (!m.handled || m.sleeping)) return false;
       if (tab === "sleeping" && !m.sleeping) return false;
+      if (tab === "spam" && !m.spam) return false;
       if (!term) return true;
       return [m.name, m.email, m.subject, m.message].join(" ").toLowerCase().includes(term);
     });

@@ -454,6 +454,14 @@ CREATE TABLE messages (
   -- `handled` because the two answer different questions: "have we replied?"
   -- and "are we looking at this now?" — a thread can be both.
   sleeping   BOOLEAN      NOT NULL DEFAULT FALSE,
+  -- Scored at intake (lib/server/spamScore). A message flagged here is still
+  -- stored and still shown in the console; the only thing the flag changes is
+  -- that no notification email is sent. Scoring decides whether to EMAIL,
+  -- never whether to ACCEPT, so a false positive costs a delayed reply rather
+  -- than a lost enquiry.
+  spam        BOOLEAN     NOT NULL DEFAULT FALSE,
+  -- Which rules fired, so a false positive can be diagnosed rather than argued about.
+  spam_reason VARCHAR(255) NULL,
   created_at DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   KEY idx_messages_created (created_at DESC),

@@ -1193,11 +1193,18 @@ export async function createMessage(input: {
   /** The signed-in sender, when there is one. Lets a recruiter see what they
       sent and read the answer; null for the anonymous public case. */
   senderUid: string | null;
+  /** Scored at intake (lib/server/spamScore). Stored either way — the only
+      thing this changes is whether a notification email goes out. */
+  spam?: boolean;
+  spamReason?: string | null;
 }): Promise<void> {
   await execute(
-    `INSERT INTO messages (name, email, subject, message, ip, sender_uid)
-     VALUES (?,?,?,?,?,?)`,
-    [input.name, input.email, input.subject, input.message, input.ip, input.senderUid],
+    `INSERT INTO messages (name, email, subject, message, ip, sender_uid, spam, spam_reason)
+     VALUES (?,?,?,?,?,?,?,?)`,
+    [
+      input.name, input.email, input.subject, input.message, input.ip, input.senderUid,
+      input.spam ?? false, input.spamReason ?? null,
+    ],
   );
 }
 
@@ -1222,11 +1229,13 @@ type MessageRow = {
   message: string | null;
   handled: number;
   sleeping: number;
+  spam: number;
+  spam_reason: string | null;
   sender_uid: string | null;
   created_at: string | null;
 };
 
-const MESSAGE_COLUMNS = `id, name, email, subject, message, handled, sleeping, sender_uid, created_at`;
+const MESSAGE_COLUMNS = `id, name, email, subject, message, handled, sleeping, spam, spam_reason, sender_uid, created_at`;
 
 /* Threads are loaded in one extra query for the whole page rather than one
    per message — a reply-per-enquiry loop is the classic N+1, and this list
@@ -1270,6 +1279,8 @@ async function withReplies(rows: MessageRow[]): Promise<ContactMessage[]> {
     message: r.message ?? "",
     handled: Boolean(r.handled),
     sleeping: Boolean(r.sleeping),
+    spam: Boolean(r.spam),
+    spamReason: r.spam_reason,
     senderUid: r.sender_uid,
     replies: byMessage.get(r.id) ?? [],
     createdAt: r.created_at,

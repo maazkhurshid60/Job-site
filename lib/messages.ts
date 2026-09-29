@@ -18,6 +18,12 @@ export type ContactMessage = {
   /** Parked by an admin: out of both working lists, nothing deleted. Wakes
       by itself when the sender replies. */
   sleeping: boolean;
+  /** Scored as spam at intake, so no notification email was sent for it. The
+      row is here in full either way — the flag hides it from the working list,
+      it does not delete anything. */
+  spam: boolean;
+  /** Which rules fired, for checking a false positive. Null when not spam. */
+  spamReason: string | null;
   /** Set when a signed-in user sent it; null for an anonymous visitor. */
   senderUid: string | null;
   /** Our answers, oldest first. */
