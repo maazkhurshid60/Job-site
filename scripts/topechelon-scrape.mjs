@@ -11,7 +11,7 @@
    fetchJobPosting below for why this isn't taken from the feed. */
 export const CONFIDENTIAL_CLIENT = "Confidential Client";
 
-export const PORTAL_URL = "https://careers.topechelon.com/portals/3a7f6fd3-7cf7-447c-a20f-2354eb2031df";
+export const PORTAL_URL = "https://jobs.metroassoc.com/portals/3a7f6fd3-7cf7-447c-a20f-2354eb2031df";
 
 // Checked in order — first match wins. Built from the actual job titles on
 // Metro's portal; extend this if a future title doesn't match anything and
