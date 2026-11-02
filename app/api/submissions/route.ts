@@ -7,6 +7,8 @@ import {
 } from "@/lib/server/repo";
 import { requireUid, requireVerifiedUid, isAdmin, AuthError } from "@/lib/server/auth";
 import { isWorkAuthorization } from "@/lib/workAuthorization";
+import { notifyNewSubmission } from "@/lib/server/notify";
+import { SITE_URL } from "@/lib/seo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -154,6 +156,25 @@ export function POST(req: Request) {
       }
       throw err;
     });
+
+    /* Best-effort, and awaited rather than fired and forgotten: a serverless
+       function can be frozen the moment it returns, which would silently drop
+       an un-awaited request. The submission is already committed by this
+       point, so a Brevo outage must not turn a successful referral into an
+       error for the recruiter -- it is logged and the submission still
+       stands, waiting in the console where it always was. */
+    try {
+      await notifyNewSubmission({
+        candidateName,
+        jobTitle: job.title,
+        company: job.company,
+        recruiterName,
+        workAuthorization,
+        reviewUrl: `${SITE_URL}/console-4h9k2xqf/submissions`,
+      });
+    } catch (err) {
+      console.error("[submissions] notification email failed:", err);
+    }
 
     return ok({ id }, { status: 201 });
   });

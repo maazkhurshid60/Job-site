@@ -96,6 +96,47 @@ export async function notifyNewMessage(input: {
   });
 }
 
+/** A recruiter referred a candidate. Goes to whoever reviews submissions, as
+    a prompt to go and look -- not as the submission itself.
+
+    Deliberately thin on detail. The candidate's email, phone, CV and notes
+    are all one click away in the console behind a login, and copying them
+    into an unencrypted email would put a stranger's contact details and CV
+    into an inbox, a mail server and a backup for a ping that only needs to
+    say "there is one waiting". What is here is what decides whether to open
+    it now or after lunch: who, for what role, from which recruiter. */
+export async function notifyNewSubmission(input: {
+  candidateName: string;
+  jobTitle: string;
+  company: string;
+  recruiterName: string;
+  workAuthorization: string;
+  reviewUrl: string;
+}): Promise<void> {
+  await send({
+    /* Defaults to Patrick, who asked for it, but env-settable so it can move
+       to a shared inbox or a second reviewer without a deploy. */
+    to: { email: process.env.SUBMISSION_NOTIFY_EMAIL ?? "patrick@metroassoc.com" },
+    subject: `New candidate: ${input.candidateName} for ${input.jobTitle}`,
+    content: {
+      preheader: `${input.recruiterName} submitted ${input.candidateName} for ${input.jobTitle}.`,
+      paragraphs: [
+        `${input.recruiterName} has submitted a candidate on JobFolder and it is waiting for review.`,
+      ],
+      fields: [
+        { label: "Candidate", value: input.candidateName },
+        { label: "Role", value: input.jobTitle },
+        { label: "Company", value: input.company },
+        { label: "Recruiter", value: input.recruiterName },
+        { label: "Right to work", value: input.workAuthorization },
+      ],
+      button: { label: "Review on JobFolder", url: input.reviewUrl },
+      footerNote:
+        "The CV, contact details and any notes are on the submission itself. You are receiving this because you review candidate submissions on JobFolder.",
+    },
+  });
+}
+
 /** Admin-triggered: nudge a recruiter to finish their profile. Sent TO the
     recruiter (not our inbox) — the opposite direction from notifyNewMessage. */
 export async function notifyProfileReminder(input: {
